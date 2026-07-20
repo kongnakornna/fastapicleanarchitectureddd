@@ -1,4 +1,4 @@
-name: "fastapi-clean-architecture-ddd-template"
+name: "fastapiddd"
 
 services:
   api:
