@@ -302,3 +302,17 @@ class LogoutInvalidEndpoint(StandardException):
             message=message,
             data={"errors": errors},
         )
+
+
+class InvalidApiKeyException(StandardException):
+    def __init__(
+        self,
+    ) -> None:
+        message = ResponseMessages.UNAUTHORIZED_ERROR.value
+        errors = "Invalid or missing API key. Please provide a valid X-API-Key header."
+
+        super().__init__(
+            status_code=HTTPStatus.UNAUTHORIZED,
+            message=message,
+            data={"errors": errors},
+        )

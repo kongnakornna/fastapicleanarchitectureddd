@@ -5,7 +5,7 @@ from typing import Optional
 from pydantic import BaseModel, Field, field_validator, ConfigDict
 
 from app.modules.shared.application.enums import ResponseMessages, Role
-from app.modules.user.application.enums import Gender
+from app.modules.user.application.enums import Gender, UserStatus
 
 
 # REQUEST
@@ -40,6 +40,18 @@ class CreateRequest(BaseModel):
         examples=["Joe", "Jan"],
         json_schema_extra={
             "example": "Joe",
+            "writeOnly": True,
+        },
+    )
+
+    username: str = Field(
+        title="Username (Required)",
+        description="The unique username of the user.",
+        min_length=3,
+        max_length=100,
+        examples=["johndoe", "janesmith"],
+        json_schema_extra={
+            "example": "johndoe",
             "writeOnly": True,
         },
     )
@@ -180,6 +192,7 @@ class CreateRequest(BaseModel):
                 "first_name": "John",
                 "last_name": "Doe",
                 "preferred_name": "Joe",
+                "username": "johndoe",
                 "gender": Gender.MALE.value,
                 "birthdate": "1995-01-01",
                 "email": "johndoe@domain.com",
@@ -191,6 +204,7 @@ class CreateRequest(BaseModel):
                     "first_name": "John",
                     "last_name": "Doe",
                     "preferred_name": "Joe",
+                    "username": "johndoe",
                     "gender": Gender.MALE.value,
                     "birthdate": "1995-01-01",
                     "email": "johndoe@domain.com",
@@ -201,6 +215,7 @@ class CreateRequest(BaseModel):
                     "first_name": "Jane",
                     "last_name": "Smith",
                     "preferred_name": "Jan",
+                    "username": "janesmith",
                     "gender": Gender.FEMALE.value,
                     "birthdate": "2000-12-31",
                     "email": "jane.smith@email.com",
@@ -257,6 +272,16 @@ class MeResponse(BaseModel):
         examples=["Joe", "Jan"],
         json_schema_extra={
             "example": "Joe",
+            "readOnly": True,
+        },
+    )
+
+    username: str = Field(
+        title="Username (Required)",
+        description="The unique username of the user.",
+        examples=["johndoe", "janesmith"],
+        json_schema_extra={
+            "example": "johndoe",
             "readOnly": True,
         },
     )
@@ -334,6 +359,7 @@ class MeResponse(BaseModel):
                 "first_name": "John",
                 "last_name": "Doe",
                 "preferred_name": "Joe",
+                "username": "johndoe",
                 "gender": Gender.MALE.value,
                 "birthdate": "1995-01-01",
                 "email": "johndoe@domain.com",
@@ -346,6 +372,7 @@ class MeResponse(BaseModel):
                     "first_name": "John",
                     "last_name": "Doe",
                     "preferred_name": "Joe",
+                    "username": "johndoe",
                     "gender": Gender.MALE.value,
                     "birthdate": "1995-01-01",
                     "email": "johndoe@domain.com",
@@ -357,6 +384,7 @@ class MeResponse(BaseModel):
                     "first_name": "Jane",
                     "last_name": "Smith",
                     "preferred_name": "Jan",
+                    "username": "janesmith",
                     "gender": Gender.FEMALE.value,
                     "birthdate": "2000-12-31",
                     "email": "jane.smith@email.com",

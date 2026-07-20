@@ -1,7 +1,9 @@
 from http import HTTPStatus
-import subprocess
 from pathlib import Path
 
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.backends import default_backend
 from loguru import logger
 
 from app.core.settings import settings
@@ -47,41 +49,37 @@ async def init_security_keys() -> None:
 
 def _generate_signing_keys(private_path: Path, public_path: Path) -> None:
     try:
-        subprocess.run(
-            [
-                "openssl",
-                "genpkey",
-                "-algorithm",
-                "RSA",
-                "-out",
-                str(private_path),
-                "-aes256",
-                "-pass",
-                f"pass:{settings.JWT_SIGNING_KEY_PASSWORD}",
-                "-pkeyopt",
-                "rsa_keygen_bits:4096",
-            ],
-            check=True,
-            capture_output=True,
+        private_key = rsa.generate_private_key(
+            public_exponent=65537,
+            key_size=4096,
+            backend=default_backend(),
         )
 
-        subprocess.run(
-            [
-                "openssl",
-                "pkey",
-                "-in",
-                str(private_path),
-                "-out",
-                str(public_path),
-                "-pubout",
-                "-passin",
-                f"pass:{settings.JWT_SIGNING_KEY_PASSWORD}",
-            ],
-            check=True,
-            capture_output=True,
-        )
-    except subprocess.CalledProcessError as e:
-        logger.error(f"Failed to generate signing keys: {e.stderr.decode()}")
+        password = settings.JWT_SIGNING_KEY_PASSWORD.encode()
+
+        with open(private_path, "wb") as f:
+            f.write(
+                private_key.private_bytes(
+                    encoding=serialization.Encoding.PEM,
+                    format=serialization.PrivateFormat.PKCS8,
+                    encryption_algorithm=serialization.BestAvailableEncryption(password),
+                )
+            )
+
+        public_key = private_key.public_key()
+
+        with open(public_path, "wb") as f:
+            f.write(
+                public_key.public_bytes(
+                    encoding=serialization.Encoding.PEM,
+                    format=serialization.PublicFormat.SubjectPublicKeyInfo,
+                )
+            )
+
+        logger.info(f"Signing keys saved to {private_path} and {public_path}")
+
+    except Exception as e:
+        logger.error(f"Failed to generate signing keys: {e}")
         raise StandardException(
             status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
             message="Failed to generate signing keys.",
@@ -90,41 +88,37 @@ def _generate_signing_keys(private_path: Path, public_path: Path) -> None:
 
 def _generate_encryption_keys(private_path: Path, public_path: Path) -> None:
     try:
-        subprocess.run(
-            [
-                "openssl",
-                "genpkey",
-                "-algorithm",
-                "RSA",
-                "-out",
-                str(private_path),
-                "-aes256",
-                "-pass",
-                f"pass:{settings.JWT_ENCRYPTION_KEY_PASSWORD}",
-                "-pkeyopt",
-                "rsa_keygen_bits:4096",
-            ],
-            check=True,
-            capture_output=True,
+        private_key = rsa.generate_private_key(
+            public_exponent=65537,
+            key_size=4096,
+            backend=default_backend(),
         )
 
-        subprocess.run(
-            [
-                "openssl",
-                "pkey",
-                "-in",
-                str(private_path),
-                "-out",
-                str(public_path),
-                "-pubout",
-                "-passin",
-                f"pass:{settings.JWT_ENCRYPTION_KEY_PASSWORD}",
-            ],
-            check=True,
-            capture_output=True,
-        )
-    except subprocess.CalledProcessError as e:
-        logger.error(f"Failed to generate encryption keys: {e.stderr.decode()}")
+        password = settings.JWT_ENCRYPTION_KEY_PASSWORD.encode()
+
+        with open(private_path, "wb") as f:
+            f.write(
+                private_key.private_bytes(
+                    encoding=serialization.Encoding.PEM,
+                    format=serialization.PrivateFormat.PKCS8,
+                    encryption_algorithm=serialization.BestAvailableEncryption(password),
+                )
+            )
+
+        public_key = private_key.public_key()
+
+        with open(public_path, "wb") as f:
+            f.write(
+                public_key.public_bytes(
+                    encoding=serialization.Encoding.PEM,
+                    format=serialization.PublicFormat.SubjectPublicKeyInfo,
+                )
+            )
+
+        logger.info(f"Encryption keys saved to {private_path} and {public_path}")
+
+    except Exception as e:
+        logger.error(f"Failed to generate encryption keys: {e}")
         raise StandardException(
             status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
             message="Failed to generate encryption keys.",

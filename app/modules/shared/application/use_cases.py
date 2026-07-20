@@ -65,6 +65,38 @@ class SharedUseCases:
                 raise UserException()
             return None
 
+    async def get_user_by_username(self, user: User) -> Optional[User]:
+        try:
+            logger.debug(
+                f"Initializing get user by username use case for user: {user.username}."
+            )
+
+            db_user = await self.user_repository.get_by_username(user)
+
+            if db_user is None and self._raise_exceptions:
+                logger.info(
+                    f"User with username {user.username} not found. Raising exception."
+                )
+                raise UserEmailNotFoundException(email=user.username)
+
+            logger.debug(f"User {user.username} retrieved from database successfully.")
+            return db_user
+        except StandardException:
+            if self._raise_exceptions:
+                raise
+            return None
+        except DomainError as e:
+            if self._raise_exceptions:
+                raise DomainException(e)
+            return None
+        except Exception as e:
+            logger.opt(exception=e).error(
+                "An unexpected error occurred during the get user by username use case."
+            )
+            if self._raise_exceptions:
+                raise UserException()
+            return None
+
     async def get_user_by_email(self, user: User) -> Optional[User]:
         try:
             logger.debug(

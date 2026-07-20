@@ -48,6 +48,21 @@ class UserEmailNotFoundException(StandardException):
         )
 
 
+class UsernameAlreadyExistsException(StandardException):
+    def __init__(
+        self,
+        username: str,
+    ) -> None:
+        message = ResponseMessages.CONFLICT.value
+        errors = f"Username '{username}' already exists."
+
+        super().__init__(
+            status_code=HTTPStatus.CONFLICT,
+            message=message,
+            data={"errors": errors},
+        )
+
+
 class CookieManagementException(StandardException):
     def __init__(
         self,

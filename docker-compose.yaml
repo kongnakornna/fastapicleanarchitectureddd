@@ -1,4 +1,4 @@
-name: "fastapiddd"
+name: "fastapi-clean-architecture-ddd-template"
 
 services:
   api:
@@ -14,7 +14,7 @@ services:
     networks:
       - fastapi-clean-architecture-ddd-template-network
     ports:
-      - "${APPLICATION_PORT}:3000"
+      - "${APPLICATION_PORT}:8000"
     restart: unless-stopped
     volumes:
       - ./:/app

@@ -3,7 +3,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends
 from loguru import logger
 
-from app.core.security import authenticate_user, no_authentication
+from app.core.security import authenticate_user, authenticate_user_or_api_key
 from app.modules.shared.presentation.exceptions import (
     StandardException,
     DomainError,
@@ -29,7 +29,7 @@ router = APIRouter(**router_docs)
 @router.post("", include_in_schema=False)
 async def create(
     payload: CreateRequest,
-    _: Annotated[None, Depends(no_authentication)],
+    user: User = Depends(authenticate_user),
     use_case: UserUseCases = Depends(get_user_use_cases),
 ) -> CreateResponse:
     try:
@@ -51,7 +51,7 @@ async def create(
 @router.get("/me/", **me_docs)
 @router.get("/me", include_in_schema=False)
 async def me(
-    user: User = Depends(authenticate_user),
+    user: User = Depends(authenticate_user_or_api_key),
     use_case: UserUseCases = Depends(get_user_use_cases),
 ) -> MeResponse:
     try:

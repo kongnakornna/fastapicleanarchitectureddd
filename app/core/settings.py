@@ -36,6 +36,8 @@ class Settings(BaseSettings):
     AUTH_API_KEY_SCHEME_DESCRIPTION: str
     AUTH_API_KEY_HEADER: str
     AUTH_API_KEY_HEADER_DESCRIPTION: str
+    AUTH_API_KEY: str
+    AUTH_API_KEY_DEFAULT_ADMIN_EMAIL: str
 
     # COOKIES
     COOKIES_MAX_AGE_SECONDS: int
@@ -73,6 +75,20 @@ class Settings(BaseSettings):
     POSTGRESQL_PASSWORD: str
     POSTGRESQL_HOST: str
     POSTGRESQL_PORT: str
+
+    # REDIS
+    REDIS_HOST: str = "localhost"
+    REDIS_PORT: int = 6379
+    REDIS_PASSWORD: str = ""
+    REDIS_DB: int = 0
+
+    # RATE LIMIT
+    RATE_LIMIT_ENABLED: bool = False
+    RATE_LIMIT_DEFAULT_REQUESTS: int = 60
+    RATE_LIMIT_DEFAULT_WINDOW_SECONDS: int = 60
+    RATE_LIMIT_AUTH_REQUESTS: int = 5
+    RATE_LIMIT_AUTH_WINDOW_SECONDS: int = 60
+    RATE_LIMIT_HEALTH_REQUESTS: int = 0
 
     # SECURITY SETTINGS
     SECURITY_ALLOW_ORIGINS: list[str]
@@ -148,15 +164,14 @@ class Settings(BaseSettings):
             {"endpoint": "/api/v1/authentication/login", "method": "POST"},
             {"endpoint": "/api/v1/authentication/logout/", "method": "DELETE"},
             {"endpoint": "/api/v1/authentication/logout", "method": "DELETE"},
+            {"endpoint": "/api/v1/authentication/register/", "method": "POST"},
+            {"endpoint": "/api/v1/authentication/register", "method": "POST"},
             # EXAMPLE
             {"endpoint": "/api/v1/example/", "method": "POST"},
             {"endpoint": "/api/v1/example", "method": "POST"},
             # HEALTH
             {"endpoint": "/health/", "method": "GET"},
             {"endpoint": "/health", "method": "GET"},
-            # USER
-            {"endpoint": "/api/v1/user/", "method": "POST"},
-            {"endpoint": "/api/v1/user", "method": "POST"},
         ]
 
     @computed_field
@@ -167,9 +182,13 @@ class Settings(BaseSettings):
             # AUTHENTICATION
             {"endpoint": "/api/v1/authentication/refresh/", "method": "PATCH"},
             {"endpoint": "/api/v1/authentication/refresh", "method": "PATCH"},
+            {"endpoint": "/api/v1/authentication/me", "method": "GET"},
+            {"endpoint": "/api/v1/authentication/me/", "method": "GET"},
             # USER
             {"endpoint": "/api/v1/user/me", "method": "GET"},
             {"endpoint": "/api/v1/user/me/", "method": "GET"},
+            {"endpoint": "/api/v1/user/", "method": "POST"},
+            {"endpoint": "/api/v1/user", "method": "POST"},
         ]
 
     @computed_field
@@ -192,7 +211,14 @@ class Settings(BaseSettings):
     @computed_field
     @property
     def SECURITY_API_KEY_ALLOWED_PATHS(self) -> list[dict[str, str]]:  # noqa
-        return []
+        return [
+            # HEALTH
+            {"endpoint": "/health/", "method": "GET"},
+            {"endpoint": "/health", "method": "GET"},
+            # EXAMPLE
+            {"endpoint": "/api/v1/example/", "method": "POST"},
+            {"endpoint": "/api/v1/example", "method": "POST"},
+        ]
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

@@ -31,6 +31,24 @@ async def create_entity_mapper(
         return mapper.to(CreateResponse).map(user)
 
 
+async def register_entity_mapper(
+    user: Union[CreateRequest, User],
+) -> Union[User, CreateResponse]:
+    if isinstance(user, CreateRequest):
+        return mapper.to(User).map(
+            user,
+            fields_mapping={
+                "name": Name(
+                    first_name=user.first_name,
+                    last_name=user.last_name,
+                    preferred_name=user.preferred_name,
+                ),
+            },
+        )
+    else:
+        return mapper.to(CreateResponse).map(user)
+
+
 async def me_entity_mapper(user: User) -> MeResponse:
     return mapper.to(MeResponse).map(
         user,
@@ -38,6 +56,7 @@ async def me_entity_mapper(user: User) -> MeResponse:
             "first_name": user.name.first_name,
             "last_name": user.name.last_name,
             "preferred_name": user.name.preferred_name,
+            "username": user.username,
             "email": user.email.__str__(),
             "phone": user.phone.__str__() if user.phone else None,
         },
@@ -58,13 +77,14 @@ async def model_entity_mapper(
                     last_name=user.last_name,
                     preferred_name=user.preferred_name,
                 ),
+                "username": user.username,
                 "gender": user.gender,
                 "birthdate": user.birthdate,
                 "email": str(user.email),
                 "phone": str(user.phone) if user.phone else None,
                 "hashed_password": user.hashed_password,
                 "role": user.role,
-                "is_active": user.is_active,
+                "status": user.status,
                 "created_at": user.created_at,
                 "updated_at": user.updated_at,
             },
@@ -77,13 +97,14 @@ async def model_entity_mapper(
                 "first_name": user.name.first_name,
                 "last_name": user.name.last_name,
                 "preferred_name": user.name.preferred_name,
+                "username": user.username,
                 "gender": user.gender,
                 "birthdate": user.birthdate,
                 "email": str(user.email),
                 "phone": str(user.phone) if user.phone else None,
                 "hashed_password": user.hashed_password,
                 "role": user.role,
-                "is_active": user.is_active,
+                "status": user.status,
                 "created_at": user.created_at,
                 "updated_at": user.updated_at,
             },

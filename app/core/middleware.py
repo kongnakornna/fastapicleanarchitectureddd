@@ -1,4 +1,5 @@
 from collections.abc import Callable
+from collections import defaultdict
 from http import HTTPStatus
 from secrets import token_urlsafe
 from time import time
@@ -337,3 +338,60 @@ class DeviceIdMiddleware(BaseHTTPMiddleware):
             )
 
         return response
+
+
+class RateLimitMiddleware(BaseHTTPMiddleware):
+    _window: dict[str, list[float]] = defaultdict(list)
+
+    _AUTH_PATHS = {"/api/v1/authentication/login/", "/api/v1/authentication/register/"}
+    _NO_LIMIT_PATHS = {"/health"}
+
+    def _get_limit(self, path: str) -> tuple[int, int]:
+        if path in self._NO_LIMIT_PATHS:
+            return 0, 0
+        if path in self._AUTH_PATHS:
+            return settings.RATE_LIMIT_AUTH_REQUESTS, settings.RATE_LIMIT_AUTH_WINDOW_SECONDS
+        return settings.RATE_LIMIT_DEFAULT_REQUESTS, settings.RATE_LIMIT_DEFAULT_WINDOW_SECONDS
+
+    async def dispatch(self, request: Request, call_next):
+        if not settings.RATE_LIMIT_ENABLED:
+            return await call_next(request)
+
+        if request.method == "OPTIONS":
+            return await call_next(request)
+
+        limit, window = self._get_limit(request.url.path)
+        if limit <= 0:
+            return await call_next(request)
+
+        client_ip = request.client.host if request.client else "unknown"
+        now = time()
+        key = f"{client_ip}:{request.url.path}"
+
+        timestamps = self._window[key]
+        cutoff = now - window
+        self._window[key] = [t for t in timestamps if t > cutoff]
+
+        if len(self._window[key]) >= limit:
+            logger.warning(
+                f"Rate limit exceeded for {client_ip} on {request.url.path}: "
+                f"{len(self._window[key])}/{limit} requests per {window}s"
+            )
+            response_content = StandardResponse(
+                code=HTTPStatus.TOO_MANY_REQUESTS,
+                method=request.method,
+                path=request.url.path,
+                timestamp=current_timestamp(),
+                details=StandardDetailsResponse(
+                    message=ResponseMessages.RATE_LIMIT_EXCEEDED.value,
+                    data={"retry_after_seconds": window, "limit": limit},
+                ),
+            )
+            return Response(
+                status_code=HTTPStatus.TOO_MANY_REQUESTS,
+                content=response_content.model_dump_json(),
+                media_type="application/json",
+            )
+
+        self._window[key].append(now)
+        return await call_next(request)

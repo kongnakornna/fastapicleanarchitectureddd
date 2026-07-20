@@ -4,15 +4,16 @@ from app.core.security import hash_password
 from app.modules.shared.application.use_cases import SharedUseCases
 from app.modules.shared.domain.entities import DomainError
 from app.modules.shared.presentation.exceptions import (
-    StandardException,
     DomainException,
+    StandardException,
 )
 from app.modules.user.application.interfaces import IUserRepository
 from app.modules.user.domain.entities import User
 from app.modules.user.presentation.exceptions import (
     UserEmailAlreadyExistsException,
-    UserException,
     UserEmailNotFoundException,
+    UserException,
+    UsernameAlreadyExistsException,
 )
 
 
@@ -36,6 +37,12 @@ class UserUseCases:
                 )
                 raise UserEmailAlreadyExistsException(email=user.email.__str__())
 
+            if await self.repository.exists_by_username(user):
+                logger.info(
+                    f"User with username {user.username} already exists. Raising exception."
+                )
+                raise UsernameAlreadyExistsException(username=user.username)
+
             user.hashed_password = await hash_password(user.password)
             await self.repository.create(user)
 
@@ -58,7 +65,7 @@ class UserUseCases:
                 f"Initializing get user use case for user: {user.email.__str__()}."
             )
 
-            db_user: User = await self.shared_service.get_user_by_id(user)
+            db_user: User | None = await self.shared_service.get_user_by_id(user)
 
             if db_user is None:
                 logger.info(

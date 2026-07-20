@@ -5,39 +5,48 @@ from fastapi.security import OAuth2PasswordRequestFormStrict
 from loguru import logger
 
 from app.core.security import (
-    no_authentication,
-    authenticate_refresh,
     authenticate_logout,
+    authenticate_refresh,
+    authenticate_user,
+    no_authentication,
 )
 from app.core.settings import settings
 from app.modules.authentication.application.use_cases import AuthenticationUseCases
 from app.modules.authentication.domain.entities import Session
 from app.modules.authentication.domain.mappers import (
     login_entity_mapper,
-    refresh_entity_mapper,
     logout_entity_mapper,
+    refresh_entity_mapper,
 )
 from app.modules.authentication.presentation.dependencies import (
     get_authentication_use_cases,
+    get_user_use_cases_for_auth,
 )
 from app.modules.authentication.presentation.docs import (
-    router_docs,
     login_docs,
-    refresh_docs,
     logout_docs,
+    me_docs,
+    refresh_docs,
+    register_docs,
+    router_docs,
 )
 from app.modules.authentication.presentation.exceptions import AuthenticationException
 from app.modules.authentication.presentation.schemas import (
     LoginResponse,
-    RefreshResponse,
     LogoutResponse,
+    RefreshResponse,
+    RegisterResponse,
 )
 from app.modules.shared.domain.entities import DomainError
 from app.modules.shared.presentation.exceptions import (
-    StandardException,
     DomainException,
+    StandardException,
 )
+from app.modules.user.application.use_cases import UserUseCases
+from app.modules.user.domain.entities import User
+from app.modules.user.domain.mappers import create_entity_mapper, me_entity_mapper
 from app.modules.user.presentation.exceptions import CookieManagementException
+from app.modules.user.presentation.schemas import CreateRequest, MeResponse
 
 router = APIRouter(**router_docs)
 
@@ -140,6 +149,47 @@ async def login(
         raise DomainException(e)
     except Exception as e:
         logger.opt(exception=e).error("An error occurred in the login endpoint.")
+        raise AuthenticationException()
+
+
+# CREATE
+@router.post("/register/", **register_docs)
+@router.post("/register", include_in_schema=False)
+async def register(
+    payload: CreateRequest,
+    _: Annotated[None, Depends(no_authentication)],
+    use_case: UserUseCases = Depends(get_user_use_cases_for_auth),
+) -> RegisterResponse:
+    try:
+        request_domain = await create_entity_mapper(payload)
+        await use_case.create(request_domain)
+        return RegisterResponse()
+    except StandardException:
+        raise
+    except DomainError as e:
+        raise DomainException(e)
+    except Exception as e:
+        logger.opt(exception=e).error("An error occurred in the register endpoint.")
+        raise AuthenticationException()
+
+
+# READ
+@router.get("/me/", **me_docs)
+@router.get("/me", include_in_schema=False)
+async def me(
+    user: User = Depends(authenticate_user),
+    use_case: UserUseCases = Depends(get_user_use_cases_for_auth),
+) -> MeResponse:
+    try:
+        response_domain = await use_case.me(user)
+        output = await me_entity_mapper(response_domain)
+        return output
+    except StandardException:
+        raise
+    except DomainError as e:
+        raise DomainException(e)
+    except Exception as e:
+        logger.opt(exception=e).error("An error occurred in the me endpoint.")
         raise AuthenticationException()
 
 

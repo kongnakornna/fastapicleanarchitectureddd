@@ -7,7 +7,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.core.settings import settings
 from app.modules.shared.application.enums import Role
 from app.modules.shared.infrastructure.models import BaseModel
-from app.modules.user.application.enums import Gender
+from app.modules.user.application.enums import Gender, UserStatus
 from app.modules.user.domain.value_objects import Phone, Email
 
 if TYPE_CHECKING:
@@ -17,7 +17,8 @@ if TYPE_CHECKING:
 class UserModel(BaseModel):
     __tablename__ = f"{settings.APPLICATION_TABLE_PREFIX}_users"
     __table_args__ = (
-        UniqueConstraint("email", "is_active", name="uq_users_email_is_active"),
+        UniqueConstraint("email", "status", name="uq_users_email_status"),
+        UniqueConstraint("username", "status", name="uq_users_username_status"),
     )
 
     first_name: Mapped[str] = mapped_column(
@@ -62,6 +63,13 @@ class UserModel(BaseModel):
         nullable=False,
     )
 
+    username: Mapped[str] = mapped_column(
+        String(100),
+        name="username",
+        comment="Unique username of the user",
+        nullable=False,
+    )
+
     phone: Mapped[Optional[Phone]] = mapped_column(
         String(18),
         name="phone",
@@ -83,6 +91,14 @@ class UserModel(BaseModel):
         comment="Role of the user",
         nullable=False,
         default=Role.USER,
+    )
+
+    status: Mapped[UserStatus] = mapped_column(
+        SQLEnum(UserStatus, name="user_status_enum"),
+        name="status",
+        comment="Status of the user (active, inactive, suspended)",
+        nullable=False,
+        default=UserStatus.ACTIVE,
     )
 
     sessions: Mapped[list["SessionModel"]] = relationship(

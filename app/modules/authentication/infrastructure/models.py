@@ -93,11 +93,12 @@ class SessionModel(Base):
         default=None,
     )
 
-    origin: Mapped[str] = mapped_column(
+    origin: Mapped[Optional[str]] = mapped_column(
         String(255),
         name="origin",
         comment="Origin header value of the client",
-        nullable=False,
+        nullable=True,
+        default=None,
     )
 
     referrer: Mapped[Optional[str]] = mapped_column(

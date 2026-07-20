@@ -5,6 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.shared.presentation.exceptions import StandardException
+from app.modules.user.application.enums import UserStatus
 from app.modules.user.application.interfaces import IUserRepository
 from app.modules.user.domain.entities import User
 from app.modules.user.domain.mappers import model_entity_mapper
@@ -39,6 +40,66 @@ class PostgresUserRepository(IUserRepository):
             raise UserException()
 
     # READ
+    async def exists_by_username(self, user: User) -> bool:
+        try:
+            logger.info(
+                f"Checking if username {user.username} exists in database."
+            )
+
+            statement = (
+                select(UserModel.id)
+                .where(
+                    UserModel.username == user.username,
+                    UserModel.status == UserStatus.ACTIVE,
+                )
+                .limit(1)
+            )
+
+            result = await self.session.scalar(statement)
+            exists = result is not None
+
+            logger.info(
+                f"Existence check for username {user.username} completed. Exists: {exists}."
+            )
+            return exists
+        except StandardException:
+            raise
+        except Exception as e:
+            logger.opt(exception=e).error(
+                "Unexpected error during the existence check of a username in the database."
+            )
+            raise UserException()
+
+    async def get_by_username(self, user: User):
+        try:
+            logger.info(f"Getting user by username {user.username} from database.")
+
+            statement = select(UserModel).where(
+                UserModel.username == user.username,
+                UserModel.status == UserStatus.ACTIVE,
+            )
+
+            result = await self.session.execute(statement)
+            user_model = result.scalar_one_or_none()
+
+            if user_model is None:
+                logger.info(
+                    f"User with username {user.username} not found in database. Returning None."
+                )
+                return None
+
+            user: User = await model_entity_mapper(user_model)
+
+            logger.info(f"User {user.email} retrieved successfully.")
+            return user
+        except StandardException:
+            raise
+        except Exception as e:
+            logger.opt(exception=e).error(
+                "Unexpected error during the get by username of a user in the database."
+            )
+            raise UserException()
+
     async def exists_by_email(self, user: User) -> bool:
         try:
             logger.info(f"Checking if user {user.email.__str__()} exists in database.")
@@ -47,7 +108,7 @@ class PostgresUserRepository(IUserRepository):
                 select(UserModel.id)
                 .where(
                     UserModel.email == str(user.email),
-                    UserModel.is_active.is_(True),
+                    UserModel.status == UserStatus.ACTIVE,
                 )
                 .limit(1)
             )
@@ -72,7 +133,7 @@ class PostgresUserRepository(IUserRepository):
             logger.info(f"Retrieving user with id {user.id} from database.")
 
             statement = select(UserModel).where(
-                UserModel.id == user.id, UserModel.is_active.is_(True)
+                UserModel.id == user.id, UserModel.status == UserStatus.ACTIVE
             )
 
             result = await self.session.execute(statement)
@@ -99,7 +160,8 @@ class PostgresUserRepository(IUserRepository):
             logger.info(f"Getting user {user.email.__str__()} from database.")
 
             statement = select(UserModel).where(
-                UserModel.email == str(user.email), UserModel.is_active
+                UserModel.email == str(user.email),
+                UserModel.status == UserStatus.ACTIVE,
             )
 
             result = await self.session.execute(statement)

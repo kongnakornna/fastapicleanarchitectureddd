@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 
 from loguru import logger
 
+from app.core.redis import add_to_blacklist
 from app.core.security import (
     verify_password,
     generate_tokens,
@@ -46,7 +47,7 @@ class AuthenticationUseCases:
                 f"Initializing user login use case for user: {session.user.email} in device: {session.device}."
             )
 
-            db_user: User = await self.shared_service.get_user_by_email(session.user)
+            db_user: User = await self.shared_service.get_user_by_username(session.user)
 
             if not await verify_password(
                 session.user.password, db_user.hashed_password
@@ -165,7 +166,16 @@ class AuthenticationUseCases:
             session.refresh_token.generate_updated_at()
             await self.repository.delete(session)
 
-            logger.debug(f"User {session.user.email} refreshed tokens successfully.")
+            await add_to_blacklist(
+                session.refresh_token.access_token.hashed_jti,
+                settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+            )
+            await add_to_blacklist(
+                session.refresh_token.hashed_jti,
+                settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS * 86400,
+            )
+
+            logger.debug(f"User {session.user.email} logged out successfully.")
             return session
         except StandardException:
             raise

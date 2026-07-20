@@ -22,7 +22,7 @@ from app.modules.authentication.presentation.schemas import (
     RefreshResponse,
     LogoutResponse,
 )
-from app.modules.shared.application.enums import Role
+from app.modules.shared.application.enums import ResponseMessages, Role
 from app.modules.shared.application.utils import BRASILIA_TZ
 
 from app.modules.user.domain.entities import User
@@ -40,7 +40,7 @@ async def login_entity_mapper(
         return mapper.to(Session).map(
             session,
             fields_mapping={
-                "user": User(email=session.username, password=session.password),
+                "user": User(username=session.username, password=session.password),
                 "ip_address": request.headers.get("x-forwarded-for")
                 or request.headers.get("x-real-ip")
                 or request.client.host,
@@ -55,7 +55,12 @@ async def login_entity_mapper(
             },
         )
     elif isinstance(session, Session) and request is None:
-        return LoginResponse()
+        return LoginResponse(
+            message=ResponseMessages.LOGIN_SUCCESS.value,
+            token_type=session.token_type.value,
+            access_token=session.refresh_token.access_token.token,
+            refresh_token=session.refresh_token.token,
+        )
     else:
         raise ValueError(
             "Session must be either a OAuth2PasswordRequestForm with a request or a Session without a request."

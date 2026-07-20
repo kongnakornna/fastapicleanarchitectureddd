@@ -25,8 +25,8 @@ class Session:
 
     # Application generated fields
     id: UUID = field(default=None, repr=True, compare=True)
-    created_at: datetime = field(default=None, repr=False, compare=True)
-    last_updated_at: datetime = field(default=None, repr=False, compare=False)
+    created_at: datetime | None = field(default=None, repr=False, compare=True)
+    last_updated_at: datetime | None = field(default=None, repr=False, compare=False)
     blacklisted: bool = field(init=False, default=False, repr=False, compare=False)
     token_type: TokenType = field(
         init=False, default=TokenType.BEARER, repr=False, compare=False
@@ -58,12 +58,12 @@ class Session:
 
 @dataclass(kw_only=True)
 class RefreshToken:
-    token: str = field(default=None, repr=False, compare=False)
-    hashed_jti: str = field(default=None, repr=False, compare=True)
-    previous_hashed_jti: str = field(default=None, repr=False, compare=True)
+    token: str | None = field(default=None, repr=False, compare=False)
+    hashed_jti: str | None = field(default=None, repr=False, compare=True)
+    previous_hashed_jti: str | None = field(default=None, repr=False, compare=True)
 
     # Application generated fields
-    replaced_by_token: UUID = field(default=None, repr=False, compare=False)
+    replaced_by_token: str | None = field(default=None, repr=False, compare=False)
     id: UUID = field(default=None, repr=True, compare=True)
     created_at: datetime = field(default=None, repr=False, compare=True)
     updated_at: datetime = field(default=None, repr=False, compare=False)

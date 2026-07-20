@@ -22,6 +22,7 @@ from loguru import logger
 from pwdlib import PasswordHash
 from fastapi.requests import Request
 
+from app.core.redis import is_blacklisted
 from app.core.settings import settings
 from app.modules.authentication.application.interfaces import IAuthenticationRepository
 from app.modules.authentication.domain.entities import (
@@ -48,9 +49,10 @@ from app.modules.authentication.presentation.exceptions import (
     RefreshTokenException,
     RefreshTokenMalformedError,
     RefreshTokenInvalidEndpoint,
+    InvalidApiKeyException,
 )
 from app.modules.shared.application.enums import Role
-from app.modules.shared.presentation.dependencies import get_authentication_repository
+from app.modules.shared.presentation.dependencies import get_authentication_repository, get_shared_use_cases
 from app.modules.shared.presentation.exceptions import StandardException
 from app.modules.user.domain.entities import User
 
@@ -512,14 +514,32 @@ async def authenticate_user(
             f"Authenticating user for endpoint '{request.url.path}' with method '{request.method}'."
         )
 
-        token = request.cookies.get(settings.COOKIES_ACCESS_TOKEN_KEY, None)
+        token = None
         device = request.cookies.get(settings.COOKIES_DEVICE_KEY, None)
 
-        if not token or not device:
+        auth_header = request.headers.get("Authorization", None)
+        if auth_header and auth_header.startswith("Bearer "):
+            token = auth_header[len("Bearer "):]
+            logger.debug(f"Token extracted from Authorization header.")
+        else:
+            token = request.cookies.get(settings.COOKIES_ACCESS_TOKEN_KEY, None)
+            if token:
+                logger.debug(f"Token extracted from cookies.")
+
+        if not token:
             raise AuthenticationCookiesNotProvidedException()
+
+        if not device:
+            device = "unknown"
 
         session: Session = await decode_nested_access_token(token)
         session: Session = await hash_tokens(session)
+
+        if await is_blacklisted(session.refresh_token.access_token.hashed_jti):
+            logger.info(
+                f"Blacklisted access token detected for hashed jti '{session.refresh_token.access_token.hashed_jti}'. Raising authentication token exception."
+            )
+            raise AuthenticationTokenInvalidException()
 
         session.device = device
         session.user_agent = (request.headers.get("user-agent") or "").lower().strip()
@@ -574,14 +594,32 @@ async def authenticate_manager(
             f"Authenticating manager for endpoint '{request.url.path}' with method '{request.method}'."
         )
 
-        token = request.cookies.get(settings.COOKIES_ACCESS_TOKEN_KEY, None)
+        token = None
         device = request.cookies.get(settings.COOKIES_DEVICE_KEY, None)
 
-        if not token or not device:
+        auth_header = request.headers.get("Authorization", None)
+        if auth_header and auth_header.startswith("Bearer "):
+            token = auth_header[len("Bearer "):]
+            logger.debug(f"Token extracted from Authorization header.")
+        else:
+            token = request.cookies.get(settings.COOKIES_ACCESS_TOKEN_KEY, None)
+            if token:
+                logger.debug(f"Token extracted from cookies.")
+
+        if not token:
             raise AuthenticationCookiesNotProvidedException()
+
+        if not device:
+            device = "unknown"
 
         session: Session = await decode_nested_access_token(token)
         session: Session = await hash_tokens(session)
+
+        if await is_blacklisted(session.refresh_token.access_token.hashed_jti):
+            logger.info(
+                f"Blacklisted access token detected for hashed jti '{session.refresh_token.access_token.hashed_jti}'. Raising authentication token exception."
+            )
+            raise AuthenticationTokenInvalidException()
 
         session.device = device
         session.user_agent = (request.headers.get("user-agent") or "").lower().strip()
@@ -644,14 +682,32 @@ async def authenticate_admin(
             f"Authenticating admin for endpoint '{request.url.path}' with method '{request.method}'."
         )
 
-        token = request.cookies.get(settings.COOKIES_ACCESS_TOKEN_KEY, None)
+        token = None
         device = request.cookies.get(settings.COOKIES_DEVICE_KEY, None)
 
-        if not token or not device:
+        auth_header = request.headers.get("Authorization", None)
+        if auth_header and auth_header.startswith("Bearer "):
+            token = auth_header[len("Bearer "):]
+            logger.debug(f"Token extracted from Authorization header.")
+        else:
+            token = request.cookies.get(settings.COOKIES_ACCESS_TOKEN_KEY, None)
+            if token:
+                logger.debug(f"Token extracted from cookies.")
+
+        if not token:
             raise AuthenticationCookiesNotProvidedException()
+
+        if not device:
+            device = "unknown"
 
         session: Session = await decode_nested_access_token(token)
         session: Session = await hash_tokens(session)
+
+        if await is_blacklisted(session.refresh_token.access_token.hashed_jti):
+            logger.info(
+                f"Blacklisted access token detected for hashed jti '{session.refresh_token.access_token.hashed_jti}'. Raising authentication token exception."
+            )
+            raise AuthenticationTokenInvalidException()
 
         session.device = device
         session.user_agent = (request.headers.get("user-agent") or "").lower().strip()
@@ -727,6 +783,12 @@ async def authenticate_refresh(
         session: Session = await decode_nested_refresh_token(token)
         session: Session = await hash_tokens(session)
 
+        if await is_blacklisted(session.refresh_token.hashed_jti):
+            logger.info(
+                f"Blacklisted refresh token detected for hashed jti '{session.refresh_token.hashed_jti}'. Raising authentication token exception."
+            )
+            raise AuthenticationTokenInvalidException()
+
         session.device = device
         session.user_agent = (request.headers.get("user-agent") or "").lower().strip()
 
@@ -779,6 +841,12 @@ async def authenticate_logout(
         session: Session = await decode_nested_access_token(token)
         session: Session = await hash_tokens(session)
 
+        if await is_blacklisted(session.refresh_token.access_token.hashed_jti):
+            logger.info(
+                f"Blacklisted access token detected for hashed jti '{session.refresh_token.access_token.hashed_jti}'. Raising authentication token exception."
+            )
+            raise AuthenticationTokenInvalidException()
+
         session.device = device
         session.user_agent = (request.headers.get("user-agent") or "").lower().strip()
 
@@ -821,3 +889,173 @@ async def authenticate_logout(
             "An error occurred during admin authentication process."
         )
         raise RefreshTokenException()
+
+
+# API KEY AUTHENTICATION
+async def authenticate_api_key(
+    request: Request,
+) -> None:
+    try:
+        logger.debug(
+            f"Authenticating API key for endpoint '{request.url.path}' with method '{request.method}'."
+        )
+
+        api_key = request.headers.get(settings.AUTH_API_KEY_HEADER, None)
+
+        if not api_key:
+            logger.info(
+                f"API key not provided for endpoint '{request.url.path}'. Raising exception."
+            )
+            raise InvalidApiKeyException()
+
+        if not hmac.compare_digest(api_key, settings.AUTH_API_KEY):
+            logger.info(
+                f"Invalid API key provided for endpoint '{request.url.path}'. Raising exception."
+            )
+            raise InvalidApiKeyException()
+
+        if not await has_access_to_endpoint(
+            request.url.path, request.method, Role.ADMIN
+        ):
+            if not await has_access_to_endpoint(
+                request.url.path, request.method, Role.MANAGER
+            ):
+                if not await has_access_to_endpoint(
+                    request.url.path, request.method, Role.USER
+                ):
+                    if not await has_access_to_endpoint(
+                        request.url.path, request.method
+                    ):
+                        logger.info(
+                            f"API key access attempt to endpoint '{request.url.path}' with method '{request.method}' that is not in the allowed paths. Raising exception."
+                        )
+                        raise UserHasNotPermissionException()
+
+        logger.debug(
+            f"API key authenticated successfully for endpoint '{request.url.path}'."
+        )
+        return None
+    except StandardException:
+        raise
+    except Exception as e:
+        logger.opt(exception=e).error(
+            "An error occurred during API key authentication process."
+        )
+        raise AuthenticationException()
+
+
+# COMBINED AUTHENTICATION (API Key or JWT Token)
+async def authenticate_user_or_api_key(
+    request: Request,
+    repository: IAuthenticationRepository = Depends(get_authentication_repository),
+    shared_service: "SharedUseCases" = Depends(get_shared_use_cases),
+) -> User:
+    try:
+        logger.debug(
+            f"Authenticating user via API key or JWT token for endpoint '{request.url.path}'."
+        )
+
+        api_key = request.headers.get(settings.AUTH_API_KEY_HEADER, None)
+
+        if api_key:
+            logger.debug(f"API key provided for endpoint '{request.url.path}'.")
+
+            if not hmac.compare_digest(api_key, settings.AUTH_API_KEY):
+                logger.info(
+                    f"Invalid API key provided for endpoint '{request.url.path}'. Raising exception."
+                )
+                raise InvalidApiKeyException()
+
+            admin_user = User(email=settings.AUTH_API_KEY_DEFAULT_ADMIN_EMAIL)
+            db_user: User = await shared_service.get_user_by_email(admin_user)
+
+            if db_user is None:
+                logger.info(
+                    f"Default admin user '{settings.AUTH_API_KEY_DEFAULT_ADMIN_EMAIL}' not found. Raising exception."
+                )
+                raise InvalidApiKeyException()
+
+            if db_user.role != Role.ADMIN:
+                logger.info(
+                    f"Default admin user '{settings.AUTH_API_KEY_DEFAULT_ADMIN_EMAIL}' does not have ADMIN role. Raising exception."
+                )
+                raise UserHasNotPermissionException()
+
+            logger.debug(
+                f"API key authenticated successfully for admin user '{db_user.email}'."
+            )
+            return db_user
+
+        logger.debug(
+            f"No API key provided, falling back to JWT token authentication for endpoint '{request.url.path}'."
+        )
+
+        token = None
+        device = request.cookies.get(settings.COOKIES_DEVICE_KEY, None)
+
+        auth_header = request.headers.get("Authorization", None)
+        if auth_header and auth_header.startswith("Bearer "):
+            token = auth_header[len("Bearer "):]
+            logger.debug(f"Token extracted from Authorization header.")
+        else:
+            token = request.cookies.get(settings.COOKIES_ACCESS_TOKEN_KEY, None)
+            if token:
+                logger.debug(f"Token extracted from cookies.")
+
+        if not token:
+            raise AuthenticationCookiesNotProvidedException()
+
+        if not device:
+            device = "unknown"
+
+        session: Session = await decode_nested_access_token(token)
+        session: Session = await hash_tokens(session)
+
+        if await is_blacklisted(session.refresh_token.access_token.hashed_jti):
+            logger.info(
+                f"Blacklisted access token detected for hashed jti '{session.refresh_token.access_token.hashed_jti}'. Raising authentication token exception."
+            )
+            raise AuthenticationTokenInvalidException()
+
+        session.device = device
+        session.user_agent = (request.headers.get("user-agent") or "").lower().strip()
+
+        db_session: Optional[Session] = await repository.get_access_token_by_session(
+            session
+        )
+
+        if (
+            db_session is None
+            or db_session.refresh_token is None
+            or db_session.refresh_token.access_token is None
+        ):
+            logger.info(
+                f"Access token with hashed jti '{session.refresh_token.access_token.hashed_jti}' not found in database. Raising authentication token exception."
+            )
+            raise AuthenticationTokenInvalidException()
+
+        session: Session = db_session
+
+        if not session.user.role == session.refresh_token.access_token.permission:
+            logger.info(
+                f"User '{session.user.email}' attempted to access endpoint '{request.url.path}' with method '{request.method}' with modified role. Raising authentication exception."
+            )
+            raise ModifiedTokenException()
+
+        if not await has_access_to_endpoint(
+            request.url.path, request.method, session.user.role
+        ):
+            logger.info(
+                f"User '{session.user.email}' attempted to access endpoint '{request.url.path}' with method '{request.method}' that is not in the allowed paths. Raising authentication exception."
+            )
+            raise UserHasNotPermissionException()
+
+        logger.debug(f"User '{session.user.email}' authenticated successfully via JWT token.")
+        return session.user
+    except StandardException:
+        raise
+    except Exception as e:
+        logger.opt(exception=e).error(
+            "An error occurred during combined authentication process."
+        )
+        raise AuthenticationException()

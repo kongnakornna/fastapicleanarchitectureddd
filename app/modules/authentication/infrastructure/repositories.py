@@ -6,14 +6,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
 from app.modules.authentication.application.interfaces import IAuthenticationRepository
-from app.modules.authentication.domain.entities import (
-    Session,
-)
+from app.modules.authentication.domain.entities import Session
 from app.modules.authentication.domain.mappers import model_entity_mapper
 from app.modules.authentication.infrastructure.models import (
-    SessionModel,
-    RefreshTokenModel,
     AccessTokenModel,
+    RefreshTokenModel,
+    SessionModel,
 )
 from app.modules.authentication.presentation.exceptions import AuthenticationException
 from app.modules.shared.presentation.exceptions import StandardException
@@ -30,7 +28,7 @@ class PostgresSessionRepository(IAuthenticationRepository):
                 f"Creating session for user {session.user.email.__str__()} with device {session.device} and user agent {session.user_agent} in database."
             )
 
-            db_session: SessionModel = await model_entity_mapper(session)
+            db_session = await model_entity_mapper(session)  # type: ignore[assignment]
 
             self.session.add(db_session)
             await self.session.flush()
@@ -81,12 +79,19 @@ class PostgresSessionRepository(IAuthenticationRepository):
                 )
                 return None
 
-            session: Session = await model_entity_mapper(session_model)
+            mapped_session = await model_entity_mapper(session_model)
+            mapped_session = mapped_session if isinstance(mapped_session, Session) else None
+
+            if mapped_session is None:
+                logger.info(
+                    f"Failed to map session model for user {session.user.email}."
+                )
+                return None
 
             logger.info(
-                f"Session retrieved successfully for user {session.user.email} with device {session.device} and user agent {session.user_agent} from database."
+                f"Session retrieved successfully for user {mapped_session.user.email} with device {mapped_session.device} and user agent {mapped_session.user_agent} from database."
             )
-            return session
+            return mapped_session
         except StandardException:
             raise
         except Exception as e:
@@ -107,14 +112,13 @@ class PostgresSessionRepository(IAuthenticationRepository):
             conditions = [
                 AccessTokenModel.hashed_jti
                 == session.refresh_token.access_token.hashed_jti,
-                SessionModel.user_agent == session.user_agent,
                 SessionModel.user_id == session.user.id,
                 AccessTokenModel.revoked.is_(False),
                 RefreshTokenModel.revoked.is_(False),
                 SessionModel.blacklisted.is_(False),
             ]
 
-            if session.device is not None:
+            if session.device is not None and session.device != "unknown":
                 conditions.append(SessionModel.device == session.device)
 
             statement = (
@@ -139,12 +143,19 @@ class PostgresSessionRepository(IAuthenticationRepository):
                 )
                 return None
 
-            session: Session = await model_entity_mapper(session_model)
+            mapped_session = await model_entity_mapper(session_model)
+            mapped_session = mapped_session if isinstance(mapped_session, Session) else None
+
+            if mapped_session is None:
+                logger.info(
+                    "Failed to map session model."
+                )
+                return None
 
             logger.info(
-                f"Session retrieved successfully for access token with ID {session.refresh_token.access_token.id} and device {session.device}."
+                f"Session retrieved successfully for access token with ID {mapped_session.refresh_token.access_token.id} and device {mapped_session.device}."
             )
-            return session
+            return mapped_session
         except StandardException:
             raise
         except Exception as e:
@@ -170,7 +181,7 @@ class PostgresSessionRepository(IAuthenticationRepository):
                 SessionModel.blacklisted.is_(False),
             ]
 
-            if session.device is not None:
+            if session.device is not None and session.device != "unknown":
                 conditions.append(SessionModel.device == session.device)
 
             statement = (
@@ -194,12 +205,13 @@ class PostgresSessionRepository(IAuthenticationRepository):
                 )
                 return None
 
-            session: Session = await model_entity_mapper(session_model)
+            mapped_session = await model_entity_mapper(session_model)
+            mapped_session = mapped_session if isinstance(mapped_session, Session) else None
 
             logger.info(
                 f"Session retrieved successfully for refresh token with ID {session.id} and device {session.device}."
             )
-            return session
+            return mapped_session
         except StandardException:
             raise
         except Exception as e:
@@ -216,7 +228,7 @@ class PostgresSessionRepository(IAuthenticationRepository):
                 f"with device {session.device} and user agent {session.user_agent} in database."
             )
 
-            db_session: SessionModel = await model_entity_mapper(session)
+            db_session = await model_entity_mapper(session)  # type: ignore[assignment]
 
             await self.session.merge(db_session)
             await self.session.flush()
@@ -245,7 +257,7 @@ class PostgresSessionRepository(IAuthenticationRepository):
             session.refresh_token.revoke()
             session.refresh_token.access_token.revoke()
 
-            db_session: SessionModel = await model_entity_mapper(session)
+            db_session = await model_entity_mapper(session)  # type: ignore[assignment]
 
             await self.session.merge(db_session)
             await self.session.flush()

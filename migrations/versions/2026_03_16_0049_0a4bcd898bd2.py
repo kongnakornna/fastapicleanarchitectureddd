@@ -23,6 +23,8 @@ down_revision: Union[str, Sequence[str], None] = "f7ea2294d326"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
+TABLE_PREFIX = "app"
+
 
 def upgrade() -> None:
     conn = op.get_bind()
@@ -30,7 +32,7 @@ def upgrade() -> None:
 
     conn.execute(
         sa.text(f"""
-                    INSERT INTO {settings.APPLICATION_TABLE_PREFIX}_users 
+                    INSERT INTO {TABLE_PREFIX}_users 
                     (id, first_name, last_name, preferred_name, gender, birthdate, email, hashed_password, role, is_active, created_at, updated_at)
                     VALUES 
                     (:id, :first_name, :last_name, :preferred_name, :gender, :birthdate, :email, :hashed_password, :role, :is_active, now(), now())
@@ -54,7 +56,7 @@ def downgrade() -> None:
     conn = op.get_bind()
     conn.execute(
         sa.text(
-            f"DELETE FROM {settings.APPLICATION_TABLE_PREFIX}_users WHERE email = :email"
+            f"DELETE FROM {TABLE_PREFIX}_users WHERE email = :email"
         ),
         {"email": settings.SECURITY_ADMIN_EMAIL},
     )

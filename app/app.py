@@ -14,6 +14,7 @@ from app.core.middleware import (
     log_request_middleware,
     ResponseFormattingMiddleware,
     DeviceIdMiddleware,
+    RateLimitMiddleware,
 )
 from app.core.resources import lifespan
 from app.core.settings import settings
@@ -60,6 +61,7 @@ app.add_middleware(
 app.add_middleware(ResponseFormattingMiddleware)
 app.add_middleware(BaseHTTPMiddleware, dispatch=log_request_middleware)
 app.add_middleware(DeviceIdMiddleware)
+app.add_middleware(RateLimitMiddleware)
 
 
 # ROUTERS
@@ -124,12 +126,13 @@ def custom_openapi():
             "type": "http",
             "scheme": "bearer",
             "bearerFormat": "JWT",
+            "description": "JWT access token. Paste the token from login response. Can also be set via HttpOnly cookie.",
         },
         settings.AUTH_API_KEY_SCHEME_NAME: {
             "type": "apiKey",
             "in": "header",
             "name": settings.AUTH_API_KEY_HEADER,
-            "description": "API Key necessary to access the API endpoints.",
+            "description": "API key for service-to-service authentication. Uses the default admin user.",
         },
     }
 

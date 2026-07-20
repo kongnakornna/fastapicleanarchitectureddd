@@ -11,6 +11,12 @@ from app.modules.authentication.infrastructure.models import (
 from app.modules.health.infrastructure.models import AlembicModel
 from app.modules.shared.infrastructure.models import Base
 from app.modules.user.infrastructure.models import UserModel
+from app.modules.user.infrastructure.permission_models import (
+    RoleModel,
+    PermissionModel,
+    UserRoleModel,
+    RolePermissionModel,
+)
 
 
 _ = [
@@ -19,6 +25,10 @@ _ = [
     RefreshTokenModel,
     SessionModel,
     UserModel,
+    RoleModel,
+    PermissionModel,
+    UserRoleModel,
+    RolePermissionModel,
 ]
 
 config = context.config

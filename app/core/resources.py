@@ -11,6 +11,7 @@ from app.core.database import (
 from app.core.logging import init_loguru
 from app.core.migrations import init_alembic_management
 from app.core.key_management import init_security_keys
+from app.core.redis import get_redis, close_redis
 from app.core.settings import settings
 from app.modules.shared.application.enums import ApplicationEnvironment
 
@@ -46,6 +47,9 @@ async def startup(app: FastAPI) -> None:
         await init_alembic_management()
         logger.info("Migration management initialized successfully.")
 
+        await get_redis()
+        logger.info("Redis client initialized successfully.")
+
         logger.info(f"{settings.APPLICATION_TITLE} is ready to serve requests.")
     except Exception as e:
         logger.opt(exception=e).error(
@@ -60,6 +64,9 @@ async def shutdown() -> None:
 
         await close_database_client()
         logger.info("Database client closed successfully.")
+
+        await close_redis()
+        logger.info("Redis client closed successfully.")
 
         logger.info(f"{settings.APPLICATION_TITLE} has been shut down successfully.")
     except Exception as e:

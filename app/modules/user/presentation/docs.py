@@ -2,7 +2,7 @@ from http import HTTPStatus
 
 from fastapi import Security
 
-from app.core.security import authenticate_user, no_authentication
+from app.core.security import authenticate_user, authenticate_user_or_api_key
 from app.modules.shared.application.enums import ResponseMessages, Role
 from app.modules.shared.presentation.schemas import StandardResponse
 from app.modules.user.application.enums import Gender
@@ -218,11 +218,12 @@ router_docs = {
 create_docs = {
     "summary": "Endpoint to create a new user.",
     "description": "Create a new user in the system with the provided details.",
-    "dependencies": [Security(no_authentication)],
+    "dependencies": [Security(authenticate_user)],
     "response_description": "The response contains only results metadata without user details.",
     "status_code": HTTPStatus.CREATED,
     "response_model": CreateResponse,
     "include_in_schema": True,
+    "openapi_extra": {"security": [{"BearerAuth": []}]},
     "responses": {
         201: {
             "description": "Successful Response",
@@ -253,12 +254,13 @@ create_docs = {
 
 me_docs = {
     "summary": "Endpoint to get the details of the authenticated user.",
-    "description": "Get the details of the authenticated user.",
-    "dependencies": [Security(authenticate_user)],
+    "description": "Get the details of the authenticated user. Supports both JWT token (Bearer header) and API key (X-API-Key header) authentication.",
+    "dependencies": [Security(authenticate_user_or_api_key)],
     "response_description": "The response contains the details of the authenticated user.",
     "status_code": HTTPStatus.OK,
     "response_model": MeResponse,
     "include_in_schema": True,
+    "openapi_extra": {"security": [{"BearerAuth": []}, {"ApiKeyAuth": []}]},
     "responses": {
         200: {
             "description": "Successful Response",

@@ -18,10 +18,15 @@ down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
+TABLE_PREFIX = "app"
+
 
 def upgrade() -> None:
+    op.execute("DROP TYPE IF EXISTS gender_enum")
+    op.execute("DROP TYPE IF EXISTS role_enum")
+
     op.create_table(
-        "fastapi_clean_architecture_ddd_template_users",
+        f"{TABLE_PREFIX}_users",
         sa.Column(
             "first_name",
             sa.String(length=100),
@@ -99,7 +104,7 @@ def upgrade() -> None:
         sa.UniqueConstraint("email", "is_active", name="uq_users_email_is_active"),
     )
     op.create_table(
-        "fastapi_clean_architecture_ddd_template_sessions",
+        f"{TABLE_PREFIX}_sessions",
         sa.Column(
             "id",
             sa.UUID(),
@@ -183,7 +188,7 @@ def upgrade() -> None:
         ),
         sa.ForeignKeyConstraint(
             ["user_id"],
-            ["fastapi_clean_architecture_ddd_template_users.id"],
+            [f"{TABLE_PREFIX}_users.id"],
             ondelete="CASCADE",
         ),
         sa.PrimaryKeyConstraint("id"),
@@ -196,12 +201,12 @@ def upgrade() -> None:
     )
     op.create_index(
         "ix_sessions_user_id_user_agent_device",
-        "fastapi_clean_architecture_ddd_template_sessions",
+        f"{TABLE_PREFIX}_sessions",
         ["user_id", "user_agent", "device"],
         unique=False,
     )
     op.create_table(
-        "fastapi_clean_architecture_ddd_template_refresh_tokens",
+        f"{TABLE_PREFIX}_refresh_tokens",
         sa.Column(
             "id",
             sa.UUID(),
@@ -258,14 +263,14 @@ def upgrade() -> None:
         ),
         sa.ForeignKeyConstraint(
             ["session_id"],
-            ["fastapi_clean_architecture_ddd_template_sessions.id"],
+            [f"{TABLE_PREFIX}_sessions.id"],
             ondelete="CASCADE",
         ),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("session_id", name="uq_refresh_tokens_session_id"),
     )
     op.create_table(
-        "fastapi_clean_architecture_ddd_template_access_tokens",
+        f"{TABLE_PREFIX}_access_tokens",
         sa.Column(
             "id",
             sa.UUID(),
@@ -299,7 +304,7 @@ def upgrade() -> None:
             sa.DateTime(timezone=True),
             server_default=sa.text("now()"),
             nullable=False,
-            comment="Timestamp when the access token was created",
+            comment="Timestamp when the record was created",
         ),
         sa.Column(
             "expires_at",
@@ -321,7 +326,7 @@ def upgrade() -> None:
         ),
         sa.ForeignKeyConstraint(
             ["refresh_id"],
-            ["fastapi_clean_architecture_ddd_template_refresh_tokens.id"],
+            [f"{TABLE_PREFIX}_refresh_tokens.id"],
             ondelete="CASCADE",
         ),
         sa.PrimaryKeyConstraint("id"),
@@ -331,7 +336,7 @@ def upgrade() -> None:
     )
     op.create_index(
         "ix_hashed_jti",
-        "fastapi_clean_architecture_ddd_template_access_tokens",
+        f"{TABLE_PREFIX}_access_tokens",
         ["hashed_jti"],
         unique=False,
     )
@@ -340,13 +345,15 @@ def upgrade() -> None:
 def downgrade() -> None:
     op.drop_index(
         "ix_hashed_jti",
-        table_name="fastapi_clean_architecture_ddd_template_access_tokens",
+        table_name=f"{TABLE_PREFIX}_access_tokens",
     )
-    op.drop_table("fastapi_clean_architecture_ddd_template_access_tokens")
-    op.drop_table("fastapi_clean_architecture_ddd_template_refresh_tokens")
+    op.drop_table(f"{TABLE_PREFIX}_access_tokens")
+    op.drop_table(f"{TABLE_PREFIX}_refresh_tokens")
     op.drop_index(
         "ix_sessions_user_id_user_agent_device",
-        table_name="fastapi_clean_architecture_ddd_template_sessions",
+        table_name=f"{TABLE_PREFIX}_sessions",
     )
-    op.drop_table("fastapi_clean_architecture_ddd_template_sessions")
-    op.drop_table("fastapi_clean_architecture_ddd_template_users")
+    op.drop_table(f"{TABLE_PREFIX}_sessions")
+    op.drop_table(f"{TABLE_PREFIX}_users")
+    op.execute("DROP TYPE IF EXISTS role_enum")
+    op.execute("DROP TYPE IF EXISTS gender_enum")

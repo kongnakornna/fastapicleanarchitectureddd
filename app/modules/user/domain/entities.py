@@ -5,13 +5,14 @@ from uuid import UUID
 
 from app.modules.shared.application.enums import Role
 from app.modules.shared.presentation.exceptions import DomainError
-from app.modules.user.application.enums import Gender
+from app.modules.user.application.enums import Gender, UserStatus
 from app.modules.user.domain.value_objects import Name, Email, Phone
 
 
 @dataclass(kw_only=True, slots=True)
 class User:
     name: Name = field(default=None, repr=True, compare=False)
+    username: str = field(default=None, repr=True, compare=True)
     gender: Gender = field(default=None, repr=False, compare=False)
     birthdate: date = field(default=None, repr=True, compare=False)
     email: Union[Email, str] = field(default=None, repr=True, compare=True)
@@ -22,7 +23,7 @@ class User:
     id: UUID = field(default=None, repr=True, compare=True)
     created_at: datetime = field(default=None, repr=False, compare=True)
     updated_at: datetime = field(default=None, repr=False, compare=False)
-    is_active: bool = field(init=False, default=True, repr=False, compare=False)
+    status: UserStatus = field(default=UserStatus.ACTIVE, repr=False, compare=False)
     hashed_password: str = field(default=None, repr=False, compare=False)
     role: Role = field(default=Role.USER, repr=False, compare=False)
 

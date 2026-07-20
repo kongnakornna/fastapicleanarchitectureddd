@@ -623,7 +623,7 @@ async def login(
 This README aimed to cover **all aspects of the architecture** of the **fastapi-clean-architecture-ddd-template** project, including the purpose of each folder/file and best practices for implementation and maintenance. To recap some key points:
 
 * The architecture follows **Clean Architecture** principles, separating domain, application, infrastructure, and presentation layers, making the code more modular, testable, and resilient to change.
-* Each feature module inside `app/modules` is internally structured consistently, making it easy to add new modules following the example's model.
+* Each feature module inside `app/modules` is internally structured consistently, making it easy to add new modules following the example's model.migrations
 * Central config files (`core`) allow managing cross-cutting concerns (config, DB, logging, security) in a unified way.
 * Dependency management via **uv** ensures reproducibility and ease of updating packages, while quality tools like **Ruff** keep the code standardized.
 * The template already provides integration with Docker, .env for configuration, and test structure – take advantage of this by always writing tests when adding features, and ensuring they all pass before integrating changes.

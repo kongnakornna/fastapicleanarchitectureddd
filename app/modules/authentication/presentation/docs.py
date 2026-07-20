@@ -4,15 +4,18 @@ from fastapi import Security
 
 from app.core.security import (
     no_authentication,
+    authenticate_user,
     authenticate_refresh,
     authenticate_logout,
 )
 from app.modules.authentication.presentation.schemas import (
     LoginResponse,
     LogoutResponse,
+    RegisterResponse,
 )
 from app.modules.shared.application.enums import ResponseMessages
 from app.modules.shared.presentation.schemas import StandardResponse
+from app.modules.user.presentation.schemas import MeResponse
 
 # MODULE DOCS
 router_docs = {
@@ -225,19 +228,19 @@ login_docs = {
     "summary": "Endpoint to login a user.",
     "description": (
         "Authenticate a user and initiate a login session. "
-        "Authentication tokens are returned via HttpOnly cookies."
+        "Authentication tokens are returned in the response body and also set as HttpOnly cookies."
     ),
     "dependencies": [Security(no_authentication)],
     "response_description": (
-        "Successful authentication. Access/refresh tokens are set in cookies and "
-        "the JSON body returns a minimal confirmation message."
+        "Successful authentication. Access/refresh tokens are returned in the JSON body "
+        "and also set as cookies."
     ),
     "status_code": HTTPStatus.OK,
     "response_model": LoginResponse,
     "include_in_schema": True,
     "responses": {
         200: {
-            "description": "Successful login response (cookies + minimal JSON body)",
+            "description": "Successful login response (tokens in body + cookies)",
             "model": LoginResponse,
             "headers": {
                 "Set-Cookie": {
@@ -253,8 +256,13 @@ login_docs = {
                 "application/json": {
                     "examples": {
                         "Login Success": {
-                            "summary": "Minimal login response body",
-                            "value": {"message": ResponseMessages.LOGIN_SUCCESS.value},
+                            "summary": "Login response with tokens",
+                            "value": {
+                                "message": ResponseMessages.LOGIN_SUCCESS.value,
+                                "token_type": "Bearer",
+                                "access_token": "eyJhbGciOiJSUzI1NiIsInR5cCI6...",
+                                "refresh_token": "eyJhbGciOiJSUzI1NiIsInR5cCI6...",
+                            },
                         }
                     }
                 }
@@ -279,6 +287,7 @@ refresh_docs = {
     "status_code": HTTPStatus.OK,
     "response_model": LoginResponse,
     "include_in_schema": True,
+    "openapi_extra": {"security": [{"BearerAuth": []}]},
     "responses": {
         200: {
             "description": "Successful refresh response (cookies + minimal JSON body)",
@@ -318,6 +327,93 @@ refresh_docs = {
     },
 }
 
+register_docs = {
+    "summary": "Endpoint to register a new user.",
+    "description": (
+        "Create a new user account. The user must provide a unique email, "
+        "username, and a strong password."
+    ),
+    "dependencies": [Security(no_authentication)],
+    "response_description": "The response contains only a success message.",
+    "status_code": HTTPStatus.CREATED,
+    "response_model": RegisterResponse,
+    "include_in_schema": True,
+    "responses": {
+        201: {
+            "description": "Successful Response",
+            "model": RegisterResponse,
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "User Registered Successfully": {
+                            "summary": "User Registered Successfully",
+                            "value": {
+                                "code": 201,
+                                "method": "POST",
+                                "path": "/api/v1/authentication/register",
+                                "timestamp": "2025-01-15T10:30:00Z",
+                                "details": {
+                                    "message": ResponseMessages.CREATED.value,
+                                    "data": {},
+                                },
+                            },
+                        },
+                    }
+                }
+            },
+        },
+    },
+}
+
+
+me_docs = {
+    "summary": "Endpoint to get the details of the authenticated user.",
+    "description": "Get the details of the authenticated user. Requires a valid JWT token via Bearer header or cookies.",
+    "dependencies": [Security(authenticate_user)],
+    "response_description": "The response contains the details of the authenticated user.",
+    "status_code": HTTPStatus.OK,
+    "response_model": MeResponse,
+    "include_in_schema": True,
+    "openapi_extra": {"security": [{"BearerAuth": []}]},
+    "responses": {
+        200: {
+            "description": "Successful Response",
+            "model": MeResponse,
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "User Details Retrieved Successfully": {
+                            "summary": "User Details Retrieved Successfully",
+                            "value": {
+                                "code": 200,
+                                "method": "GET",
+                                "path": "/api/v1/authentication/me",
+                                "timestamp": "2025-01-15T10:30:00Z",
+                                "details": {
+                                    "message": ResponseMessages.SUCCESS.value,
+                                    "data": {
+                                        "first_name": "John",
+                                        "last_name": "Doe",
+                                        "preferred_name": "Joe",
+                                        "username": "johndoe",
+                                        "gender": "male",
+                                        "birthdate": "1995-01-01",
+                                        "email": "johndoe@domain.com",
+                                        "phone": "+555472664275",
+                                        "role": "admin",
+                                        "created_at": "2024-05-01T12:00:00Z",
+                                    },
+                                },
+                            },
+                        }
+                    }
+                }
+            },
+        }
+    },
+}
+
+
 logout_docs = {
     "summary": "Endpoint to logout a user.",
     "description": (
@@ -332,6 +428,7 @@ logout_docs = {
     "status_code": HTTPStatus.OK,
     "response_model": LogoutResponse,
     "include_in_schema": True,
+    "openapi_extra": {"security": [{"BearerAuth": []}]},
     "responses": {
         200: {
             "description": "Successful logout response (cookies removed + minimal JSON body)",
