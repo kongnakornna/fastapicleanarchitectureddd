@@ -17,7 +17,14 @@ from app.modules.shared.presentation.schemas import (
 
 async def validation_exception_handler(request: Request, exc: Exception) -> Response:
     err = cast(RequestValidationError, exc)
-    errors = {e["loc"][-1]: e["msg"] for e in err.errors()}
+    errors = {}
+    for e in err.errors():
+        loc = e["loc"]
+        if len(loc) == 1:
+            key = str(loc[0])
+        else:
+            key = str(loc[-1]) if isinstance(loc[-1], str) else str(loc[0])
+        errors[key] = e["msg"]
 
     response_content = StandardResponse(
         code=HTTPStatus.UNPROCESSABLE_ENTITY,

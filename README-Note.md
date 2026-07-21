@@ -2,11 +2,23 @@
 
 FastAPI backend template สำหรับสร้าง application ขนาดใหญ่ที่มีความเป็นโมดูลาร์และ scale ได้ ใช้หลักการ **Clean Architecture** และ **Domain-Driven Design (DDD)** แยกชั้น domain, application, infrastructure, presentation ออกจากกันอย่างชัดเจน
 
+uv run -- uvicorn app.app:app --reload
 ---
 U: kongnakorn
 P: Na@1234@#
 T: password
 
+{
+  "birthdate": "1995-01-01",
+  "email": "admindev@gmail.com",
+  "first_name": "admindev",
+  "gender": "male",
+  "last_name": "dev",
+  "password": "P@ssword123",
+  "phone": "+66955088091",
+  "preferred_name": "Joeadmin",
+  "username": "admindev"
+}
 
 ## เนื้อหา
 
@@ -539,3 +551,30 @@ alembic downgrade -1
 - ใช้ **uv** สำหรับจัดการ dependencies
 - มี integration กับ Docker, .env, และโครงสร้าง test พร้อมใช้
 - เขียนโค้ดตาม **PEP8**, มี documentation, type hints, และแยกความรับผิดชอบชัดเจน
+
+เป้าหมาย แปลงโค้ดจาก Golang ไปเป็น Python ต้องปรับเปลี่ยนโครงสร้างหลัก
+อ่าน 
+C:\github\icmongolang\internal\modules\influxdb
+C:\github\icmongolang\internal\modules\iot
+C:\github\icmongolang\internal\modules\queue
+C:\github\icmongolang\internal\modules\mqtt
+
+C:\github\icmongolang\pkg\influxdb
+C:\github\icmongolang\pkg\mqtt
+C:\github\icmongolang\pkg\httpErrors
+C:\github\icmongolang\pkg\utils
+C:\github\icmongolang\pkg\helpers
+C:\github\icmongolang\pkg\helpers
+ย้ายมา
+C:\github\fastapiddd
+1.เขียนคู่มมือ  ไว้ใน C:\github\fastapiddd\docs
+2.เป้าหมาย แปลงโค้ดจาก Golang ไปเป็น Python ต้องปรับเปลี่ยนโครงสร้างหลัก
+3.databse setup
+
+
+
+1.migrations databse
+2.เขียนคู่มมือ  ไว้ใน C:\github\fastapiddd\docs
+3.unittest 
+4.update  swagger
+

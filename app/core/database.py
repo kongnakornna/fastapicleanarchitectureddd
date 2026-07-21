@@ -15,7 +15,7 @@ pg_engine = create_engine(
     settings.POSTGRESQL_DATABASE_URL,
     pool_pre_ping=True,
     echo=settings.APPLICATION_ENVIRONMENT_DEBUG,
-    connect_args={"options": "-c timezone=America/Sao_Paulo"},
+    connect_args={"options": "-c timezone=asia/bangkok"},
     future=True,
 )
 
@@ -54,7 +54,7 @@ pg_async_engine = create_async_engine(
     settings.POSTGRESQL_ASYNC_DATABASE_URL,
     pool_pre_ping=True,
     echo=settings.APPLICATION_ENVIRONMENT_DEBUG,
-    connect_args={"server_settings": {"timezone": "America/Sao_Paulo"}},
+    connect_args={"server_settings": {"timezone": "asia/bangkok"}},
     future=True,
 )
 

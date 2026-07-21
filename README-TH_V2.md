@@ -1,11 +1,11 @@
 # FastAPI Clean Architecture + Domain-Driven Design Template
 
 FastAPI backend template สำหรับสร้าง application ขนาดใหญ่ที่มีความเป็นโมดูลาร์และ scale ได้ ใช้หลักการ **Clean Architecture** และ **Domain-Driven Design (DDD)** แยกชั้น domain, application, infrastructure, presentation ออกจากกันอย่างชัดเจน
-
----
 U: kongnakorn
 P: Na@1234@#
 T: password
+
+uv run -- uvicorn app.app:app --reload---
 
 
 ## เนื้อหา

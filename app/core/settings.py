@@ -90,6 +90,27 @@ class Settings(BaseSettings):
     RATE_LIMIT_AUTH_WINDOW_SECONDS: int = 60
     RATE_LIMIT_HEALTH_REQUESTS: int = 0
 
+    # INFLUXDB
+    INFLUXDB_URL: str = "http://localhost:8086"
+    INFLUXDB_TOKEN: str = ""
+    INFLUXDB_ORG: str = "my-org"
+    INFLUXDB_BUCKET: str = "iot_sensors"
+    INFLUXDB_TIMEOUT: int = 30
+
+    # MQTT
+    MQTT_BROKER: str = "tcp://localhost:1883"
+    MQTT_CLIENT_ID: str = ""
+    MQTT_USERNAME: str = ""
+    MQTT_PASSWORD: str = ""
+    MQTT_KEEPALIVE: int = 30
+    MQTT_CLEAN_SESSION: bool = True
+    MQTT_AUTO_RECONNECT: bool = True
+
+    # QUEUE
+    QUEUE_TYPE: str = "redis"  # redis | noop
+    QUEUE_REDIS_URL: str = "redis://localhost:6379/1"
+    QUEUE_MAX_RETRIES: int = 3
+
     # SECURITY SETTINGS
     SECURITY_ALLOW_ORIGINS: list[str]
     SECURITY_ALLOW_HEADERS: list[str]

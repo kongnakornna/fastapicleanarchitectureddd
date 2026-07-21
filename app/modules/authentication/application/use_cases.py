@@ -47,16 +47,16 @@ class AuthenticationUseCases:
                 f"Initializing user login use case for user: {session.user.email} in device: {session.device}."
             )
 
-            db_user: User = await self.shared_service.get_user_by_username(session.user)
+            db_user: User | None = await self.shared_service.get_user_by_username(session.user)
 
-            if not await verify_password(
+            if not db_user or not await verify_password(
                 session.user.password, db_user.hashed_password
             ):
                 logger.info("User password does not match, raising exception.")
                 raise SessionInvalidCredentialsException()
 
             session.user = db_user
-            session_from_db: Session = (
+            session_from_db: Session | None = (
                 await self.repository.get_by_user_id_agent_and_device(session)
             )
 
@@ -166,14 +166,16 @@ class AuthenticationUseCases:
             session.refresh_token.generate_updated_at()
             await self.repository.delete(session)
 
-            await add_to_blacklist(
-                session.refresh_token.access_token.hashed_jti,
-                settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-            )
-            await add_to_blacklist(
-                session.refresh_token.hashed_jti,
-                settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS * 86400,
-            )
+            if session.refresh_token.access_token.hashed_jti:
+                await add_to_blacklist(
+                    session.refresh_token.access_token.hashed_jti,
+                    settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+                )
+            if session.refresh_token.hashed_jti:
+                await add_to_blacklist(
+                    session.refresh_token.hashed_jti,
+                    settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS * 86400,
+                )
 
             logger.debug(f"User {session.user.email} logged out successfully.")
             return session
