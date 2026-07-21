@@ -31,7 +31,7 @@ from app.modules.iot.presentation.schemas import (
     UpdateDeviceStatusRequest,
 )
 
-router = APIRouter(prefix="/mqtt3", tags=["IoT MQTT3"])
+router = APIRouter(prefix="/iot", tags=["IoT"])
 
 
 @router.get("/status")

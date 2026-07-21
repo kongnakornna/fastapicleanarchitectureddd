@@ -98,7 +98,7 @@ class Settings(BaseSettings):
     INFLUXDB_TIMEOUT: int = 30
 
     # MQTT
-    MQTT_BROKER: str = "tcp://localhost:1883"
+    MQTT_BROKER: str = "mqtt://localhost:1883"
     MQTT_CLIENT_ID: str = ""
     MQTT_USERNAME: str = ""
     MQTT_PASSWORD: str = ""

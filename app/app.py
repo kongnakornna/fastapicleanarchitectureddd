@@ -182,7 +182,7 @@ def custom_openapi():
                 "description": "Endpoints for managing user resources.",
             },
             {
-                "name": "IoT MQTT3",
+                "name": "IoT",
                 "description": "IoT device monitoring and control endpoints.",
             },
             {
