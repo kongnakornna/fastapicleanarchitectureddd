@@ -643,12 +643,13 @@ Happy coding! 🚀 And remember: a well-defined architecture is a guide, but it 
 
 
 
-![](images/paste-20260807-114238.png)
+![](images/paste-20260807-114238.png
 
 
 ![](images/paste-20260807-114249.png)
 
 
+![](images/paste-20260807-130526.png)
 
 
 ![](images/paste-20260807-114259.png)
