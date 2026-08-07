@@ -654,4 +654,10 @@ Happy coding! 🚀 And remember: a well-defined architecture is a guide, but it 
 
 ![](images/paste-20260807-114259.png)
 
+![](images/paste-20260807-155700.png)
+
+![](images/paste-20260807-155715.png)
+
+![](images/paste-20260807-155731.png)
+
 
