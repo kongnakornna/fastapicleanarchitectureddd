@@ -1,5 +1,5 @@
 # FastAPI Clean Architecture and Domain-Driven Design Template
-
+# http://localhost:8000/docs
 The **fastapi-clean-architecture-ddd-template** repository is a Python backend project template, aimed at applications that use FastAPI and potentially Artificial Intelligence components. This project serves as a foundation for creating new applications following a modular and scalable architecture, promoting separation of concerns and ease of maintenance. The architecture adopted is inspired by **Clean Architecture** and **Domain-Driven Design (DDD)** principles, organizing the code into well-defined layers: domain, application, infrastructure, and presentation, along with core configuration components.
 
 This README documents the project's structure, explaining the purpose of each folder and file, naming conventions, dependencies used, and best practices to follow. In the end, any team member should be able to understand the proposed architecture and know how to extend the template for new features without doubts.
