@@ -638,3 +638,19 @@ This README aimed to cover **all aspects of the architecture** of the **fastapi-
 With this template in hand, the team can start new projects faster and more uniformly, focusing on application-specific logic since the foundations (structure and basic config) are already prepared. Feel free to adjust details as needed for your specific project, but **maintain consistency** – this will make onboarding new devs easier and code sharing across sibling projects smoother.
 
 Happy coding! 🚀 And remember: a well-defined architecture is a guide, but it should always serve the software’s purpose. Use it with flexibility and good judgment. Any contributions or improvements to the template itself can be discussed with the team so we can continuously evolve our standard base. Good coding!
+
+![](images/paste-20260807-114226.png)
+
+
+
+![](images/paste-20260807-114238.png)
+
+
+![](images/paste-20260807-114249.png)
+
+
+
+
+![](images/paste-20260807-114259.png)
+
+
