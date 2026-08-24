@@ -825,3 +825,9 @@ alembic downgrade -1
 - ใช้ **uv** สำหรับจัดการ dependencies
 - มี integration กับ Docker, .env, และโครงสร้าง test พร้อมใช้
 - เขียนโค้ดตาม **PEP8**, มี documentation, type hints, และแยกความรับผิดชอบชัดเจน
+
+
+1. AI / ML Engineer (สายวิจัยและพัฒนาโมเดล)เน้นการสร้าง ปรับแต่ง (Fine-tuning) และฝึกฝนโมเดล AI เพื่อแก้โจทย์เฉพาะทางทักษะเดิมที่คุณมีประโยชน์: OOP, Python, Git, Data Structuresทักษะที่ต้องเรียนรู้เพิ่ม:Frameworks: TensorFlow, PyTorch, Scikit-LearnMath Fundamentals: Linear Algebra, Calculus, Statistics (ความน่าจะเป็นและสถิติ)Core Concepts: Deep Learning, NLP (ประมวลผลภาษา), Computer Vision (ประมวลผลภาพ)🚀
+2. MLOps Engineer (สายระบบและโครงสร้างพื้นฐาน)เน้นการนำโมเดล AI จาก Data Scientist ไปติดตั้ง จัดการ และดูแลระบบให้ทำงานได้อย่างเสถียรในโปรดักชัน (คล้าย DevOps แต่เป็นฝั่ง AI)ทักษะเดิมที่คุณมีประโยชน์: CI/CD, Docker, Linux, Cloud (AWS/GCP/Azure)ทักษะที่ต้องเรียนรู้เพิ่ม:ML Pipeline Tools: Kubeflow, MLflow, AirflowModel Deployment: API Engineering (FastAPI), Model Monitoring (ตรวจสอบประสิทธิภาพโมเดล)Vector Databases: Pinecone, Milvus (สำหรับงาน Generative AI)💡 3. AI Application Developer (สายประยุกต์ใช้ API)เน้นการนำ AI สำเร็จรูป (เช่น OpenAI, Claude) มาเชื่อมต่อเข้ากับ App หรือ Web ของธุรกิจเพื่อสร้างฟีเจอร์อัจฉริยะ เส้นทางนี้ย้ายสายได้เร็วที่สุดทักษะเดิมที่คุณมีประโยชน์: Web/Mobile Development, REST APIs, JSONทักษะที่ต้องเรียนรู้เพิ่ม:LLM Orchestration: LangChain, LlamaIndex (สำหรับสร้างระบบ Chatbot หรือ RAG ค้นหาข้อมูล)Advanced Prompting: เทคนิคเขียนคำสั่งควบคุม AI ระดับโปรแกรมมิ่งSemantic Search: การค้นหาข้อมูลตามความหมายด้วย Embedding
+
+
