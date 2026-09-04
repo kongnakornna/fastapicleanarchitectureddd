@@ -105,7 +105,7 @@ services:
     networks:
       - fastapi-clean-ddd-network
     ports:
-      - "9086:8086"
+      - "9088:8086"
     restart: unless-stopped
     volumes:
       - influxdb_data:/var/lib/influxdb2
