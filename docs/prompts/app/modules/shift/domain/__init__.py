@@ -1,1 +1,0 @@
-"""shift domain layer - pure business logic."""

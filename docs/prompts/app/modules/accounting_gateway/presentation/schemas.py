@@ -1,1 +1,0 @@
-# accounting_gateway/presentation/schemas.py from pydantic import BaseModel, ConfigDict   class accounting_gatewayCreate(BaseModel):     pass   class accounting_gatewayResponse(BaseModel):     model_config = ConfigDict(from_attributes=True)

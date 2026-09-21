@@ -1,1 +1,0 @@
-# analytics/application/exceptions.py from app.shared.exceptions import ApplicationException   class analyticsException(ApplicationException):     code = "anl_APP_ERROR"   class analyticsNotFoundException(analyticsException):     code = "anl_NOT_FOUND"

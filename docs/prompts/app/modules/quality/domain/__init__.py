@@ -1,1 +1,0 @@
-"""quality domain layer - pure business logic."""

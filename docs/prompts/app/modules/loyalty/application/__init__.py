@@ -1,1 +1,0 @@
-"""loyalty application layer - use cases + ports."""

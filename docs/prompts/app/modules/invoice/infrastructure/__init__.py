@@ -1,1 +1,0 @@
-"""invoice infrastructure layer."""

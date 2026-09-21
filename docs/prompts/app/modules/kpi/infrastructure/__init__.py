@@ -1,1 +1,0 @@
-"""kpi infrastructure layer."""

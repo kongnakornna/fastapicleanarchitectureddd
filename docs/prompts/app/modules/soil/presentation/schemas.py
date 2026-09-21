@@ -1,1 +1,0 @@
-# soil/presentation/schemas.py from pydantic import BaseModel, ConfigDict   class soilCreate(BaseModel):     pass   class soilResponse(BaseModel):     model_config = ConfigDict(from_attributes=True)

@@ -1,1 +1,0 @@
-# iot/presentation/routers.py from fastapi import APIRouter, Depends  from .dependencies import get_iot_use_cases  router = APIRouter(prefix="/api/v1/iot", tags=["iot"])   # TODO: Add endpoints

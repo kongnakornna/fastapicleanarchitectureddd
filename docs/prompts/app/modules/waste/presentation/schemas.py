@@ -1,1 +1,0 @@
-# waste/presentation/schemas.py from pydantic import BaseModel, ConfigDict   class wasteCreate(BaseModel):     pass   class wasteResponse(BaseModel):     model_config = ConfigDict(from_attributes=True)

@@ -1,1 +1,0 @@
-"""retail domain layer - pure business logic."""

@@ -1,1 +1,0 @@
-# backup/application/exceptions.py from app.shared.exceptions import ApplicationException   class backupException(ApplicationException):     code = "bkp_APP_ERROR"   class backupNotFoundException(backupException):     code = "bkp_NOT_FOUND"

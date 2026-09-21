@@ -1,1 +1,0 @@
-# employee/application/exceptions.py from app.shared.exceptions import ApplicationException   class employeeException(ApplicationException):     code = "emp_APP_ERROR"   class employeeNotFoundException(employeeException):     code = "emp_NOT_FOUND"

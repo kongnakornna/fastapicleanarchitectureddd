@@ -1,1 +1,0 @@
-# forecast/application/exceptions.py from app.shared.exceptions import ApplicationException   class forecastException(ApplicationException):     code = "fc_APP_ERROR"   class forecastNotFoundException(forecastException):     code = "fc_NOT_FOUND"

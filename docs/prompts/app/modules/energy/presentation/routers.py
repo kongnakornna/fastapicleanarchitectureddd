@@ -1,1 +1,0 @@
-# energy/presentation/routers.py from fastapi import APIRouter, Depends  from .dependencies import get_energy_use_cases  router = APIRouter(prefix="/api/v1/energy", tags=["energy"])   # TODO: Add endpoints

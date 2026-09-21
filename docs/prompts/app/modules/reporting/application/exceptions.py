@@ -1,1 +1,0 @@
-# reporting/application/exceptions.py from app.shared.exceptions import ApplicationException   class reportingException(ApplicationException):     code = "rpt_APP_ERROR"   class reportingNotFoundException(reportingException):     code = "rpt_NOT_FOUND"

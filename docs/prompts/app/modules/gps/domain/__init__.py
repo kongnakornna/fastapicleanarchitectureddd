@@ -1,1 +1,0 @@
-"""gps domain layer - pure business logic."""

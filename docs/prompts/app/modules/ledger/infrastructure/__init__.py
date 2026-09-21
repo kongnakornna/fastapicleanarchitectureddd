@@ -1,1 +1,0 @@
-"""ledger infrastructure layer."""

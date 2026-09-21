@@ -1,1 +1,0 @@
-"""promotion domain layer - pure business logic."""

@@ -1,1 +1,0 @@
-"""energy application layer - use cases + ports."""

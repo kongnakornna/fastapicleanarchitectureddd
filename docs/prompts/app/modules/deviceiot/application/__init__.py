@@ -1,1 +1,0 @@
-"""deviceiot application layer - use cases + ports."""

@@ -1,1 +1,0 @@
-# inventory/presentation/schemas.py from pydantic import BaseModel, ConfigDict   class inventoryCreate(BaseModel):     pass   class inventoryResponse(BaseModel):     model_config = ConfigDict(from_attributes=True)

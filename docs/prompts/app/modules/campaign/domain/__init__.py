@@ -1,1 +1,0 @@
-"""campaign domain layer - pure business logic."""

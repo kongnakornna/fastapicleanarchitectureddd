@@ -1,1 +1,0 @@
-# promotion/presentation/schemas.py from pydantic import BaseModel, ConfigDict   class promotionCreate(BaseModel):     pass   class promotionResponse(BaseModel):     model_config = ConfigDict(from_attributes=True)

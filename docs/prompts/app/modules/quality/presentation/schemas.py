@@ -1,1 +1,0 @@
-# quality/presentation/schemas.py from pydantic import BaseModel, ConfigDict   class qualityCreate(BaseModel):     pass   class qualityResponse(BaseModel):     model_config = ConfigDict(from_attributes=True)

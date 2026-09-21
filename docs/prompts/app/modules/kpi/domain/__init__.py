@@ -1,1 +1,0 @@
-"""kpi domain layer - pure business logic."""

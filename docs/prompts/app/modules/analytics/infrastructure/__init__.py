@@ -1,1 +1,0 @@
-"""analytics infrastructure layer."""

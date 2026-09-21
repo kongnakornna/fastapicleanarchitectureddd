@@ -1,1 +1,0 @@
-"""accounting_gateway domain layer - pure business logic."""

@@ -1,1 +1,0 @@
-# forecast/presentation/routers.py from fastapi import APIRouter, Depends  from .dependencies import get_forecast_use_cases  router = APIRouter(prefix="/api/v1/forecast", tags=["forecast"])   # TODO: Add endpoints

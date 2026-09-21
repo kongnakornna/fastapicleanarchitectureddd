@@ -1,1 +1,0 @@
-"""audit_viewer domain layer - pure business logic."""

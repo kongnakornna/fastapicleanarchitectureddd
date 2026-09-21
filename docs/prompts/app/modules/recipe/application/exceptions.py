@@ -1,1 +1,0 @@
-# recipe/application/exceptions.py from app.shared.exceptions import ApplicationException   class recipeException(ApplicationException):     code = "rcp_APP_ERROR"   class recipeNotFoundException(recipeException):     code = "rcp_NOT_FOUND"

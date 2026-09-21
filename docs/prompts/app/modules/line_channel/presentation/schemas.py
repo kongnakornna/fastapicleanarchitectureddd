@@ -1,1 +1,0 @@
-# line_channel/presentation/schemas.py from pydantic import BaseModel, ConfigDict   class line_channelCreate(BaseModel):     pass   class line_channelResponse(BaseModel):     model_config = ConfigDict(from_attributes=True)

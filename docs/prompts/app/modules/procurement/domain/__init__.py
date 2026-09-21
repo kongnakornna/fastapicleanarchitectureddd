@@ -1,1 +1,0 @@
-"""procurement domain layer - pure business logic."""

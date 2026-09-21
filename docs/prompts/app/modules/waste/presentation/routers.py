@@ -1,1 +1,0 @@
-# waste/presentation/routers.py from fastapi import APIRouter, Depends  from .dependencies import get_waste_use_cases  router = APIRouter(prefix="/api/v1/waste", tags=["waste"])   # TODO: Add endpoints

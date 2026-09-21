@@ -1,1 +1,0 @@
-# shift/application/exceptions.py from app.shared.exceptions import ApplicationException   class shiftException(ApplicationException):     code = "shf_APP_ERROR"   class shiftNotFoundException(shiftException):     code = "shf_NOT_FOUND"

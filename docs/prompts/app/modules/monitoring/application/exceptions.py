@@ -1,1 +1,0 @@
-# monitoring/application/exceptions.py from app.shared.exceptions import ApplicationException   class monitoringException(ApplicationException):     code = "mon_APP_ERROR"   class monitoringNotFoundException(monitoringException):     code = "mon_NOT_FOUND"

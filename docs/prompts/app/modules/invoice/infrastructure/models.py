@@ -1,1 +1,0 @@
-# invoice/infrastructure/models.py from sqlalchemy import Column, String from sqlalchemy.dialects.postgresql import UUID as PGUUID  from app.shared.base_model import Base, TenantMixin   # TODO: Add SQLAlchemy models for: Invoice, InvoiceLine

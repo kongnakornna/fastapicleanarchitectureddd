@@ -1,1 +1,0 @@
-# procurement/application/exceptions.py from app.shared.exceptions import ApplicationException   class procurementException(ApplicationException):     code = "proc_APP_ERROR"   class procurementNotFoundException(procurementException):     code = "proc_NOT_FOUND"

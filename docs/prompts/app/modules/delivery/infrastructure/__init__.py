@@ -1,1 +1,0 @@
-"""delivery infrastructure layer."""

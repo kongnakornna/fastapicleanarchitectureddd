@@ -1,1 +1,0 @@
-# recommendation/presentation/schemas.py from pydantic import BaseModel, ConfigDict   class recommendationCreate(BaseModel):     pass   class recommendationResponse(BaseModel):     model_config = ConfigDict(from_attributes=True)

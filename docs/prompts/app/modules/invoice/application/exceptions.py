@@ -1,1 +1,0 @@
-# invoice/application/exceptions.py from app.shared.exceptions import ApplicationException   class invoiceException(ApplicationException):     code = "inv_APP_ERROR"   class invoiceNotFoundException(invoiceException):     code = "inv_NOT_FOUND"

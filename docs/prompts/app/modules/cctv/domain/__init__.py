@@ -1,1 +1,0 @@
-"""cctv domain layer - pure business logic."""

@@ -1,1 +1,0 @@
-"""loyalty domain layer - pure business logic."""

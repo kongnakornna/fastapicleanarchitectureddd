@@ -1,1 +1,0 @@
-"""waste domain layer - pure business logic."""

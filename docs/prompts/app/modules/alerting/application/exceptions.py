@@ -1,1 +1,0 @@
-# alerting/application/exceptions.py from app.shared.exceptions import ApplicationException   class alertingException(ApplicationException):     code = "alr_APP_ERROR"   class alertingNotFoundException(alertingException):     code = "alr_NOT_FOUND"

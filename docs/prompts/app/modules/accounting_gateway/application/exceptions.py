@@ -1,1 +1,0 @@
-# accounting_gateway/application/exceptions.py from app.shared.exceptions import ApplicationException   class accounting_gatewayException(ApplicationException):     code = "acg_APP_ERROR"   class accounting_gatewayNotFoundException(accounting_gatewayException):     code = "acg_NOT_FOUND"

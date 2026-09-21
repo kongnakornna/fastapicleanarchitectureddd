@@ -1,1 +1,0 @@
-# energy/presentation/schemas.py from pydantic import BaseModel, ConfigDict   class energyCreate(BaseModel):     pass   class energyResponse(BaseModel):     model_config = ConfigDict(from_attributes=True)

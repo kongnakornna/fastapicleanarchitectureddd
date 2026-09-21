@@ -1,1 +1,0 @@
-"""crop application layer - use cases + ports."""

@@ -1,1 +1,0 @@
-# campaign/application/exceptions.py from app.shared.exceptions import ApplicationException   class campaignException(ApplicationException):     code = "cmp_APP_ERROR"   class campaignNotFoundException(campaignException):     code = "cmp_NOT_FOUND"

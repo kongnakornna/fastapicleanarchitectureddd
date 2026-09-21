@@ -1,1 +1,0 @@
-# quality/application/exceptions.py from app.shared.exceptions import ApplicationException   class qualityException(ApplicationException):     code = "qc_APP_ERROR"   class qualityNotFoundException(qualityException):     code = "qc_NOT_FOUND"

@@ -1,1 +1,0 @@
-# agriculture/presentation/routers.py from fastapi import APIRouter, Depends  from .dependencies import get_agriculture_use_cases  router = APIRouter(prefix="/api/v1/agriculture", tags=["agriculture"])   # TODO: Add endpoints

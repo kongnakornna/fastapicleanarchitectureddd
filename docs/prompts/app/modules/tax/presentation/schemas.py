@@ -1,1 +1,0 @@
-# tax/presentation/schemas.py from pydantic import BaseModel, ConfigDict   class taxCreate(BaseModel):     pass   class taxResponse(BaseModel):     model_config = ConfigDict(from_attributes=True)

@@ -1,1 +1,0 @@
-"""irrigation domain layer - pure business logic."""

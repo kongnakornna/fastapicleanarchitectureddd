@@ -1,1 +1,0 @@
-# pos/application/mappers.py   class posMapper:     """Maps domain entity <-> ORM model <-> pydantic schema."""     pass

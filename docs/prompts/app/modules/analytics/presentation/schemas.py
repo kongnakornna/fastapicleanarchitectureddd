@@ -1,1 +1,0 @@
-# analytics/presentation/schemas.py from pydantic import BaseModel, ConfigDict   class analyticsCreate(BaseModel):     pass   class analyticsResponse(BaseModel):     model_config = ConfigDict(from_attributes=True)

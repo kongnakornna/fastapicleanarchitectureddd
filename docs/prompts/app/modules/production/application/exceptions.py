@@ -1,1 +1,0 @@
-# production/application/exceptions.py from app.shared.exceptions import ApplicationException   class productionException(ApplicationException):     code = "prod_APP_ERROR"   class productionNotFoundException(productionException):     code = "prod_NOT_FOUND"

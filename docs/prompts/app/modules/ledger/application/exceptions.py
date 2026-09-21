@@ -1,1 +1,0 @@
-# ledger/application/exceptions.py from app.shared.exceptions import ApplicationException   class ledgerException(ApplicationException):     code = "led_APP_ERROR"   class ledgerNotFoundException(ledgerException):     code = "led_NOT_FOUND"

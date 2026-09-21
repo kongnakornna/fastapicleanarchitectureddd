@@ -1,1 +1,0 @@
-# satisfaction/presentation/schemas.py from pydantic import BaseModel, ConfigDict   class satisfactionCreate(BaseModel):     pass   class satisfactionResponse(BaseModel):     model_config = ConfigDict(from_attributes=True)

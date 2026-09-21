@@ -1,1 +1,0 @@
-# monitoring/presentation/schemas.py from pydantic import BaseModel, ConfigDict   class monitoringCreate(BaseModel):     pass   class monitoringResponse(BaseModel):     model_config = ConfigDict(from_attributes=True)

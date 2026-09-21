@@ -1,1 +1,0 @@
-"""agriculture domain layer - pure business logic."""

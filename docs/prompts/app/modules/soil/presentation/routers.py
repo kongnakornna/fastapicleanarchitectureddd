@@ -1,1 +1,0 @@
-# soil/presentation/routers.py from fastapi import APIRouter, Depends  from .dependencies import get_soil_use_cases  router = APIRouter(prefix="/api/v1/soil", tags=["soil"])   # TODO: Add endpoints

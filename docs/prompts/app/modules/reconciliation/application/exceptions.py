@@ -1,1 +1,0 @@
-# reconciliation/application/exceptions.py from app.shared.exceptions import ApplicationException   class reconciliationException(ApplicationException):     code = "rec_APP_ERROR"   class reconciliationNotFoundException(reconciliationException):     code = "rec_NOT_FOUND"

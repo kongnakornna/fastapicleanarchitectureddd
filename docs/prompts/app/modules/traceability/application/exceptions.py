@@ -1,1 +1,0 @@
-# traceability/application/exceptions.py from app.shared.exceptions import ApplicationException   class traceabilityException(ApplicationException):     code = "trc_APP_ERROR"   class traceabilityNotFoundException(traceabilityException):     code = "trc_NOT_FOUND"

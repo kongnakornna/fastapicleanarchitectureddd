@@ -1,1 +1,0 @@
-# kpi/presentation/schemas.py from pydantic import BaseModel, ConfigDict   class kpiCreate(BaseModel):     pass   class kpiResponse(BaseModel):     model_config = ConfigDict(from_attributes=True)

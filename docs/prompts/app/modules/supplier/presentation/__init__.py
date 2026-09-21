@@ -1,1 +1,0 @@
-"""supplier presentation layer."""

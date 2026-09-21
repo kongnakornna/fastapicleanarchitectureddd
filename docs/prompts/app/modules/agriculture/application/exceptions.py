@@ -1,1 +1,0 @@
-# agriculture/application/exceptions.py from app.shared.exceptions import ApplicationException   class agricultureException(ApplicationException):     code = "agr_APP_ERROR"   class agricultureNotFoundException(agricultureException):     code = "agr_NOT_FOUND"

@@ -1,1 +1,0 @@
-"""deviceiot infrastructure layer."""

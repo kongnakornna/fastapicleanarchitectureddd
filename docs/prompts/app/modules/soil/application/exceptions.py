@@ -1,1 +1,0 @@
-# soil/application/exceptions.py from app.shared.exceptions import ApplicationException   class soilException(ApplicationException):     code = "soil_APP_ERROR"   class soilNotFoundException(soilException):     code = "soil_NOT_FOUND"

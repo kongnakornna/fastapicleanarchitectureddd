@@ -1,1 +1,0 @@
-# pos/application/exceptions.py from app.shared.exceptions import ApplicationException   class posException(ApplicationException):     code = "pos_APP_ERROR"   class posNotFoundException(posException):     code = "pos_NOT_FOUND"

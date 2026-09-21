@@ -1,1 +1,0 @@
-# warehouse/presentation/schemas.py from pydantic import BaseModel, ConfigDict   class warehouseCreate(BaseModel):     pass   class warehouseResponse(BaseModel):     model_config = ConfigDict(from_attributes=True)

@@ -1,1 +1,0 @@
-"""traceability domain layer - pure business logic."""

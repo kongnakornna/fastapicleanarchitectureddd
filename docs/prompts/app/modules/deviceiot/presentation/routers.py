@@ -1,1 +1,0 @@
-# deviceiot/presentation/routers.py from fastapi import APIRouter, Depends  from .dependencies import get_deviceiot_use_cases  router = APIRouter(prefix="/api/v1/deviceiot", tags=["deviceiot"])   # TODO: Add endpoints

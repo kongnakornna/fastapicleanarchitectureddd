@@ -1,1 +1,0 @@
-"""product infrastructure layer."""

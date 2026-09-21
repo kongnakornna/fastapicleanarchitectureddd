@@ -1,1 +1,0 @@
-# loyalty/application/exceptions.py from app.shared.exceptions import ApplicationException   class loyaltyException(ApplicationException):     code = "loy_APP_ERROR"   class loyaltyNotFoundException(loyaltyException):     code = "loy_NOT_FOUND"

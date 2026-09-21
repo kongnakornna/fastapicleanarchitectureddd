@@ -1,1 +1,0 @@
-# product/presentation/schemas.py from pydantic import BaseModel, ConfigDict   class productCreate(BaseModel):     pass   class productResponse(BaseModel):     model_config = ConfigDict(from_attributes=True)

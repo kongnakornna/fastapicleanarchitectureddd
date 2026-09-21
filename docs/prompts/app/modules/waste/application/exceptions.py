@@ -1,1 +1,0 @@
-# waste/application/exceptions.py from app.shared.exceptions import ApplicationException   class wasteException(ApplicationException):     code = "wst_APP_ERROR"   class wasteNotFoundException(wasteException):     code = "wst_NOT_FOUND"

@@ -1,1 +1,0 @@
-"""warehouse infrastructure layer."""

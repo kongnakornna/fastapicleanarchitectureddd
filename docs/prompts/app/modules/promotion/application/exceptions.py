@@ -1,1 +1,0 @@
-# promotion/application/exceptions.py from app.shared.exceptions import ApplicationException   class promotionException(ApplicationException):     code = "promo_APP_ERROR"   class promotionNotFoundException(promotionException):     code = "promo_NOT_FOUND"

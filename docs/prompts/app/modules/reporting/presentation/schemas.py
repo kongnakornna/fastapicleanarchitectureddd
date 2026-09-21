@@ -1,1 +1,0 @@
-# reporting/presentation/schemas.py from pydantic import BaseModel, ConfigDict   class reportingCreate(BaseModel):     pass   class reportingResponse(BaseModel):     model_config = ConfigDict(from_attributes=True)

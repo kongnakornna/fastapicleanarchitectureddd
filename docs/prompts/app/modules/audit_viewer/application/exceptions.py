@@ -1,1 +1,0 @@
-# audit_viewer/application/exceptions.py from app.shared.exceptions import ApplicationException   class audit_viewerException(ApplicationException):     code = "av_APP_ERROR"   class audit_viewerNotFoundException(audit_viewerException):     code = "av_NOT_FOUND"

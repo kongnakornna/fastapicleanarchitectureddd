@@ -1,1 +1,0 @@
-"""deviceiot domain layer - pure business logic."""

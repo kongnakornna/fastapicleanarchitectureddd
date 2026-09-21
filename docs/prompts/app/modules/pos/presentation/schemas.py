@@ -1,1 +1,0 @@
-# pos/presentation/schemas.py from pydantic import BaseModel, ConfigDict   class posCreate(BaseModel):     pass   class posResponse(BaseModel):     model_config = ConfigDict(from_attributes=True)

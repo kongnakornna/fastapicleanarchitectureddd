@@ -1,1 +1,0 @@
-# line_channel/application/exceptions.py from app.shared.exceptions import ApplicationException   class line_channelException(ApplicationException):     code = "line_APP_ERROR"   class line_channelNotFoundException(line_channelException):     code = "line_NOT_FOUND"

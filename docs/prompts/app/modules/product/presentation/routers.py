@@ -1,1 +1,0 @@
-# product/presentation/routers.py from fastapi import APIRouter, Depends  from .dependencies import get_product_use_cases  router = APIRouter(prefix="/api/v1/product", tags=["product"])   # TODO: Add endpoints

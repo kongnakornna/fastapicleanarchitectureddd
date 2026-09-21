@@ -1,1 +1,0 @@
-# shift/presentation/routers.py from fastapi import APIRouter, Depends  from .dependencies import get_shift_use_cases  router = APIRouter(prefix="/api/v1/shift", tags=["shift"])   # TODO: Add endpoints

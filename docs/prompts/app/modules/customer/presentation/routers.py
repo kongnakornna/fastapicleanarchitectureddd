@@ -1,1 +1,0 @@
-# customer/presentation/routers.py from fastapi import APIRouter, Depends  from .dependencies import get_customer_use_cases  router = APIRouter(prefix="/api/v1/customer", tags=["customer"])   # TODO: Add endpoints
