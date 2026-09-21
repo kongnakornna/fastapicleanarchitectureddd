@@ -1,0 +1,1 @@
+# warehouse/presentation/routers.py from fastapi import APIRouter, Depends  from .dependencies import get_warehouse_use_cases  router = APIRouter(prefix="/api/v1/warehouse", tags=["warehouse"])   # TODO: Add endpoints

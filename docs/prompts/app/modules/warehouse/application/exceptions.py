@@ -1,0 +1,1 @@
+# warehouse/application/exceptions.py from app.shared.exceptions import ApplicationException   class warehouseException(ApplicationException):     code = "wh_APP_ERROR"   class warehouseNotFoundException(warehouseException):     code = "wh_NOT_FOUND"

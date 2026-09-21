@@ -1,0 +1,1 @@
+"""warehouse domain layer - pure business logic."""

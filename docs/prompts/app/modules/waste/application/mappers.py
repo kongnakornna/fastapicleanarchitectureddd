@@ -1,0 +1,1 @@
+# waste/application/mappers.py   class wasteMapper:     """Maps domain entity <-> ORM model <-> pydantic schema."""     pass
