@@ -1,0 +1,1 @@
+# cctv/presentation/schemas.py from pydantic import BaseModel, ConfigDict   class cctvCreate(BaseModel):     pass   class cctvResponse(BaseModel):     model_config = ConfigDict(from_attributes=True)

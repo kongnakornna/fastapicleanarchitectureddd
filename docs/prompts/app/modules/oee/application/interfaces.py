@@ -1,0 +1,1 @@
+# oee/application/interfaces.py - ports (Protocol) from typing import Protocol   # TODO: Define repository / cache / publisher protocols

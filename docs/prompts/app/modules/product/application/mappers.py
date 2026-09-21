@@ -1,0 +1,1 @@
+# product/application/mappers.py   class productMapper:     """Maps domain entity <-> ORM model <-> pydantic schema."""     pass

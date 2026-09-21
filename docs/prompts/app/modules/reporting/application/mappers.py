@@ -1,0 +1,1 @@
+# reporting/application/mappers.py   class reportingMapper:     """Maps domain entity <-> ORM model <-> pydantic schema."""     pass

@@ -1,0 +1,1 @@
+# route/application/exceptions.py from app.shared.exceptions import ApplicationException   class routeException(ApplicationException):     code = "rte_APP_ERROR"   class routeNotFoundException(routeException):     code = "rte_NOT_FOUND"

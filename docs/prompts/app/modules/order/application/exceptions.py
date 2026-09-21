@@ -1,0 +1,1 @@
+# order/application/exceptions.py from app.shared.exceptions import ApplicationException   class orderException(ApplicationException):     code = "ord_APP_ERROR"   class orderNotFoundException(orderException):     code = "ord_NOT_FOUND"

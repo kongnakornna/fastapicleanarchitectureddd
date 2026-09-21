@@ -1,0 +1,1 @@
+# traceability/presentation/schemas.py from pydantic import BaseModel, ConfigDict   class traceabilityCreate(BaseModel):     pass   class traceabilityResponse(BaseModel):     model_config = ConfigDict(from_attributes=True)

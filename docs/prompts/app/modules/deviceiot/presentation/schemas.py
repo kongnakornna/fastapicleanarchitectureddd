@@ -1,0 +1,1 @@
+# deviceiot/presentation/schemas.py from pydantic import BaseModel, ConfigDict   class deviceiotCreate(BaseModel):     pass   class deviceiotResponse(BaseModel):     model_config = ConfigDict(from_attributes=True)

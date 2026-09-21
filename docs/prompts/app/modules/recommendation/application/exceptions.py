@@ -1,0 +1,1 @@
+# recommendation/application/exceptions.py from app.shared.exceptions import ApplicationException   class recommendationException(ApplicationException):     code = "reco_APP_ERROR"   class recommendationNotFoundException(recommendationException):     code = "reco_NOT_FOUND"

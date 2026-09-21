@@ -1,0 +1,1 @@
+# forecast/application/mappers.py   class forecastMapper:     """Maps domain entity <-> ORM model <-> pydantic schema."""     pass

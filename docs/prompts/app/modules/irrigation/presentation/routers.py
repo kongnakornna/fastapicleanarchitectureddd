@@ -1,0 +1,1 @@
+# irrigation/presentation/routers.py from fastapi import APIRouter, Depends  from .dependencies import get_irrigation_use_cases  router = APIRouter(prefix="/api/v1/irrigation", tags=["irrigation"])   # TODO: Add endpoints

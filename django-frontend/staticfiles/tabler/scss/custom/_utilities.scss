@@ -1,0 +1,77 @@
+@use '@tabler/core/scss/config' as *;
+
+.container-tight {
+  max-width: 30rem;
+  width: 100%;
+  margin-inline: auto;
+}
+
+.navbar-vertical-left {
+  left: 0;
+  right: auto;
+}
+
+.navbar-vertical-right {
+  left: auto;
+  right: 0;
+}
+
+.auth-wrapper {
+  .page {
+    min-height: 100vh;
+  }
+}
+
+.code-input {
+  width: 100%;
+  text-align: center;
+  font-size: 1.25rem;
+  padding: 0.75rem 0.5rem;
+}
+
+/* ---------------------------------------------------
+   Navbar horizontal — hide brand when sidebar is vertical
+   --------------------------------------------------- */
+.d-none-navbar-horizontal {
+  .navbar-vertical ~ & {
+    display: none !important;
+  }
+}
+
+/* ---------------------------------------------------
+   Sponsor button (pink outline)
+   --------------------------------------------------- */
+.btn-heart {
+  --#{$prefix}btn-color: #{$pink};
+  --#{$prefix}btn-bg: transparent;
+  --#{$prefix}btn-border-color: transparent;
+  --#{$prefix}btn-hover-color: #{$white};
+  --#{$prefix}btn-hover-bg: #{$pink};
+  --#{$prefix}btn-hover-border-color: #{$pink};
+}
+
+/* ---------------------------------------------------
+   Sidebar collapsed state
+   --------------------------------------------------- */
+$sidebar-collapsed-width: 4rem !default;
+
+.navbar-collapsed {
+  width: $sidebar-collapsed-width !important;
+
+  .navbar-brand,
+  .nav-link-title,
+  .dropdown-toggle:after,
+  .badge {
+    display: none;
+  }
+
+  .nav-link-icon {
+    margin: 0;
+  }
+}
+
+body.sidebar-collapsed {
+  .page {
+    padding-inline-start: $sidebar-collapsed-width;
+  }
+}

@@ -1,0 +1,1 @@
+# oee/presentation/schemas.py from pydantic import BaseModel, ConfigDict   class oeeCreate(BaseModel):     pass   class oeeResponse(BaseModel):     model_config = ConfigDict(from_attributes=True)

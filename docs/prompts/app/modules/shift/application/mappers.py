@@ -1,0 +1,1 @@
+# shift/application/mappers.py   class shiftMapper:     """Maps domain entity <-> ORM model <-> pydantic schema."""     pass

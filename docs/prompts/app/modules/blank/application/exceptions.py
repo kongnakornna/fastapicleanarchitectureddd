@@ -1,0 +1,1 @@
+# blank/application/exceptions.py from app.shared.exceptions import ApplicationException   class blankException(ApplicationException):     code = "blk_APP_ERROR"   class blankNotFoundException(blankException):     code = "blk_NOT_FOUND"

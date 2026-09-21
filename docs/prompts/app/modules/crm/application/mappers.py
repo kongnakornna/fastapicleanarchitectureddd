@@ -1,0 +1,1 @@
+# crm/application/mappers.py   class crmMapper:     """Maps domain entity <-> ORM model <-> pydantic schema."""     pass

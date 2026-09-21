@@ -1,0 +1,1 @@
+# pos/presentation/routers.py from fastapi import APIRouter, Depends  from .dependencies import get_pos_use_cases  router = APIRouter(prefix="/api/v1/pos", tags=["pos"])   # TODO: Add endpoints

@@ -1,0 +1,1 @@
+# delivery/application/exceptions.py from app.shared.exceptions import ApplicationException   class deliveryException(ApplicationException):     code = "dlv_APP_ERROR"   class deliveryNotFoundException(deliveryException):     code = "dlv_NOT_FOUND"

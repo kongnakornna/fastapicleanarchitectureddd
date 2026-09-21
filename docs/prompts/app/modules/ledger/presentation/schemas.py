@@ -1,0 +1,1 @@
+# ledger/presentation/schemas.py from pydantic import BaseModel, ConfigDict   class ledgerCreate(BaseModel):     pass   class ledgerResponse(BaseModel):     model_config = ConfigDict(from_attributes=True)

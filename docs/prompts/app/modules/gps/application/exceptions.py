@@ -1,0 +1,1 @@
+# gps/application/exceptions.py from app.shared.exceptions import ApplicationException   class gpsException(ApplicationException):     code = "gps_APP_ERROR"   class gpsNotFoundException(gpsException):     code = "gps_NOT_FOUND"

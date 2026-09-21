@@ -1,0 +1,1 @@
+# transport/application/mappers.py   class transportMapper:     """Maps domain entity <-> ORM model <-> pydantic schema."""     pass

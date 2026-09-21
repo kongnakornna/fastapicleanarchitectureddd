@@ -1,0 +1,1 @@
+# kpi/application/exceptions.py from app.shared.exceptions import ApplicationException   class kpiException(ApplicationException):     code = "kpi_APP_ERROR"   class kpiNotFoundException(kpiException):     code = "kpi_NOT_FOUND"

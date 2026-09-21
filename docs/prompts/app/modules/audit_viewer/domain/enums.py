@@ -1,0 +1,1 @@
+# audit_viewer/domain/enums.py from enum import Enum   # TODO: Add enums

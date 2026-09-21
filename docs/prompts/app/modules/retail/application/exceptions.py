@@ -1,0 +1,1 @@
+# retail/application/exceptions.py from app.shared.exceptions import ApplicationException   class retailException(ApplicationException):     code = "rtl_APP_ERROR"   class retailNotFoundException(retailException):     code = "rtl_NOT_FOUND"

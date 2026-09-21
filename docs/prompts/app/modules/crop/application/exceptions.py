@@ -1,0 +1,1 @@
+# crop/application/exceptions.py from app.shared.exceptions import ApplicationException   class cropException(ApplicationException):     code = "crp_APP_ERROR"   class cropNotFoundException(cropException):     code = "crp_NOT_FOUND"

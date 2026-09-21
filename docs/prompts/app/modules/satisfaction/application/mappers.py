@@ -1,0 +1,1 @@
+# satisfaction/application/mappers.py   class satisfactionMapper:     """Maps domain entity <-> ORM model <-> pydantic schema."""     pass

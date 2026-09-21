@@ -1,0 +1,1 @@
+# recipe/presentation/schemas.py from pydantic import BaseModel, ConfigDict   class recipeCreate(BaseModel):     pass   class recipeResponse(BaseModel):     model_config = ConfigDict(from_attributes=True)

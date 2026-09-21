@@ -1,0 +1,1 @@
+# tax/application/exceptions.py from app.shared.exceptions import ApplicationException   class taxException(ApplicationException):     code = "tax_APP_ERROR"   class taxNotFoundException(taxException):     code = "tax_NOT_FOUND"

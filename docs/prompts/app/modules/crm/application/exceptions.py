@@ -1,0 +1,1 @@
+# crm/application/exceptions.py from app.shared.exceptions import ApplicationException   class crmException(ApplicationException):     code = "crm_APP_ERROR"   class crmNotFoundException(crmException):     code = "crm_NOT_FOUND"

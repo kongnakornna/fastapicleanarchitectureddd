@@ -1,0 +1,1 @@
+# customer/application/exceptions.py from app.shared.exceptions import ApplicationException   class customerException(ApplicationException):     code = "cus_APP_ERROR"   class customerNotFoundException(customerException):     code = "cus_NOT_FOUND"

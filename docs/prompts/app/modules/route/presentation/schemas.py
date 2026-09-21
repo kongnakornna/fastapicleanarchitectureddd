@@ -1,0 +1,1 @@
+# route/presentation/schemas.py from pydantic import BaseModel, ConfigDict   class routeCreate(BaseModel):     pass   class routeResponse(BaseModel):     model_config = ConfigDict(from_attributes=True)

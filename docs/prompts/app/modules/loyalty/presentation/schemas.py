@@ -1,0 +1,1 @@
+# loyalty/presentation/schemas.py from pydantic import BaseModel, ConfigDict   class loyaltyCreate(BaseModel):     pass   class loyaltyResponse(BaseModel):     model_config = ConfigDict(from_attributes=True)

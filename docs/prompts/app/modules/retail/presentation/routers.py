@@ -1,0 +1,1 @@
+# retail/presentation/routers.py from fastapi import APIRouter, Depends  from .dependencies import get_retail_use_cases  router = APIRouter(prefix="/api/v1/retail", tags=["retail"])   # TODO: Add endpoints

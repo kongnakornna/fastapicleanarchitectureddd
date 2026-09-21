@@ -1,0 +1,24 @@
+{% load i18n %}
+{# templates/partials/page-header.html #}
+{# Usage: {% include "partials/page-header.html" with title="dashboard.title" pretitle="dashboard.pretitle" %} #}
+<div class="page-header d-print-none {% if header_class %}{{ header_class }}{% endif %} {% if overlap and dark %}text-white{% endif %}">
+  <div class="container-xl">
+    <div class="row g-2 align-items-center">
+      <div class="col">
+        {% if pretitle %}
+          <div class="page-pretitle">{% trans pretitle %}</div>
+        {% endif %}
+        <h1 class="page-title">
+          {% if icon %}{% include "partials/icons.html" with icon=icon %}{% endif %}
+          {% trans title %}
+        </h1>
+        {% if description %}
+          <div class="text-secondary mt-1">{% trans description %}</div>
+        {% endif %}
+      </div>
+      <div class="col-auto ms-auto d-print-none">
+        {% block page_actions %}{% endblock %}
+      </div>
+    </div>
+  </div>
+</div>

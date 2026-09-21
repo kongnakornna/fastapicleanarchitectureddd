@@ -1,0 +1,1 @@
+"""line_channel domain layer - pure business logic."""

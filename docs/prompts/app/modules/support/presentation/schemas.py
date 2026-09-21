@@ -1,0 +1,1 @@
+# support/presentation/schemas.py from pydantic import BaseModel, ConfigDict   class supportCreate(BaseModel):     pass   class supportResponse(BaseModel):     model_config = ConfigDict(from_attributes=True)

@@ -1,0 +1,1 @@
+# cctv/application/exceptions.py from app.shared.exceptions import ApplicationException   class cctvException(ApplicationException):     code = "cctv_APP_ERROR"   class cctvNotFoundException(cctvException):     code = "cctv_NOT_FOUND"

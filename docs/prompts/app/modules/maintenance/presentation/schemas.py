@@ -1,0 +1,1 @@
+# maintenance/presentation/schemas.py from pydantic import BaseModel, ConfigDict   class maintenanceCreate(BaseModel):     pass   class maintenanceResponse(BaseModel):     model_config = ConfigDict(from_attributes=True)

@@ -1,0 +1,1 @@
+# pricing/presentation/schemas.py from pydantic import BaseModel, ConfigDict   class pricingCreate(BaseModel):     pass   class pricingResponse(BaseModel):     model_config = ConfigDict(from_attributes=True)

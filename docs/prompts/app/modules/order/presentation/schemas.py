@@ -1,0 +1,1 @@
+# order/presentation/schemas.py from pydantic import BaseModel, ConfigDict   class orderCreate(BaseModel):     pass   class orderResponse(BaseModel):     model_config = ConfigDict(from_attributes=True)

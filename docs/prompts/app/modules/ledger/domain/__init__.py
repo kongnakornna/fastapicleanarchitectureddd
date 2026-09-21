@@ -1,0 +1,1 @@
+"""ledger domain layer - pure business logic."""

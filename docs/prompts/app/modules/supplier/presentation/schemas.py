@@ -1,0 +1,1 @@
+# supplier/presentation/schemas.py from pydantic import BaseModel, ConfigDict   class supplierCreate(BaseModel):     pass   class supplierResponse(BaseModel):     model_config = ConfigDict(from_attributes=True)

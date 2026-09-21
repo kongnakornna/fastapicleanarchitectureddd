@@ -1,0 +1,1 @@
+# invoice/presentation/schemas.py from pydantic import BaseModel, ConfigDict   class invoiceCreate(BaseModel):     pass   class invoiceResponse(BaseModel):     model_config = ConfigDict(from_attributes=True)

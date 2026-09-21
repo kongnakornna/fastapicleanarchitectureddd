@@ -1,0 +1,1 @@
+# promotion/application/mappers.py   class promotionMapper:     """Maps domain entity <-> ORM model <-> pydantic schema."""     pass

@@ -1,0 +1,1 @@
+# support/application/exceptions.py from app.shared.exceptions import ApplicationException   class supportException(ApplicationException):     code = "sup2_APP_ERROR"   class supportNotFoundException(supportException):     code = "sup2_NOT_FOUND"

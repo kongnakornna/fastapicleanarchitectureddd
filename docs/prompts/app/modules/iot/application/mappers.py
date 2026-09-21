@@ -1,0 +1,1 @@
+# iot/application/mappers.py   class iotMapper:     """Maps domain entity <-> ORM model <-> pydantic schema."""     pass

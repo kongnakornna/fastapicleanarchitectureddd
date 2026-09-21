@@ -1,0 +1,1 @@
+# kpi/domain/events.py - domain event names  # TODO: Add domain event names

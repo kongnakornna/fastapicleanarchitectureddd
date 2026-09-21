@@ -1,0 +1,1 @@
+# energy/application/exceptions.py from app.shared.exceptions import ApplicationException   class energyException(ApplicationException):     code = "eng_APP_ERROR"   class energyNotFoundException(energyException):     code = "eng_NOT_FOUND"

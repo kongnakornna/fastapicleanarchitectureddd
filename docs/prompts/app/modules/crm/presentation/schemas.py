@@ -1,0 +1,1 @@
+# crm/presentation/schemas.py from pydantic import BaseModel, ConfigDict   class crmCreate(BaseModel):     pass   class crmResponse(BaseModel):     model_config = ConfigDict(from_attributes=True)

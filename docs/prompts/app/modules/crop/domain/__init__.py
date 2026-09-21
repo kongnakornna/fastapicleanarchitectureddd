@@ -1,0 +1,1 @@
+"""crop domain layer - pure business logic."""

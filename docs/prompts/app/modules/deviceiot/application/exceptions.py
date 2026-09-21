@@ -1,0 +1,1 @@
+# deviceiot/application/exceptions.py from app.shared.exceptions import ApplicationException   class deviceiotException(ApplicationException):     code = "deviceiot_APP_ERROR"   class deviceiotNotFoundException(deviceiotException):     code = "deviceiot_NOT_FOUND"

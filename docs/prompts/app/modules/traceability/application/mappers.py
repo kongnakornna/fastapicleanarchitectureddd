@@ -1,0 +1,1 @@
+# traceability/application/mappers.py   class traceabilityMapper:     """Maps domain entity <-> ORM model <-> pydantic schema."""     pass

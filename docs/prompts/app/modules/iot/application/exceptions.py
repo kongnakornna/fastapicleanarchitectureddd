@@ -1,0 +1,1 @@
+# iot/application/exceptions.py from app.shared.exceptions import ApplicationException   class iotException(ApplicationException):     code = "iot_APP_ERROR"   class iotNotFoundException(iotException):     code = "iot_NOT_FOUND"

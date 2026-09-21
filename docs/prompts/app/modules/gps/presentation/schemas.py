@@ -1,0 +1,1 @@
+# gps/presentation/schemas.py from pydantic import BaseModel, ConfigDict   class gpsCreate(BaseModel):     pass   class gpsResponse(BaseModel):     model_config = ConfigDict(from_attributes=True)

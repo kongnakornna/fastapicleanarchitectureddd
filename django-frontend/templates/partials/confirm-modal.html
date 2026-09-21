@@ -1,0 +1,36 @@
+{% load i18n %}
+<div x-data="confirmModal()" x-show="visible" x-cloak
+     @keydown.escape.window="cancel()"
+     class="modal modal-blur fade" :class="{ show: visible }"
+     :style="visible ? 'display:block' : 'display:none'"
+     tabindex="-1" role="dialog" aria-modal="true">
+  <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <button type="button" class="btn-close" @click="cancel()"
+              aria-label="{% trans 'common.close' %}"></button>
+      <div class="modal-status bg-danger"></div>
+      <div class="modal-body text-center py-4">
+        <h3>{% trans "layout.header.signOutConfirmTitle" %}</h3>
+        <div class="text-secondary">
+          {% trans "layout.header.signOutConfirmMessage" %}
+        </div>
+      </div>
+      <div class="modal-footer">
+        <div class="w-100">
+          <div class="row">
+            <div class="col">
+              <a href="javascript:void(0)" class="btn w-100"
+                 @click.prevent="cancel()">{% trans "common.cancel" %}</a>
+            </div>
+            <div class="col">
+              <a href="javascript:void(0)" class="btn btn-danger w-100"
+                 @click.prevent="confirm()">
+                {% trans "layout.header.signOutConfirmButton" %}
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

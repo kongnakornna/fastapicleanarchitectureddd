@@ -1,0 +1,1 @@
+# supplier/application/exceptions.py from app.shared.exceptions import ApplicationException   class supplierException(ApplicationException):     code = "sup_APP_ERROR"   class supplierNotFoundException(supplierException):     code = "sup_NOT_FOUND"

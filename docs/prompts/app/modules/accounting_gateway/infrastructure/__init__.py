@@ -1,0 +1,1 @@
+"""accounting_gateway infrastructure layer."""

@@ -1,0 +1,1 @@
+# product/application/exceptions.py from app.shared.exceptions import ApplicationException   class productException(ApplicationException):     code = "prd_APP_ERROR"   class productNotFoundException(productException):     code = "prd_NOT_FOUND"

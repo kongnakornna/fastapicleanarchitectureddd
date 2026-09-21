@@ -1,0 +1,1 @@
+# production/presentation/schemas.py from pydantic import BaseModel, ConfigDict   class productionCreate(BaseModel):     pass   class productionResponse(BaseModel):     model_config = ConfigDict(from_attributes=True)

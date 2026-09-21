@@ -1,0 +1,1 @@
+# crop/presentation/schemas.py from pydantic import BaseModel, ConfigDict   class cropCreate(BaseModel):     pass   class cropResponse(BaseModel):     model_config = ConfigDict(from_attributes=True)

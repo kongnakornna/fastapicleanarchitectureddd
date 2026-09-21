@@ -1,0 +1,1 @@
+"""oee domain layer - pure business logic."""

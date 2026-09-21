@@ -1,0 +1,1 @@
+# irrigation/presentation/schemas.py from pydantic import BaseModel, ConfigDict   class irrigationCreate(BaseModel):     pass   class irrigationResponse(BaseModel):     model_config = ConfigDict(from_attributes=True)

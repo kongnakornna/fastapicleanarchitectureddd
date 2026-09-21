@@ -1,0 +1,1 @@
+# payment/application/exceptions.py from app.shared.exceptions import ApplicationException   class paymentException(ApplicationException):     code = "pay_APP_ERROR"   class paymentNotFoundException(paymentException):     code = "pay_NOT_FOUND"

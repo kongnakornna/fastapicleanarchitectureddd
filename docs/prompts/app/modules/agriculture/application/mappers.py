@@ -1,0 +1,1 @@
+# agriculture/application/mappers.py   class agricultureMapper:     """Maps domain entity <-> ORM model <-> pydantic schema."""     pass

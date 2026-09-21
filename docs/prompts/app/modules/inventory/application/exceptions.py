@@ -1,0 +1,1 @@
+# inventory/application/exceptions.py from app.shared.exceptions import ApplicationException   class inventoryException(ApplicationException):     code = "invt_APP_ERROR"   class inventoryNotFoundException(inventoryException):     code = "invt_NOT_FOUND"

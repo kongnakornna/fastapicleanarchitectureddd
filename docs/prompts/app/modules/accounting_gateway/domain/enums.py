@@ -1,0 +1,1 @@
+# accounting_gateway/domain/enums.py from enum import Enum   # TODO: Add enums

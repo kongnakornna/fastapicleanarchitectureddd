@@ -1,0 +1,1 @@
+# blank/presentation/schemas.py from pydantic import BaseModel, ConfigDict   class blankCreate(BaseModel):     pass   class blankResponse(BaseModel):     model_config = ConfigDict(from_attributes=True)

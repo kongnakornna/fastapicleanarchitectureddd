@@ -1,0 +1,1 @@
+# shift/presentation/schemas.py from pydantic import BaseModel, ConfigDict   class shiftCreate(BaseModel):     pass   class shiftResponse(BaseModel):     model_config = ConfigDict(from_attributes=True)

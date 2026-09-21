@@ -1,0 +1,1 @@
+"""satisfaction application layer - use cases + ports."""

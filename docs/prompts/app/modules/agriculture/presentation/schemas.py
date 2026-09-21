@@ -1,0 +1,1 @@
+# agriculture/presentation/schemas.py from pydantic import BaseModel, ConfigDict   class agricultureCreate(BaseModel):     pass   class agricultureResponse(BaseModel):     model_config = ConfigDict(from_attributes=True)

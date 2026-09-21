@@ -1,0 +1,1 @@
+# audit_viewer/presentation/schemas.py from pydantic import BaseModel, ConfigDict   class audit_viewerCreate(BaseModel):     pass   class audit_viewerResponse(BaseModel):     model_config = ConfigDict(from_attributes=True)

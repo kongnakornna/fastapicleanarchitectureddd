@@ -1,0 +1,1 @@
+# satisfaction/application/exceptions.py from app.shared.exceptions import ApplicationException   class satisfactionException(ApplicationException):     code = "csat_APP_ERROR"   class satisfactionNotFoundException(satisfactionException):     code = "csat_NOT_FOUND"

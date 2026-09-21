@@ -1,0 +1,1 @@
+# oee/application/exceptions.py from app.shared.exceptions import ApplicationException   class oeeException(ApplicationException):     code = "oee_APP_ERROR"   class oeeNotFoundException(oeeException):     code = "oee_NOT_FOUND"

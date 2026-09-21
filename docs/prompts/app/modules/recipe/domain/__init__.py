@@ -1,0 +1,1 @@
+"""recipe domain layer - pure business logic."""

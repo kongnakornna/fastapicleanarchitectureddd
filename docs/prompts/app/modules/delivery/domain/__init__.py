@@ -1,0 +1,1 @@
+"""delivery domain layer - pure business logic."""

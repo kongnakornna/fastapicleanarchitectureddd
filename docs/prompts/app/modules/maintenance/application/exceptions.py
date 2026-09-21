@@ -1,0 +1,1 @@
+# maintenance/application/exceptions.py from app.shared.exceptions import ApplicationException   class maintenanceException(ApplicationException):     code = "mnt_APP_ERROR"   class maintenanceNotFoundException(maintenanceException):     code = "mnt_NOT_FOUND"

@@ -1,0 +1,1 @@
+# irrigation/application/exceptions.py from app.shared.exceptions import ApplicationException   class irrigationException(ApplicationException):     code = "irr_APP_ERROR"   class irrigationNotFoundException(irrigationException):     code = "irr_NOT_FOUND"

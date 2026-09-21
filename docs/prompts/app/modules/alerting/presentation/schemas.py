@@ -1,0 +1,1 @@
+# alerting/presentation/schemas.py from pydantic import BaseModel, ConfigDict   class alertingCreate(BaseModel):     pass   class alertingResponse(BaseModel):     model_config = ConfigDict(from_attributes=True)

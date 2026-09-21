@@ -1,0 +1,1 @@
+# delivery/presentation/schemas.py from pydantic import BaseModel, ConfigDict   class deliveryCreate(BaseModel):     pass   class deliveryResponse(BaseModel):     model_config = ConfigDict(from_attributes=True)

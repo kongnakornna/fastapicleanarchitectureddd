@@ -1,0 +1,29 @@
+{% load i18n %}
+<footer class="footer footer-transparent d-print-none">
+  <div class="container-xl">
+    <div class="row text-center align-items-center flex-row-reverse">
+      <div class="col-lg-auto ms-lg-auto">
+        <ul class="list-inline list-inline-dots mb-0">
+          <li class="list-inline-item">
+            <a href="javascript:void(0)" class="link-secondary">{% trans "layout.footer.about" %}</a>
+          </li>
+          <li class="list-inline-item">
+            <a href="javascript:void(0)" class="link-secondary">{% trans "layout.footer.help" %}</a>
+          </li>
+          <li class="list-inline-item">
+            <a href="javascript:void(0)" class="link-secondary">{% trans "layout.footer.privacy" %}</a>
+          </li>
+        </ul>
+      </div>
+      <div class="col-12 col-lg-auto mt-3 mt-lg-0">
+        <ul class="list-inline list-inline-dots mb-0">
+          <li class="list-inline-item">
+            {% trans "layout.footer.copyright" %} {{ display_year }}
+            <a href="/" class="link-secondary">{% trans "app.name" %}</a>
+            {% trans "layout.footer.allRightsReserved" %}
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</footer>

@@ -1,0 +1,1 @@
+# loyalty/application/mappers.py   class loyaltyMapper:     """Maps domain entity <-> ORM model <-> pydantic schema."""     pass

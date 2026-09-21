@@ -1,0 +1,1 @@
+"""product domain layer - pure business logic."""

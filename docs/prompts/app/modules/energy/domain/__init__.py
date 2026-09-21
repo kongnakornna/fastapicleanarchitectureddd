@@ -1,0 +1,1 @@
+"""energy domain layer - pure business logic."""

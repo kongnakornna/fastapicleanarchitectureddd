@@ -1,0 +1,1 @@
+# transport/application/exceptions.py from app.shared.exceptions import ApplicationException   class transportException(ApplicationException):     code = "trn_APP_ERROR"   class transportNotFoundException(transportException):     code = "trn_NOT_FOUND"

@@ -1,0 +1,1 @@
+"""accounting_gateway application layer - use cases + ports."""

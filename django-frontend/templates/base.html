@@ -1,0 +1,61 @@
+{% extends "layout/app_layout.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "app.name" %}{% endblock %}
+
+{% block page_header %}
+<div class="page-header d-print-none">
+  <div class="container-xl">
+    <div class="row g-2 align-items-center">
+      <div class="col">
+        <div class="page-pretitle">{% trans "dashboard.overview" %}</div>
+        <h1 class="page-title">{% trans "dashboard.title" %}</h1>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row row-deck row-cards">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-body">
+        <h3 class="card-title">🎉 Django Frontend พร้อมใช้งาน!</h3>
+        <p class="text-secondary mb-3">
+          ระบบ Layouts + Authentication ทำงานได้แล้ว ลองเข้า
+          <a href="{% url 'auth:login' %}">{% trans "login.title" %}</a>
+          หรือใช้งาน header/sidebar/theme ได้เลย
+        </p>
+
+        <div class="row g-3">
+          <div class="col-md-4">
+            <div class="card">
+              <div class="card-body">
+                <h4>🎨 Theme</h4>
+                <p class="text-secondary small">ลองกดปุ่ม palette (ล่างซ้าย) เพื่อเปลี่ยน theme</p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="card">
+              <div class="card-body">
+                <h4>🌓 Dark Mode</h4>
+                <p class="text-secondary small">กดไอคอนพระจันทร์บน header</p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="card">
+              <div class="card-body">
+                <h4>🌐 ภาษา</h4>
+                <p class="text-secondary small">TH / EN (i18n)</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

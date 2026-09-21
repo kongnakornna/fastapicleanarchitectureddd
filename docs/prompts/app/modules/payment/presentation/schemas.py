@@ -1,0 +1,1 @@
+# payment/presentation/schemas.py from pydantic import BaseModel, ConfigDict   class paymentCreate(BaseModel):     pass   class paymentResponse(BaseModel):     model_config = ConfigDict(from_attributes=True)

@@ -1,0 +1,1 @@
+"""alerting domain layer - pure business logic."""
