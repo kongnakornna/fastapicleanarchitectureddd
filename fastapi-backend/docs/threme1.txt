@@ -1,0 +1,460 @@
+ทำทั้นที่ จำกัดแค่  C:\github\fastapi-clean-architecture-ddd-erp-iot\fastapi-backend\app\modules\idempotency  เท่านั้น
+1. อ่าน C:\github\fastapi-clean-architecture-ddd-erp-iot\fastapi-backend\prompts\layer-0-core\idempotency.md
+2. สร้าง file / update data
+3. อ่าน C:\github\fastapi-clean-architecture-ddd-erp-iot\fastapi-backend\app\modules\idempotency สร้าง file / update data ที่ว่าง
+
+
+ Thought: 4.6s
+Let me start by reading the prompt file and exploring the current state of the idempotency module.
+→Read prompts\layer-0-core\idempotency.md
+→Read app\modules\idempotency
++ Thought: 16.5s
+Objective
+- สร้าง/อัปเดตไฟล์ในโมดูล idempotency (Module 0.4, Layer 0 Core) ตาม spec ใน prompts\layer-0-core\idempotency.md
+- จำกัดขอบเขตงานเฉพาะ C:\github\fastapi-clean-architecture-ddd-erp-iot\fastapi-backend\app\modules\idempotency เท่านั้น
+Important Details
+- ขอบเขตงานจำกัดเฉพาะ C:\github\fastapi-clean-architecture-ddd-erp-iot\fastapi-backend\app\modules\idempotency เท่านั้น
+- Module: idempotency; Layer 0 (Core); Priority 🔴; Phase 1; มิติธุรกิจ Core (cross-cutting)
+- Dependencies: tenant_context, config
+- Domain Concepts: IdempotencyKey (VO), IdempotencyRecord (entity), IdempotencyStatus (enum)
+- Prefix: idem; Table: tenant_{tid}.idempotency_records
+- ข้อกำหนด: client ส่ง Idempotency-Key header ทุก mutating request; key ใหม่ → execute + store; key ซ้ำ + COMPLETED → return cached result; key ซ้ำ + IN_PROGRESS → 409 Conflict; key ซ้ำ + payload ต่าง → 422; TTL 24 ชั่วโมง (config ได้)
+- IdempotencyRecord เป็น dataclass สืบจาก BaseEntity: fields key, status (default "IN_PROGRESS"), request_hash, response_body (dict), response_status, locked_until, expires_at; validate key ว่าง → raise DomainError("Idempotency key required"); มี method is_expired()
+- ไฟล์ spec ถูก truncate ที่บรรทัด 59 — อ่านเนื้อหาส่วนที่เหลือยังไม่ครบ
+Work State
+Completed
+- อ่าน spec บางส่วน: C:\github\fastapi-clean-architecture-ddd-erp-iot\fastapi-backend\prompts\layer-0-core\idempotency.md (ถึงบรรทัด ~58)
+- สำรวจ directory เป้าหมาย app\modules\idempotency แล้ว: พบ __init__.py, application/, domain/, infrastructure/, presentation/
+Active
+- (none) — ยังไม่ได้สร้าง/อัปเดตไฟล์ใด
+Blocked
+- เนื้อหา spec ตั้งแต่บรรทัด 59 เป็นต้นไปยังไม่ถูกอ่าน (truncated) — spec เต็มของแต่ละ layer ยังไม่ครบ
+- ยังไม่ทราบว่าไฟล์ย่อยใน application/, domain/, infrastructure/, presentation/ ไฟล์ใดว่าง/ต้องสร้าง
+Next Move
+1. อ่าน idempotency.md ต่อจากบรรทัด 59 (หรือแบบเต็ม) เพื่อให้ได้ spec ครบของ domain/application/infrastructure/presentation
+2. list เนื้อหาใน application/, domain/, infrastructure/, presentation/ เพื่อระบุไฟล์ว่างที่ต้องสร้าง/อัปเดต
+3. สร้าง/อัปเดตไฟล์ตาม spec ทีละ layer เริ่มจาก domain แล้วต่อ application/infrastructure/presentation
+Relevant Files
+- C:\github\fastapi-clean-architecture-ddd-erp-iot\fastapi-backend\prompts\layer-0-core\idempotency.md: spec ต้นทางของโมดูล (อ่านไม่ครบ)
+- C:\github\fastapi-clean-architecture-ddd-erp-iot\fastapi-backend\app\modules\idempotency\: directory เป้าหมาย (มี __init__.py + โฟลเดอร์ application/, domain/, infrastructure/, presentation/)
+▣  Compaction · Big Pickle · 25.5s
++ Thought: 747ms
+→Read prompts\layer-0-core\idempotency.md [offset=1, limit=400]
+→Read app\modules\idempotency
++ Thought: 11.2s
+Objective
+- สร้าง/อัปเดตไฟล์ในโมดูล idempotency (Module 0.4, Layer 0 Core) ตาม spec ใน prompts\layer-0-core\idempotency.md
+- จำกัดขอบเขตงานเฉพาะ C:\github\fastapi-clean-architecture-ddd-erp-iot\fastapi-backend\app\modules\idempotency เท่านั้น
+Important Details
+- ขอบเขตงานจำกัดเฉพาะ C:\github\fastapi-clean-architecture-ddd-erp-iot\fastapi-backend\app\modules\idempotency เท่านั้น
+- Module: idempotency; Layer 0 (Core); Priority 🔴; Phase 1; มิติธุรกิจ Core (cross-cutting)
+- Dependencies: tenant_context, config
+- Domain Concepts: IdempotencyKey (VO), IdempotencyRecord (entity), IdempotencyStatus (enum)
+- Prefix: idem; Table: tenant_{tid}.idempotency_records
+- ข้อกำหนด: client ส่ง Idempotency-Key header ทุก mutating request; key ใหม่ → execute + store; key ซ้ำ + COMPLETED → return cached result; key ซ้ำ + IN_PROGRESS → 409 Conflict; key ซ้ำ + payload ต่าง → 422; TTL 24 ชั่วโมง (config ได้)
+- Domain spec ที่อ่านได้แล้ว (spec บรรทัด 38-58): IdempotencyRecord(BaseEntity) dataclass fields key (default ""), status (default "IN_PROGRESS"), request_hash, response_body (dict, default_factory=dict), response_status (int, default 0), locked_until (datetime|None), expires_at (datetime|None); __post_init__ → เรียก _validate(); _validate() raise DomainError("Idempotency key required") ถ้า key ว่าง; มี method is_expired() (อ่านถูกตัดตรงกลาง method)
+Work State
+Completed
+- อ่าน spec บางส่วน: C:\github\fastapi-clean-architecture-ddd-erp-iot\fastapi-backend\prompts\layer-0-core\idempotency.md (ถึงบรรทัด ~58)
+- สำรวจ directory เป้าหมาย app\modules\idempotency แล้ว: พบ __init__.py + โฟลเดอร์ application/, domain/, infrastructure/, presentation/ (5 entries)
+Active
+- (none) — ยังไม่ได้สร้าง/อัปเดตไฟล์ใด
+Blocked
+- เนื้อหา spec ตั้งแต่บรรทัด 59 เป็นต้นไปยังไม่ถูกอ่าน (truncated) — spec เต็มของแต่ละ layer (รวม is_expired() ที่ค้าง) ยังไม่ครบ
+- ยังไม่ทราบว่าไฟล์ย่อยภายใน application/, domain/, infrastructure/, presentation/ ไฟล์ใดว่าง/ต้องสร้าง
+Next Move
+1. อ่าน idempotency.md ต่อจากบรรทัด 59 (offset 59 ขึ้นไป) เพื่อให้ได้ spec ครบของ domain/application/infrastructure/presentation
+2. list เนื้อหาใน application/, domain/, infrastructure/, presentation/ เป็นรายโฟลเดอร์ เพื่อระบุไฟล์ว่างที่ต้องสร้าง/อัปเดต
+3. สร้าง/อัปเดตไฟล์ตาม spec ทีละ layer — เริ่มจาก domain แล้วต่อ application/infrastructure/presentation
+Relevant Files
+- C:\github\fastapi-clean-architecture-ddd-erp-iot\fastapi-backend\prompts\layer-0-core\idempotency.md: spec ต้นทางของโมดูล (อ่านไม่ครบ — truncate ที่บรรทัด 59)
+- C:\github\fastapi-clean-architecture-ddd-erp-iot\fastapi-backend\app\modules\idempotency\: directory เป้าหมาย (มี __init__.py + โฟลเดอร์ application/, domain/, infrastructure/, presentation/; ยังไม่รู้ไฟล์ภายในแต่ละโฟลเดอร์)
+▣  Compaction · Big Pickle · 19.8s
++ Thought: 569ms
+Continuing with the next steps: reading the rest of the spec and listing the module's subdirectories.
+→Read prompts\layer-0-core\idempotency.md [offset=59]
+→Read app\modules\idempotency
++ Thought: 18.6s
+Objective
+- Create/update files in the idempotency module (Module 0.4, Layer 0 Core) per the spec in prompts\layer-0-core\idempotency.md
+- Scope limited to C:\github\fastapi-clean-architecture-ddd-erp-iot\fastapi-backend\app\modules\idempotency
+Important Details
+- Module: idempotency; Layer 0 (Core); Priority 🔴; Phase 1; cross-cutting core business dimension
+- Dependencies: tenant_context, config
+- Prefix: idem; Table: tenant_{tid}.idempotency_records
+- Behavior: client sends Idempotency-Key header on every mutating request; new key → execute + store; duplicate + COMPLETED → return cached result; duplicate + IN_PROGRESS → 409 Conflict; duplicate + different payload → 422; TTL 24h (configurable)
+- Known spec contents (read through ~line 109):
+- domain entity IdempotencyRecord(BaseEntity): fields key (default ""), status (default "IN_PROGRESS"), request_hash, response_body (dict, default_factory=dict), response_status (int, default 0), locked_until (datetime|None), expires_at (datetime|None); __post_init__ → _validate() raises DomainError("Idempotency key required") if key empty; methods is_expired() (expires_at is not None and datetime.utcnow() > expires_at), is_completed(), is_in_progress(), complete(status, body) (sets status=COMPLETED, response_status, response_body)
+- domain/value_objects.py: IdempotencyKey frozen dataclass (value, scope); __post_init__ raises DomainError("Idempotency key length must be 8-255"); redis_key(tenant_id) → f"t:{tenant_id}:idem:{self.scope}:{self.value}"
+- domain/enums.py: IdempotencyStatus (IN_PROGRESS, COMPLETED, FAILED); IdempotencyConflict (SAME_KEY_SAME_PAYLOAD, SAME_KEY_DIFF_PAYLOAD, CONCURRENT)
+- application/interfaces.py: IIdempotencyStore(Protocol) with async get(key, tenant_id) -> IdempotencyRecord | None, async set(key, tenant_id, rec), async lock(key, tenant_id, ttl ...) — truncated at line 109
+Work State
+Completed
+- Read spec from line 59 through ~109 (domain entity methods, value_objects, enums, start of application layer)
+- Explored target directory top level: __init__.py + subfolders application/, domain/, infrastructure/, presentation/ (5 entries)
+Active
+- (none)
+Blocked
+- Spec truncated at line 109 — remainder of application/interfaces.py lock signature, application services, infrastructure, and presentation still unread
+- Contents of the four subdirectories unknown — top-level listing does not show files inside them
+Next Move
+1. Read idempotency.md from offset 109/110 to capture the rest of the application/infrastructure/presentation spec
+2. List contents of each subdirectory individually (application/, domain/, infrastructure/, presentation/) to identify empty/placeholder files to create or update
+3. Create/update files per spec layer by layer — start with domain/, then application/, infrastructure/, presentation/
+Relevant Files
+- C:\github\fastapi-clean-architecture-ddd-erp-iot\fastapi-backend\prompts\layer-0-core\idempotency.md: source spec (read through ~line 109, then truncated)
+- C:\github\fastapi-clean-architecture-ddd-erp-iot\fastapi-backend\app\modules\idempotency\: target directory (top level: __init__.py, application/, domain/, infrastructure/, presentation/)
+▣  Compaction · Big Pickle · 27.7s
++ Thought: 1.1s
+→Read prompts\layer-0-core\idempotency.md [offset=109]
+→Read app\modules\idempotency\domain
+→Read app\modules\idempotency\application
+→Read app\modules\idempotency\infrastructure
+→Read app\modules\idempotency\presentation
++ Thought: 12.1s
+Objective
+- Create/update the idempotency module (Module 0.4, Layer 0 Core) files per the spec in prompts\layer-0-core\idempotency.md
+- Scope limited to C:\github\fastapi-clean-architecture-ddd-erp-iot\fastapi-backend\app\modules\idempotency
+Important Details
+- Module: idempotency; Layer 0 (Core); Priority 🔴; Phase 1; cross-cutting core business dimension; dependencies: tenant_context, config
+- Prefix: idem; Table: tenant_{tid}.idempotency_records
+- Behavior: Idempotency-Key header on every mutating request; new key → execute + store; duplicate + COMPLETED → return cached result; duplicate + IN_PROGRESS → 409; duplicate + different payload → 422; TTL 24h (config.IDEMPOTENCY_TTL_SECONDS)
+- All four subdirectories already contain files (listed below) — expect updates to existing files, not fresh creation
+- Known spec content so far:
+- domain/entities.py: IdempotencyRecord(BaseEntity) — fields key (default ""), status (default "IN_PROGRESS"), request_hash, response_body (dict, default_factory=dict), response_status (int, default 0), locked_until (datetime|None), expires_at (datetime|None); __post_init__ → _validate() raises DomainError("Idempotency key required") if key empty; methods is_expired() (expires_at is not None and datetime.utcnow() > expires_at), is_completed(), is_in_progress(), complete(status, body)
+- domain/value_objects.py: IdempotencyKey frozen dataclass (value, scope); __post_init__ raises DomainError("Idempotency key length must be 8-255"); redis_key(tenant_id) → f"t:{tenant_id}:idem:{self.scope}:{self.value}"
+- domain/enums.py: IdempotencyStatus (IN_PROGRESS, COMPLETED, FAILED); IdempotencyConflict (SAME_KEY_SAME_PAYLOAD, SAME_KEY_DIFF_PAYLOAD, CONCURRENT)
+- domain/ also contains exceptions.py and events.py (spec sections for these not yet read)
+- application/interfaces.py: IIdempotencyStore(Protocol) — async get(key: IdempotencyKey, tenant_id: str) -> IdempotencyRecord | None, async set(key, tenant_id, rec) -> None, async lock(key, tenant_id, ttl: int) -> bool, async unlock(key, tenant_id) -> None
+- application/use_cases.py: class IdempotencyUseCases — __init__(self, store, config) sets self.store, self.ttl = config.IDEMPOTENCY_TTL_SECONDS; async check_or_lock(self, raw_key, scope, payload) -> IdempotencyRecord | None:
+- ctx = get_context(); key = IdempotencyKey(value=raw_key, scope=scope); existing = await self.store.get(key, ctx.tenant_id)
+- if existing and existing.is_completed(): if existing.request_hash != self._hash(payload) → raise IdempotencyConflictException("Payload mismatch"); else return existing (replay)
+- if existing and existing.is_in_progress() → raise IdempotencyConflictException("Request in progress")
+- locked = await self.store.lock(key, ctx.tenant_id, self.ttl); if not locked → raise IdempotencyConflictException("Concurrent request")
+- creates IdempotencyRecord(key=raw_key, status="IN_PROGRESS", request_hash=self._hash(payload), expires_at=datetime.utcnow() + timedelta(seconds=self.ttl)) then await self.store.set(...) (arguments truncated)
+Work State
+Completed
+- Read spec idempotency.md from line 59 through ~148 (domain complete, application interfaces + start of check_or_lock; truncated mid-check_or_lock at line 148)
+- Explored target directory top level: __init__.py + application/, domain/, infrastructure/, presentation/
+- Listed contents of all four subdirectories (see Relevant Files) — all contain existing files
+Active
+- (none)
+Blocked
+- Spec read still truncated at line 148 (await self.store.set() — remainder of check_or_lock, other use case methods, plus infrastructure and presentation spec sections unread
+Next Move
+1. Read idempotency.md from offset 148 to capture the rest of the application and all infrastructure/presentation spec sections
+2. Update/create files layer by layer: domain/ → application/ → infrastructure/ → presentation/ (start by comparing domain/entities.py, domain/value_objects.py, domain/enums.py, domain/exceptions.py, domain/events.py against spec)
+3. Continue with application/ (interfaces.py, exceptions.py, use_cases.py, mappers.py, utils.py), then infrastructure/ (models.py, repositories.py, caches.py, services.py), then presentation/ (routers.py, schemas.py, dependencies.py, docs.py)
+Relevant Files
+- C:\github\fastapi-clean-architecture-ddd-erp-iot\fastapi-backend\prompts\layer-0-core\idempotency.md: source spec (read through line ~148, then truncated)
+- C:\github\fastapi-clean-architecture-ddd-erp-iot\fastapi-backend\app\modules\idempotency\domain\: __init__.py, entities.py, enums.py, events.py, exceptions.py, value_objects.py
+- C:\github\fastapi-clean-architecture-ddd-erp-iot\fastapi-backend\app\modules\idempotency\application\: __init__.py, exceptions.py, interfaces.py, mappers.py, use_cases.py, utils.py
+- C:\github\fastapi-clean-architecture-ddd-erp-iot\fastapi-backend\app\modules\idempotency\infrastructure\: __init__.py, caches.py, models.py, repositories.py, services.py
+- C:\github\fastapi-clean-architecture-ddd-erp-iot\fastapi-backend\app\modules\idempotency\presentation\: __init__.py, dependencies.py, docs.py, routers.py, schemas.py
+▣  Compaction · Big Pickle · 23.0s
++ Thought: 863ms
+Continuing from where I left off — reading the rest of the spec.
+→Read prompts\layer-0-core\idempotency.md [offset=148]
++ Thought: 8.5s
+Objective
+- Create/update the idempotency module (Module 0.4, Layer 0 Core) files per the spec in C:\github\fastapi-clean-architecture-ddd-erp-iot\fastapi-backend\prompts\layer-0-core\idempotency.md
+- Scope limited to C:\github\fastapi-clean-architecture-ddd-erp-iot\fastapi-backend\app\modules\idempotency
+Important Details
+- Module: idempotency; Layer 0 (Core); Priority 🔴; Phase 1; cross-cutting core business dimension; dependencies: tenant_context, config
+- Prefix: idem; Table: tenant_{tid}.idempotency_records
+- Behavior: Idempotency-Key header on every mutating request; new key → execute + store; duplicate + COMPLETED → return cached result; duplicate + IN_PROGRESS → 409; duplicate + different payload → 422; TTL 24h (config.IDEMPOTENCY_TTL_SECONDS)
+- All four subdirectories already contain files — expect updates to existing files, not fresh creation
+- Domain spec (captured): IdempotencyRecord(BaseEntity) with fields key (default ""), status (default "IN_PROGRESS"), request_hash, response_body (dict, default_factory=dict), response_status (int, default 0), locked_until (datetime|None), expires_at (datetime|None); __post_init__ → _validate() raises DomainError("Idempotency key required") if key empty; methods is_expired(), is_completed(), is_in_progress(), complete(status, body); IdempotencyKey frozen dataclass (value, scope) validating 8-255 length, redis_key(tenant_id) → f"t:{tenant_id}:idem:{self.scope}:{self.value}"; IdempotencyStatus (IN_PROGRESS, COMPLETED, FAILED); IdempotencyConflict (SAME_KEY_SAME_PAYLOAD, SAME_KEY_DIFF_PAYLOAD, CONCURRENT)
+- Application spec (captured):
+- interfaces.py: IIdempotencyStore(Protocol) — async get(key, tenant_id) -> IdempotencyRecord | None, async set(key, tenant_id, rec), async lock(key, tenant_id, ttl) -> bool, async unlock(key, tenant_id)
+- use_cases.py: IdempotencyUseCases(store, config) with self.ttl = config.IDEMPOTENCY_TTL_SECONDS
+- check_or_lock(raw_key, scope, payload): get_context(); existing completed + hash mismatch → IdempotencyConflictException("Payload mismatch"); completed + hash match → return existing (replay); in_progress → IdempotencyConflictException("Request in progress"); lock fails → IdempotencyConflictException("Concurrent request"); creates IN_PROGRESS record with request_hash=_hash(payload), expires_at=utcnow + timedelta(seconds=ttl), store.set(...), returns None; except StandardException re-raise, DomainError → DomainException, other → IdempotencyException()
+- complete(raw_key, scope, status, body): fetch rec, rec.complete(status, body), store.set, store.unlock; exceptions logged, not re-raised
+- _hash(payload): json.dumps(payload, sort_keys=True, separators=(",", ":")) + hashlib.sha256
+- mappers.py — IdempotencyMapper; exceptions.py — IdempotencyException, IdempotencyConflictException; utils.py — idempotent() decorator
+- Infrastructure spec (partial): models.py — IdempotencyRecordModel(BaseModel), __tablename__ = "idempotency_records", key = Column(String(255), nullable=False, index=True) (rest unread)
+Work State
+Completed
+- Read spec idempotency.md from line 59 through ~188 (domain + application sections complete; infrastructure models.py started; truncated after line 188)
+- Explored target directory top level: __init__.py + application/, domain/, infrastructure/, presentation/
+- Listed contents of all four subdirectories (see Relevant Files) — all contain existing files
+Active
+- (none)
+Blocked
+- Spec read still truncated at line ~188/189 (mid infrastructure/models.py, key = Column(...)) — remainder of models.py, repositories.py, caches.py, services.py, and all presentation sections unread
+Next Move
+1. Read idempotency.md from offset 189 (or 190) to capture the rest of infrastructure and presentation spec sections
+2. Update/create files layer by layer: domain/ → application/ → infrastructure/ → presentation/ (start by comparing existing domain/entities.py, domain/value_objects.py, domain/enums.py, domain/exceptions.py, domain/events.py against spec)
+3. Continue with application/ (interfaces.py, exceptions.py, use_cases.py, mappers.py, utils.py), then infrastructure/ (models.py, repositories.py, caches.py, services.py), then presentation/ (routers.py, schemas.py, dependencies.py, docs.py)
+Relevant Files
+- C:\github\fastapi-clean-architecture-ddd-erp-iot\fastapi-backend\prompts\layer-0-core\idempotency.md: source spec (read through line ~188, then truncated)
+- C:\github\fastapi-clean-architecture-ddd-erp-iot\fastapi-backend\app\modules\idempotency\domain\: __init__.py, entities.py, enums.py, events.py, exceptions.py, value_objects.py
+- C:\github\fastapi-clean-architecture-ddd-erp-iot\fastapi-backend\app\modules\idempotency\application\: __init__.py, exceptions.py, interfaces.py, mappers.py, use_cases.py, utils.py
+- C:\github\fastapi-clean-architecture-ddd-erp-iot\fastapi-backend\app\modules\idempotency\infrastructure\: __init__.py, caches.py, models.py, repositories.py, services.py
+- C:\github\fastapi-clean-architecture-ddd-erp-iot\fastapi-backend\app\modules\idempotency\presentation\: __init__.py, dependencies.py, docs.py, routers.py, schemas.py
+▣  Compaction · Big Pickle · 18.7s
++ Thought: 341ms
+→Read prompts\layer-0-core\idempotency.md [offset=189]
++ Thought: 4.7s
+Objective
+- Create/update the idempotency module (Module 0.4, Layer 0 Core) files per the spec in C:\github\fastapi-clean-architecture-ddd-erp-iot\fastapi-backend\prompts\layer-0-core\idempotency.md
+- Scope limited to C:\github\fastapi-clean-architecture-ddd-erp-iot\fastapi-backend\app\modules\idempotency
+Important Details
+- Module: idempotency; Layer 0 (Core); Priority 🔴; Phase 1; cross-cutting core business dimension; dependencies: tenant_context, config
+- Prefix: idem; Table: tenant_{tid}.idempotency_records
+- Behavior: Idempotency-Key header on every mutating request; new key → execute + store; duplicate + COMPLETED → return cached result; duplicate + IN_PROGRESS → 409; duplicate + different payload → 422; TTL 24h (config.IDEMPOTENCY_TTL_SECONDS)
+- All four subdirectories already contain files — expect updates to existing files, not fresh creation
+- Domain spec (captured): IdempotencyRecord(BaseEntity) with fields key (default ""), status (default "IN_PROGRESS"), request_hash, response_body (dict, default_factory=dict), response_status (int, default 0), locked_until (datetime|None), expires_at (datetime|None); __post_init__ → _validate() raises DomainError("Idempotency key required") if key empty; methods is_expired(), is_completed(), is_in_progress(), complete(status, body); IdempotencyKey frozen dataclass (value, scope) validating 8-255 length, redis_key(tenant_id) → f"t:{tenant_id}:idem:{self.scope}:{self.value}"; IdempotencyStatus (IN_PROGRESS, COMPLETED, FAILED); IdempotencyConflict (SAME_KEY_SAME_PAYLOAD, SAME_KEY_DIFF_PAYLOAD, CONCURRENT)
+- Application spec (captured):
+- interfaces.py: IIdempotencyStore(Protocol) — async get(key, tenant_id) -> IdempotencyRecord | None, async set(key, tenant_id, rec), async lock(key, tenant_id, ttl) -> bool, async unlock(key, tenant_id)
+- use_cases.py: IdempotencyUseCases(store, config) with self.ttl = config.IDEMPOTENCY_TTL_SECONDS
+- check_or_lock(raw_key, scope, payload): get_context(); existing completed + hash mismatch → IdempotencyConflictException("Payload mismatch"); completed + hash match → return existing (replay); in_progress → IdempotencyConflictException("Request in progress"); lock fails → IdempotencyConflictException("Concurrent request"); creates IN_PROGRESS record with request_hash=_hash(payload), expires_at=utcnow + timedelta(seconds=ttl), store.set(...), returns None; except StandardException re-raise, DomainError → DomainException, other → IdempotencyException()
+- complete(raw_key, scope, status, body): fetch rec, rec.complete(status, body), store.set, store.unlock; exceptions logged, not re-raised
+- _hash(payload): json.dumps(payload, sort_keys=True, separators=(",", ":")) + hashlib.sha256
+- mappers.py — IdempotencyMapper; exceptions.py — IdempotencyException, IdempotencyConflictException; utils.py — idempotent() decorator
+- Infrastructure spec (captured, lines 189-218):
+- models.py — IdempotencyRecordModel(BaseModel), __tablename__ = "idempotency_records"; columns: key = Column(String(255), nullable=False, index=True), scope = Column(String(100), nullable=False, index=True), status = Column(String(20), nullable=False), request_hash = Column(String(64), nullable=False), response_body = Column(JSONB, default=dict), response_status = Column(Integer), locked_until = Column(DateTime(timezone=True)), expires_at = Column(DateTime(timezone=True), index=True); __table_args__ = (UniqueConstraint("key", "scope", "tenant_id", name="uq_idem_key_scope_tenant"),)
+- repositories.py — PostgresIdempotencyRepository (fallback เมื่อ Redis ล่ม / fallback when Redis down)
+- caches.py — RedisIdempotencyStore (primary, atomic SET NX): async lock(self, key, tenant_id, ttl) -> bool does self.redis.set(f"{key.redis_key(tenant_id)}:lock", "1", nx=True, ex=ttl); on exception logs with logger.opt(exception=e).error("Lock failed") and returns False (conservative: fail closed)
+- services.py — ไม่มี / none
+- Presentation spec (captured):
+- routers.py — ไม่มี public router (uses middleware/dependency)
+- schemas.py — IdempotencyRecordSchema
+- docs.py — docs
+- dependencies.py — require_idempotency_key() FastAPI dependency
+- Error handling: Use cases: 3-branch; Store: 2-branch (Redis), never-raise (fallback logging)
+- Invariants (partial, truncated at line 233): Key + Scope + Tenant = unique; next bullet unread
+Work State
+Completed
+- Read spec idempotency.md from line 59 through ~233 (domain + application + infrastructure incl. models.py columns/constraint + presentation + error handling sections captured; truncated mid "### 6. Invariants" at line 233)
+- Explored target directory top level: __init__.py + application/, domain/, infrastructure/, presentation/
+- Listed contents of all four subdirectories (see Relevant Files) — all contain existing files
+Active
+- (none)
+Blocked
+- Spec read still truncated at line ~233 (mid "### 6. Invariants", after - Key + Scope + Tenant = unique and a dangling  ` ) — remainder of invariants section unread
+Next Move
+1. Read idempotency.md from offset 233 (or 234) to capture the rest of the invariants section (likely the last spec section)
+2. Verify no further spec content remains (check total file length / read to end)
+3. Update/create files layer by layer: domain/ → application/ → infrastructure/ → presentation/ (start by comparing existing domain/entities.py, domain/value_objects.py, domain/enums.py, domain/exceptions.py, domain/events.py against spec)
+4. Continue with application/ (interfaces.py, exceptions.py, use_cases.py, mappers.py, utils.py), then infrastructure/ (models.py, repositories.py, caches.py, services.py), then presentation/ (routers.py, schemas.py, dependencies.py, docs.py)
+Relevant Files
+- C:\github\fastapi-clean-architecture-ddd-erp-iot\fastapi-backend\prompts\layer-0-core\idempotency.md: source spec (read through line ~233, then truncated mid-invariants)
+- C:\github\fastapi-clean-architecture-ddd-erp-iot\fastapi-backend\app\modules\idempotency\domain\: __init__.py, entities.py, enums.py, events.py, exceptions.py, value_objects.py
+- C:\github\fastapi-clean-architecture-ddd-erp-iot\fastapi-backend\app\modules\idempotency\application\: __init__.py, exceptions.py, interfaces.py, mappers.py, use_cases.py, utils.py
+- C:\github\fastapi-clean-architecture-ddd-erp-iot\fastapi-backend\app\modules\idempotency\infrastructure\: __init__.py, caches.py, models.py, repositories.py, services.py
+- C:\github\fastapi-clean-architecture-ddd-erp-iot\fastapi-backend\app\modules\idempotency\presentation\: __init__.py, dependencies.py, docs.py, routers.py, schemas.py
+▣  Compaction · Big Pickle · 22.4s
++ Thought: 555ms
+→Read prompts\layer-0-core\idempotency.md [offset=219]
++ Thought: 8.5s
+Objective
+- Create/update the idempotency module (Module 0.4, Layer 0 Core) files per the spec in C:\github\fastapi-clean-architecture-ddd-erp-iot\fastapi-backend\prompts\layer-0-core\idempotency.md
+- Scope limited to C:\github\fastapi-clean-architecture-ddd-erp-iot\fastapi-backend\app\modules\idempotency
+Important Details
+- Module: idempotency; Layer 0 (Core); Priority 🔴; Phase 1; cross-cutting core business dimension; dependencies: tenant_context, config
+- Prefix: idem; Table: tenant_{tid}.idempotency_records
+- Behavior: Idempotency-Key header on every mutating request; new key → execute + store; duplicate + COMPLETED → return cached result; duplicate + IN_PROGRESS → 409; duplicate + different payload → 422; TTL 24h (config.IDEMPOTENCY_TTL_SECONDS)
+- All four subdirectories already contain files — expect updates to existing files, not fresh creation
+- Spec output contract: 16 files, 2-language comments (Thai/English), พร้อมรัน (ready to run)
+- Domain spec:
+- IdempotencyRecord(BaseEntity): key (default ""), status (default "IN_PROGRESS"), request_hash, response_body (dict, default_factory=dict), response_status (int, default 0), locked_until (datetime|None), expires_at (datetime|None); __post_init__ → _validate() raises DomainError("Idempotency key required") if key empty; methods is_expired(), is_completed(), is_in_progress(), complete(status, body)
+- IdempotencyKey frozen dataclass (value, scope) validating 8-255 length; redis_key(tenant_id) → f"t:{tenant_id}:idem:{self.scope}:{self.value}"
+- IdempotencyStatus (IN_PROGRESS, COMPLETED, FAILED); IdempotencyConflict (SAME_KEY_SAME_PAYLOAD, SAME_KEY_DIFF_PAYLOAD, CONCURRENT)
+- Domain events: IdempotencyLocked, IdempotencyCompleted, IdempotencyConflict
+- Application spec:
+- interfaces.py: IIdempotencyStore(Protocol) — async get(key, tenant_id), async set(key, tenant_id, rec), async lock(key, tenant_id, ttl) -> bool, async unlock(key, tenant_id)
+- use_cases.py: IdempotencyUseCases(store, config) with self.ttl = config.IDEMPOTENCY_TTL_SECONDS; check_or_lock(raw_key, scope, payload): existing completed + hash mismatch → IdempotencyConflictException("Payload mismatch"); completed + hash match → replay; in_progress → IdempotencyConflictException("Request in progress"); lock fails → IdempotencyConflictException("Concurrent request"); creates IN_PROGRESS record, expires_at=utcnow + timedelta(seconds=ttl), store.set(...), returns None; except StandardException re-raise, DomainError → DomainException, other → IdempotencyException(); complete(raw_key, scope, status, body): fetch rec, rec.complete(...), store.set, store.unlock, exceptions logged not re-raised; _hash(payload): json.dumps(payload, sort_keys=True, separators=(",", ":")) + hashlib.sha256
+- mappers.py — IdempotencyMapper; exceptions.py — IdempotencyException, IdempotencyConflictException; utils.py — idempotent() decorator
+- Infrastructure spec:
+- models.py — IdempotencyRecordModel(BaseModel), __tablename__ = "idempotency_records"; columns: key String(255) nullable index, scope String(100) nullable index, status String(20), request_hash String(64), response_body JSONB default dict, response_status Integer, locked_until DateTime(tz), expires_at DateTime(tz) index; __table_args__ = (UniqueConstraint("key", "scope", "tenant_id", name="uq_idem_key_scope_tenant"),)
+- repositories.py — PostgresIdempotencyRepository (fallback เมื่อ Redis ล่ม / fallback when Redis down)
+- caches.py — RedisIdempotencyStore (primary, atomic SET NX); lock() does self.redis.set(f"{key.redis_key(tenant_id)}:lock", "1", nx=True, ex=ttl); on exception logs logger.opt(exception=e).error("Lock failed") and returns False (fail closed)
+- services.py — ไม่มี / none
+- Presentation spec: routers.py — ไม่มี public router (middleware/dependency); schemas.py — IdempotencyRecordSchema; docs.py — docs; dependencies.py — require_idempotency_key() FastAPI dependency
+- Error handling: Use cases: 3-branch; Store: 2-branch (Redis), never-raise (fallback logging)
+- Invariants (full): Key + Scope + Tenant unique; COMPLETED record must always return original response; payload hash must match else 422; concurrent requests → 1 success, rest 409
+- Tests (spec §8): test_first_request_executes, test_second_request_replays, test_payload_mismatch_raises, test_concurrent_requests_only_one_wins, test_expired_record_allows_retry, test_property_replay_returns_same_response
+Work State
+Completed
+- Full spec captured: idempotency.md read to end of file (total 258 lines, ends with --- on line 258); invariants, domain events, tests, and output sections now complete
+- Explored target directory top level (__init__.py + 4 subdirectories) and listed contents of all four subdirectories — all contain existing files
+Active
+- (none)
+Blocked
+- (none)
+Next Move
+1. Begin implementation layer by layer per spec: domain/ → application/ → infrastructure/ → presentation/ (16 files total; update existing files, not create fresh)
+2. Start by diffing existing domain/entities.py, domain/value_objects.py, domain/enums.py, domain/exceptions.py, domain/events.py against spec and updating them
+3. Continue with application/ (interfaces.py, exceptions.py, use_cases.py, mappers.py, utils.py), then infrastructure/ (models.py, repositories.py, caches.py, services.py), then presentation/ (routers.py, schemas.py, dependencies.py, docs.py)
+Relevant Files
+- C:\github\fastapi-clean-architecture-ddd-erp-iot\fastapi-backend\prompts\layer-0-core\idempotency.md: source spec — fully read (258 lines)
+- C:\github\fastapi-clean-architecture-ddd-erp-iot\fastapi-backend\app\modules\idempotency\domain\: __init__.py, entities.py, enums.py, events.py, exceptions.py, value_objects.py
+- C:\github\fastapi-clean-architecture-ddd-erp-iot\fastapi-backend\app\modules\idempotency\application\: __init__.py, exceptions.py, interfaces.py, mappers.py, use_cases.py, utils.py
+- C:\github\fastapi-clean-architecture-ddd-erp-iot\fastapi-backend\app\modules\idempotency\infrastructure\: __init__.py, caches.py, models.py, repositories.py, services.py
+- C:\github\fastapi-clean-architecture-ddd-erp-iot\fastapi-backend\app\modules\idempotency\presentation\: __init__.py, dependencies.py, docs.py, routers.py, schemas.py
+▣  Compaction · Big Pickle · 20.6s
++ Thought: 408ms
+Continuing with the implementation. Let me read the spec and existing files to diff against.
+→Read prompts\layer-0-core\idempotency.md
++ Thought: 5.9s
+Objective
+- Continue implementing/updating the idempotency module (Module 0.4, Layer 0 Core) per the spec at C:\github\fastapi-clean-architecture-ddd-erp-iot\fastapi-backend\prompts\layer-0-core\idempotency.md
+- Scope limited to C:\github\fastapi-clean-architecture-ddd-erp-iot\fastapi-backend\app\modules\idempotency; update existing files (all subdirectories already contain files), build layer by layer: domain/ → application/ → infrastructure/ → presentation/
+Important Details
+- Module: idempotency; Layer 0 (Core); Priority 🔴; Phase 1; cross-cutting core dimension; dependencies: tenant_context, config
+- Prefix: idem; Table: tenant_{tid}.idempotency_records
+- Behavior: Idempotency-Key header on every mutating request; new key → execute + store; duplicate + COMPLETED → cached result; duplicate + IN_PROGRESS → 409; duplicate + different payload → 422; TTL 24h (config.IDEMPOTENCY_TTL_SECONDS)
+- Output contract: 16 files, Thai/English comments, พร้อมรัน (ready to run)
+- Domain spec:
+- IdempotencyRecord(BaseEntity): key (default ""), status (default "IN_PROGRESS"), request_hash, response_body (dict, default_factory=dict), response_status (int, default 0), locked_until (datetime|None), expires_at (datetime|None); __post_init__ → _validate() raises DomainError("Idempotency key required") if key empty; methods is_expired(), is_completed(), is_in_progress(), complete(status, body)
+- IdempotencyKey frozen dataclass (value, scope) validating 8–255 length; redis_key(tenant_id) → f"t:{tenant_id}:idem:{self.scope}:{self.value}"
+- IdempotencyStatus (IN_PROGRESS, COMPLETED, FAILED); IdempotencyConflict (SAME_KEY_SAME_PAYLOAD, SAME_KEY_DIFF_PAYLOAD, CONCURRENT)
+- Domain events: IdempotencyLocked, IdempotencyCompleted, IdempotencyConflict
+- Application spec:
+- interfaces.py: IIdempotencyStore(Protocol) — async get(key, tenant_id), async set(key, tenant_id, rec), async lock(key, tenant_id, ttl) -> bool, async unlock(key, tenant_id)
+- use_cases.py: IdempotencyUseCases(store, config) with self.ttl = config.IDEMPOTENCY_TTL_SECONDS; check_or_lock(raw_key, scope, payload): completed + hash mismatch → IdempotencyConflictException("Payload mismatch"); completed + hash match → replay; in_progress → IdempotencyConflictException("Request in progress"); lock fails → IdempotencyConflictException("Concurrent request"); creates IN_PROGRESS record, expires_at=utcnow + timedelta(seconds=ttl), store.set(...), returns None; except StandardException re-raise, DomainError → DomainException, other → IdempotencyException(); complete(raw_key, scope, status, body): fetch rec, rec.complete(...), store.set, store.unlock, exceptions logged not re-raised; _hash(payload): json.dumps(payload, sort_keys=True, separators=(",", ":")) + hashlib.sha256
+- mappers.py — IdempotencyMapper; exceptions.py — IdempotencyException, IdempotencyConflictException; utils.py — idempotent() decorator
+- Infrastructure spec:
+- models.py — IdempotencyRecordModel(BaseModel), __tablename__ = "idempotency_records"; columns: key String(255) nullable index, scope String(100) nullable index, status String(20), request_hash String(64), response_body JSONB default dict, response_status Integer, locked_until DateTime(tz), expires_at DateTime(tz) index; __table_args__ = (UniqueConstraint("key", "scope", "tenant_id", name="uq_idem_key_scope_tenant"),)
+- repositories.py — PostgresIdempotencyRepository (fallback เมื่อ Redis ล่ม / fallback when Redis down)
+- caches.py — RedisIdempotencyStore (primary, atomic SET NX); lock() does self.redis.set(f"{key.redis_key(tenant_id)}:lock", "1", nx=True, ex=ttl); on exception logs logger.opt(exception=e).error("Lock failed") and returns False (fail closed)
+- services.py — ไม่มี / none
+- Presentation spec: routers.py — ไม่มี public router (middleware/dependency); schemas.py — IdempotencyRecordSchema; docs.py — docs; dependencies.py — require_idempotency_key() FastAPI dependency
+- Error handling: Use cases: 3-branch; Store: 2-branch (Redis), never-raise (fallback logging)
+- Invariants: Key + Scope + Tenant unique; COMPLETED record must always return original response; payload hash mismatch → 422; concurrent requests → 1 success, rest 409
+- Tests (spec §8): test_first_request_executes, test_second_request_replays, test_payload_mismatch_raises, test_concurrent_requests_only_one_wins, test_expired_record_allows_retry, test_property_replay_returns_same_response
+Work State
+Completed
+- Full spec captured: idempotency.md read to end (258 lines, ends with --- line 258); invariants, domain events, tests, output sections captured
+- Explored target directory top level (__init__.py + 4 subdirectories) — all four subdirectories contain existing files
+- Started implementation: re-read spec file idempotency.md to diff against existing files (read through line ~59, covering metadata and start of Domain Layer spec)
+Active
+- Implementation in progress, first step is the domain/ layer — diffing existing files against spec
+Blocked
+- (none)
+Next Move
+1. Diff domain/entities.py against spec and update IdempotencyRecord (__post_init__/_validate raising DomainError("Idempotency key required"), methods is_expired, is_completed, is_in_progress, complete(status, body))
+2. Update remaining domain/ files: value_objects.py (IdempotencyKey), enums.py (IdempotencyStatus, IdempotencyConflict), exceptions.py, events.py
+3. Continue with application/ (interfaces.py, exceptions.py, use_cases.py, mappers.py, utils.py)
+4. Then infrastructure/ (models.py, repositories.py, caches.py, services.py — none)
+5. Then presentation/ (routers.py — none, schemas.py, dependencies.py, docs.py)
+Relevant Files
+- C:\github\fastapi-clean-architecture-ddd-erp-iot\fastapi-backend\prompts\layer-0-core\idempotency.md: source spec — fully read (258 lines); being re-read/diffed during implementation
+- C:\github\fastapi-clean-architecture-ddd-erp-iot\fastapi-backend\app\modules\idempotency\domain\: __init__.py, entities.py, enums.py, events.py, exceptions.py, value_objects.py — current implementation target
+- C:\github\fastapi-clean-architecture-ddd-erp-iot\fastapi-backend\app\modules\idempotency\application\: __init__.py, exceptions.py, interfaces.py, mappers.py, use_cases.py, utils.py
+- C:\github\fastapi-clean-architecture-ddd-erp-iot\fastapi-backend\app\modules\idempotency\infrastructure\: __init__.py, caches.py, models.py, repositories.py, services.py
+- C:\github\fastapi-clean-architecture-ddd-erp-iot\fastapi-backend\app\modules\idempotency\presentation\: __init__.py, dependencies.py, docs.py, routers.py, schemas.py
+▣  Compaction · Big Pickle · 23.6s
++ Thought: 918ms
+I'll continue with the domain layer. Let me read the spec and existing domain files to diff.
+→Read prompts\layer-0-core\idempotency.md
+→Read app\modules\idempotency\domain\entities.py
+→Read app\modules\idempotency\domain\value_objects.py
+→Read app\modules\idempotency\domain\enums.py
+→Read app\modules\idempotency\domain\exceptions.py
+→Read app\modules\idempotency\domain\events.py
+→Read app\modules\idempotency\domain\__init__.py
++ Thought: 7.1s
+Objective
+- Continue implementing/updating the idempotency module (Module 0.4, Layer 0 Core, Phase 1, Priority 🔴) per the spec at C:\github\fastapi-clean-architecture-ddd-erp-iot\fastapi-backend\prompts\layer-0-core\idempotency.md
+- Scope limited to C:\github\fastapi-clean-architecture-ddd-erp-iot\fastapi-backend\app\modules\idempotency; build layer by layer: domain/ → application/ → infrastructure/ → presentation/ (16 files total, ready to run)
+Important Details
+- Module: idempotency; dependencies: tenant_context, config; prefix idem; table tenant_{tid}.idempotency_records
+- Behavior: Idempotency-Key header on every mutating request; new key → execute + store; duplicate + COMPLETED → replay cached result; duplicate + IN_PROGRESS → 409; duplicate + different payload → 422; TTL 24h via config.IDEMPOTENCY_TTL_SECONDS
+- Invariants: Key + Scope + Tenant unique; COMPLETED record must always return original response; payload hash mismatch → 422 (hash = sha256 of json.dumps(payload, sort_keys=True, separators=(",", ":"))); concurrent requests → 1 success, rest 409
+- Error handling rules: Use cases: 3-branch (re-raise StandardException; DomainError → DomainException; other → IdempotencyException()); Store: 2-branch Redis (log via logger.opt(exception=e).error(...) + return False, fail closed), never-raise fallback logging
+- Domain spec (from spec, lines ~36–100):
+- IdempotencyRecord(BaseEntity) in domain/entities.py: fields key: str = "", status: str = "IN_PROGRESS", request_hash: str = "", response_body: dict = field(default_factory=dict), response_status: int = 0, locked_until: datetime | None = None, expires_at: datetime | None = None; __post_init__ → _validate() raising DomainError("Idempotency key required") if key empty; methods is_expired(), is_completed(), is_in_progress(), complete(status, body)
+- IdempotencyKey frozen dataclass (value, scope) validating 8–255 length; redis_key(tenant_id) → f"t:{tenant_id}:idem:{self.scope}:{self.value}"
+- IdempotencyStatus (IN_PROGRESS, COMPLETED, FAILED); IdempotencyConflict (SAME_KEY_SAME_PAYLOAD, SAME_KEY_DIFF_PAYLOAD, CONCURRENT)
+- Domain events: IdempotencyLocked, IdempotencyCompleted, IdempotencyConflict
+- Application spec: interfaces.py IIdempotencyStore(Protocol) with async get/set/lock/unlock; use_cases.py IdempotencyUseCases(store, config) with self.ttl = config.IDEMPOTENCY_TTL_SECONDS, methods check_or_lock(raw_key, scope, payload) (completed + hash mismatch → IdempotencyConflictException("Payload mismatch"); completed + hash match → replay; in_progress → IdempotencyConflictException("Request in progress"); lock fails → IdempotencyConflictException("Concurrent request"); else create IN_PROGRESS record with expires_at=utcnow + timedelta(seconds=ttl), store.set(...), return None) and complete(raw_key, scope, status, body) (fetch, rec.complete(...), store.set, store.unlock, exceptions logged not re-raised); mappers.py IdempotencyMapper; exceptions.py IdempotencyException, IdempotencyConflictException; utils.py idempotent() decorator
+- Infrastructure spec: models.py IdempotencyRecordModel(BaseModel), __tablename__ = "idempotency_records", columns key String(255) nullable index, scope String(100) nullable index, status String(20), request_hash String(64), response_body JSONB default dict, response_status Integer, locked_until DateTime(tz), expires_at DateTime(tz) index; __table_args__ = (UniqueConstraint("key", "scope", "tenant_id", name="uq_idem_key_scope_tenant"),); repositories.py PostgresIdempotencyRepository (fallback when Redis down); caches.py RedisIdempotencyStore (primary, atomic SET NX; lock() = self.redis.set(f"{key.redis_key(tenant_id)}:lock", "1", nx=True, ex=ttl)); services.py — none
+- Presentation spec: routers.py — none (middleware/dependency); schemas.py IdempotencyRecordSchema; dependencies.py require_idempotency_key() FastAPI dependency; docs.py — docs
+- Tests (spec §8): test_first_request_executes, test_second_request_replays, test_payload_mismatch_raises, test_concurrent_requests_only_one_wins, test_expired_record_allows_retry, test_property_replay_returns_same_response
+Work State
+Completed
+- Full spec captured earlier (258 lines, ends with ---); re-read started during implementation (conversation read reached line 59: metadata + start of Domain Layer spec incl. IdempotencyRecord.__post_init__ → _validate raising DomainError("Idempotency key required"))
+- Target directory explored; all four subdirectories contain existing files
+- All six domain/ files read for diffing:
+Active
+- Domain layer implementation in progress — domain/ files diffed against spec but not yet written; current contents are placeholders:
+- domain/entities.py: single comment line with TODO example; imports shown in comment: from app.shared.base_entity import BaseEntity, from .exceptions import DomainError, _utcnow() helper
+- domain/value_objects.py: # TODO: Add value objects only
+- domain/enums.py: # TODO: Add enums only
+- domain/events.py: # TODO: Add domain event names only
+- domain/exceptions.py: already has class DomainError(DomainException) with code = "idem_DOMAIN_ERROR" (keep)
+- domain/__init__.py: docstring only
+Blocked
+- (none)
+Next Move
+1. Rewrite domain/entities.py with IdempotencyRecord(BaseEntity) per spec (fields, __post_init__/_validate, is_expired, is_completed, is_in_progress, complete(status, body))
+2. Rewrite domain/value_objects.py with frozen IdempotencyKey (8–255 char validation, redis_key(tenant_id))
+3. Rewrite domain/enums.py with IdempotencyStatus + IdempotencyConflict
+4. Update domain/events.py with IdempotencyLocked, IdempotencyCompleted, IdempotencyConflict; keep domain/exceptions.py as-is
+5. Continue to application/ (interfaces.py, exceptions.py, use_cases.py, mappers.py, utils.py), then infrastructure/ (models.py, repositories.py, caches.py), then presentation/ (schemas.py, dependencies.py, docs.py; no routers.py/services.py)
+Relevant Files
+- C:\github\fastapi-clean-architecture-ddd-erp-iot\fastapi-backend\prompts\layer-0-core\idempotency.md: source spec, 258 lines, fully captured; re-read in progress for diffing
+- C:\github\fastapi-clean-architecture-ddd-erp-iot\fastapi-backend\app\modules\idempotency\domain\: entities.py, value_objects.py, enums.py, events.py, exceptions.py, __init__.py — current implementation target (all placeholders, read/diffed)
+- C:\github\fastapi-clean-architecture-ddd-erp-iot\fastapi-backend\app\modules\idempotency\application\: __init__.py, exceptions.py, interfaces.py, mappers.py, use_cases.py, utils.py — next layer
+- C:\github\fastapi-clean-architecture-ddd-erp-iot\fastapi-backend\app\modules\idempotency\infrastructure\: __init__.py, caches.py, models.py, repositories.py, services.py (none)
+- C:\github\fastapi-clean-architecture-ddd-erp-iot\fastapi-backend\app\modules\idempotency\presentation\: __init__.py, dependencies.py, docs.py, routers.py (none), schemas.py
+▣  Compaction · Big Pickle · 39.4s
++ Thought: 1.2s
+I'll continue with the domain layer. Let me re-read the spec and the shared base module to get exact details.
+→Read prompts\layer-0-core\idempotency.md
+✱Glob "app/shared/**/*.py" (8 matches)
++ Thought: 4.5s
+Objective
+- Continue implementing/updating the idempotency module (Module 0.4, Layer 0 Core, Phase 1, Priority 🔴) per the spec at C:\github\fastapi-clean-architecture-ddd-erp-iot\fastapi-backend\prompts\layer-0-core\idempotency.md
+- Scope limited to C:\github\fastapi-clean-architecture-ddd-erp-iot\fastapi-backend\app\modules\idempotency; build layer by layer: domain/ → application/ → infrastructure/ → presentation/ (16 files total, ready to run)
+Important Details
+- Module: idempotency; dependencies: tenant_context, config; prefix idem; table tenant_{tid}.idempotency_records
+- Behavior: Idempotency-Key header on every mutating request; new key → execute + store; duplicate + COMPLETED → replay cached result; duplicate + IN_PROGRESS → 409; duplicate + different payload → 422; TTL 24h via config.IDEMPOTENCY_TTL_SECONDS
+- Invariants: Key + Scope + Tenant unique; COMPLETED record must always return original response; payload hash mismatch → 422 (hash = sha256 of json.dumps(payload, sort_keys=True, separators=(",", ":"))); concurrent requests → 1 success, rest 409
+- Error handling rules: Use cases: 3-branch (re-raise StandardException; DomainError → DomainException; other → IdempotencyException()); Store: 2-branch Redis (log via logger.opt(exception=e).error(...) + return False, fail closed), never-raise fallback logging
+- Domain spec (from spec, lines ~36–100, re-read reached line 59):
+- IdempotencyRecord(BaseEntity) in domain/entities.py: fields key: str = "", status: str = "IN_PROGRESS", request_hash: str = "", response_body: dict = field(default_factory=dict), response_status: int = 0, locked_until: datetime | None = None, expires_at: datetime | None = None; __post_init__ → _validate() raising DomainError("Idempotency key required") if key empty; methods is_expired(), is_completed(), is_in_progress(), complete(status, body)
+- IdempotencyKey frozen dataclass (value, scope) validating 8–255 length; redis_key(tenant_id) → f"t:{tenant_id}:idem:{self.scope}:{self.value}"
+- IdempotencyStatus (IN_PROGRESS, COMPLETED, FAILED); IdempotencyConflict (SAME_KEY_SAME_PAYLOAD, SAME_KEY_DIFF_PAYLOAD, CONCURRENT)
+- Domain events: IdempotencyLocked, IdempotencyCompleted, IdempotencyConflict
+- Application spec: interfaces.py IIdempotencyStore(Protocol) with async get/set/lock/unlock; use_cases.py IdempotencyUseCases(store, config) with self.ttl = config.IDEMPOTENCY_TTL_SECONDS, methods check_or_lock(raw_key, scope, payload) (completed + hash mismatch → IdempotencyConflictException("Payload mismatch"); completed + hash match → replay; in_progress → IdempotencyConflictException("Request in progress"); lock fails → IdempotencyConflictException("Concurrent request"); else create IN_PROGRESS record with expires_at=utcnow + timedelta(seconds=ttl), store.set(...), return None) and complete(raw_key, scope, status, body) (fetch, rec.complete(...), store.set, store.unlock, exceptions logged not re-raised); mappers.py IdempotencyMapper; exceptions.py IdempotencyException, IdempotencyConflictException; utils.py idempotent() decorator
+- Infrastructure spec: models.py IdempotencyRecordModel(BaseModel), __tablename__ = "idempotency_records", columns key String(255) nullable index, scope String(100) nullable index, status String(20), request_hash String(64), response_body JSONB default dict, response_status Integer, locked_until DateTime(tz), expires_at DateTime(tz) index; __table_args__ = (UniqueConstraint("key", "scope", "tenant_id", name="uq_idem_key_scope_tenant"),); repositories.py PostgresIdempotencyRepository (fallback when Redis down); caches.py RedisIdempotencyStore (primary, atomic SET NX; lock() = self.redis.set(f"{key.redis_key(tenant_id)}:lock", "1", nx=True, ex=ttl)); services.py — none
+- Presentation spec: routers.py — none (middleware/dependency); schemas.py IdempotencyRecordSchema; dependencies.py require_idempotency_key() FastAPI dependency; docs.py — docs
+- Tests (spec §8): test_first_request_executes, test_second_request_replays, test_payload_mismatch_raises, test_concurrent_requests_only_one_wins, test_expired_record_allows_retry, test_property_replay_returns_same_response
+- Shared package confirmed to contain: app/shared/__init__.py, tenant_context.py, redis.py, pagination.py, exceptions.py, database.py, base_model.py, base_entity.py (glob result)
+Work State
+Completed
+- Full spec captured earlier (258 lines, ends with ---); re-read in progress (conversation read reached line 59: metadata + start of Domain Layer spec incl. IdempotencyRecord.__post_init__ → _validate raising DomainError("Idempotency key required"))
+- Target directory explored; all four subdirectories contain existing files
+- All six domain/ files read for diffing
+- Glob of app/shared/**/*.py done — app/shared/base_entity.py confirmed present for BaseEntity import
+Active
+- Domain layer implementation in progress — domain/ files diffed against spec but not yet written; current contents are placeholders:
+- domain/entities.py: single comment line with TODO example; imports shown in comment: from app.shared.base_entity import BaseEntity, from .exceptions import DomainError, _utcnow() helper
+- domain/value_objects.py: # TODO: Add value objects only
+- domain/enums.py: # TODO: Add enums only
+- domain/events.py: # TODO: Add domain event names only
+- domain/exceptions.py: already has class DomainError(DomainException) with code = "idem_DOMAIN_ERROR" (keep)
+- domain/__init__.py: docstring only
+Blocked
+- (none)
+Next Move
+1. Rewrite domain/entities.py with IdempotencyRecord(BaseEntity) per spec (fields, __post_init__/_validate, is_expired, is_completed, is_in_progress, complete(status, body))
+2. Rewrite domain/value_objects.py with frozen IdempotencyKey (8–255 char validation, redis_key(tenant_id))
+3. Rewrite domain/enums.py with IdempotencyStatus + IdempotencyConflict
+4. Update domain/events.py with IdempotencyLocked, IdempotencyCompleted, IdempotencyConflict; keep domain/exceptions.py as-is
+5. Continue to application/ (interfaces.py, exceptions.py, use_cases.py, mappers.py, utils.py), then infrastructure/ (models.py, repositories.py, caches.py), then presentation/ (schemas.py, dependencies.py, docs.py; no routers.py/services.py)
+Relevant Files
+- C:\github\fastapi-clean-architecture-ddd-erp-iot\fastapi-backend\prompts\layer-0-core\idempotency.md: source spec, 258 lines; re-read in progress for diffing (reached line 59)
+- C:\github\fastapi-clean-architecture-ddd-erp-iot\fastapi-backend\app\shared\base_entity.py: provides BaseEntity for IdempotencyRecord; other shared modules: exceptions.py, base_model.py, tenant_context.py, redis.py, database.py, pagination.py
+- C:\github\fastapi-clean-architecture-ddd-erp-iot\fastapi-backend\app\modules\idempotency\domain\: entities.py, value_objects.py, enums.py, events.py, exceptions.py, __init__.py — current implementation target (all placeholders, read/diffed)
+- C:\github\fastapi-clean-architecture-ddd-erp-iot\fastapi-backend\app\modules\idempotency\application\: __init__.py, exceptions.py, interfaces.py, mappers.py, use_cases.py, utils.py — next layer
+- C:\github\fastapi-clean-architecture-ddd-erp-iot\fastapi-backend\app\modules\idempotency\infrastructure\: __init__.py, caches.py, models.py, repositories.py, services.py (none)
+- C:\github\fastapi-clean-architecture-ddd-erp-iot\fastapi-backend\app\modules\idempotency\presentation\: __init__.py, dependencies.py, docs.py, routers.py (none), schemas.py
+▣  Compaction · Big Pickle · 27.0s
+Error from provider (Console): Rate limit exceeded. Please try again later.
+ต่อ
+Error from provider (Console): Rate limit exceeded. Please try again later.
+▣  Build · Big Pickle

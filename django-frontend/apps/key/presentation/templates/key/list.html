@@ -1,0 +1,59 @@
+{% extends "layout/app_layout.html" %}
+{% load i18n icons %}
+
+{% block page_header %}
+{% include "partials/page-header.html" with title="key.list.title" icon="key" %}
+{% endblock %}
+
+{% block content %}
+<div class="page-body">
+  <div class="container-xl">
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">{% trans "key.list.title" %}</h3>
+        <div class="card-actions">
+          <a href="{% url 'key:create' %}" class="btn btn-primary">{% icon "plus" %} {% trans "key.create" %}</a>
+        </div>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-vcenter">
+          <thead>
+            <tr>
+              <th>{% trans "key.field.name" %}</th>
+              <th>{% trans "key.field.prefix" %}</th>
+              <th>{% trans "key.field.lastUsed" %}</th>
+              <th>{% trans "key.field.status" %}</th>
+              <th class="w-1"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for k in keys %}
+            <tr>
+              <td>{{ k.name }}</td>
+              <td><code>{{ k.prefix }}...</code></td>
+              <td class="text-secondary">{{ k.last_used|default:"never" }}</td>
+              <td>
+                {% if k.is_active %}<span class="badge bg-success">Active</span>
+                {% else %}<span class="badge bg-secondary">Revoked</span>{% endif %}
+              </td>
+              <td>
+                <a href="{% url 'key:detail' k.id %}" class="btn btn-sm">{% icon "eye" %}</a>
+                {% if k.is_active %}
+                <form method="post" action="{% url 'key:revoke' k.id %}" class="d-inline"
+                      x-data @submit.prevent="if (confirm('Revoke this key?')) $el.submit()">
+                  {% csrf_token %}
+                  <button class="btn btn-sm btn-danger">{% icon "trash" %}</button>
+                </form>
+                {% endif %}
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5" class="text-center text-secondary py-4">{% trans "common.noData" %}</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

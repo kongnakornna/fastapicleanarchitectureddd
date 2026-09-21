@@ -1,0 +1,71 @@
+{% extends "auth/auth_layout.html" %}
+{% load i18n icons %}
+
+{% block title %}{% trans "login.title" %} — {% trans "app.name" %}{% endblock %}
+
+{% block auth_content %}
+<div x-data="loginForm()">
+  <div class="card card-md">
+    <div class="card-body">
+      <h2 class="h2 text-center mb-4">{% trans "login.title" %}</h2>
+
+      {% if error %}
+        <div class="alert alert-danger mb-3">{{ error }}</div>
+      {% endif %}
+
+      <form method="post" novalidate autocomplete="off">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ next|default:'/' }}">
+
+        <div class="mb-3">
+          <label class="form-label" for="id_username">{% trans "login.username" %}</label>
+          {{ form.username }}
+        </div>
+
+        <div class="mb-2">
+          <label class="form-label" for="id_password">
+            {% trans "login.password" %}
+            <span class="form-label-description">
+              <a href="{% url 'auth:forgot-password' %}">{% trans "login.forgotPassword" %}</a>
+            </span>
+          </label>
+          <div class="input-group input-group-flat">
+            <input :type="passwordVisible ? 'text' : 'password'"
+                   class="form-control" name="password" id="id_password"
+                   placeholder="{% trans 'login.password' %}"
+                   autocomplete="current-password"
+                   x-model="password" required>
+            <span class="input-group-text">
+              {% include "partials/password-toggle.html" %}
+            </span>
+          </div>
+        </div>
+
+        <div class="form-footer">
+          <button type="submit" class="btn btn-primary w-100"
+                  :disabled="loading || !password">
+            <span x-show="loading" class="spinner-border spinner-border-sm me-2"></span>
+            {% trans "login.submit" %}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+  <div class="text-center text-secondary mt-3">
+    {% trans "login.noAccount" %}
+    <a href="{% url 'auth:sign-up' %}" tabindex="-1">{% trans "login.signUp" %}</a>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  function loginForm() {
+    return {
+      password: '',
+      passwordVisible: false,
+      loading: false,
+    };
+  }
+</script>
+{% endblock %}

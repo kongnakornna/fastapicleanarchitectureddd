@@ -1,0 +1,74 @@
+{% extends "layout/app_layout.html" %}
+{% load i18n humanize icons %}
+
+{% block page_header %}
+{% include "partials/page-header.html" with title="user.list.title" icon="users" %}
+{% endblock %}
+
+{% block content %}
+<div class="page-body">
+  <div class="container-xl">
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">{% trans "user.list.title" %}</h3>
+        <div class="card-actions">
+          <a href="{% url 'user:create' %}" class="btn btn-primary">
+            {% icon "plus" %} {% trans "user.list.create" %}
+          </a>
+        </div>
+      </div>
+      <div class="card-body border-bottom py-3">
+        <form method="get" class="d-flex">
+          <input type="text" name="q" value="{{ q }}" class="form-control me-2"
+                 placeholder="{% trans 'common.search' %}">
+          <button type="submit" class="btn">{% icon "search" %}</button>
+        </form>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-vcenter card-table">
+          <thead>
+            <tr>
+              <th>{% trans "user.field.username" %}</th>
+              <th>{% trans "user.field.email" %}</th>
+              <th>{% trans "user.field.fullName" %}</th>
+              <th>{% trans "user.field.role" %}</th>
+              <th>{% trans "user.field.status" %}</th>
+              <th class="w-1"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for u in users %}
+            <tr>
+              <td>{{ u.username }}</td>
+              <td class="text-secondary">{{ u.email }}</td>
+              <td>{{ u.full_name }}</td>
+              <td><span class="badge bg-blue-lt">{{ u.role_name }}</span></td>
+              <td>
+                {% if u.is_active %}
+                  <span class="badge bg-success">{% trans "common.active" %}</span>
+                {% else %}
+                  <span class="badge bg-secondary">{% trans "common.inactive" %}</span>
+                {% endif %}
+              </td>
+              <td>
+                <div class="btn-list flex-nowrap">
+                  <a href="{% url 'user:detail' u.id %}" class="btn btn-sm">{% icon "eye" %}</a>
+                  <a href="{% url 'user:edit' u.id %}" class="btn btn-sm">{% icon "pencil" %}</a>
+                  <form method="post" action="{% url 'user:delete' u.id %}" class="d-inline"
+                        x-data @submit.prevent="if (confirm('{% trans "common.confirmDelete" %}')) $el.submit()">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-danger">{% icon "trash" %}</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="6" class="text-center text-secondary py-4">{% trans "common.noData" %}</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,30 @@
+{% extends "layout/app_layout.html" %}
+{% load i18n %}
+
+{% block content %}
+<div class="page-body">
+  <div class="container-xl">
+    <div class="card">
+      <div class="card-body">
+        {% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+        <form method="post">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label class="form-label">{% trans "knowledge.field.title" %}</label>
+            <input type="text" name="title" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">{% trans "knowledge.field.source" %}</label>
+            <input type="text" name="source" class="form-control" placeholder="URL or file path">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Content</label>
+            <textarea name="content" class="form-control" rows="10" required></textarea>
+          </div>
+          <button class="btn btn-primary">{% trans "common.save" %}</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

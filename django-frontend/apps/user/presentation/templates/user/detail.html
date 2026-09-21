@@ -1,0 +1,28 @@
+{% extends "layout/app_layout.html" %}
+{% load i18n %}
+
+{% block page_header %}
+{% include "partials/page-header.html" with title="user.detail.title" icon="user" %}
+{% endblock %}
+
+{% block content %}
+<div class="page-body">
+  <div class="container-xl">
+    <div class="card">
+      <div class="card-body">
+        <dl class="row">
+          <dt class="col-3">{% trans "user.field.username" %}</dt><dd class="col-9">{{ user.username }}</dd>
+          <dt class="col-3">{% trans "user.field.email" %}</dt><dd class="col-9">{{ user.email }}</dd>
+          <dt class="col-3">{% trans "user.field.fullName" %}</dt><dd class="col-9">{{ user.full_name }}</dd>
+          <dt class="col-3">{% trans "user.field.phone" %}</dt><dd class="col-9">{{ user.phone_number|default:"—" }}</dd>
+          <dt class="col-3">{% trans "user.field.role" %}</dt><dd class="col-9">{{ user.role_name }}</dd>
+        </dl>
+      </div>
+      <div class="card-footer">
+        <a href="{% url 'user:edit' user.id %}" class="btn btn-primary">{% trans "common.edit" %}</a>
+        <a href="{% url 'user:list' %}" class="btn btn-link link-secondary">{% trans "common.back" %}</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,53 @@
+{% load static i18n %}
+<!DOCTYPE html>
+<html lang="{{ LANGUAGE_CODE|default:'th' }}"
+      x-data="appShell()" x-init="init()"
+      :data-bs-theme="$store.theme.mode"
+      class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{% trans "app.name" %}{% endblock %}</title>
+
+  <link rel="icon" type="image/x-icon" href="{% static 'img/favicon.ico' %}">
+
+  {# 🎨 Tabler CSS (CDN หรือ local) #}
+  <link rel="stylesheet" href="{% static 'tabler/dist/css/tabler.min.css' %}">
+  {# 🎨 Tailwind output #}
+  <link rel="stylesheet" href="{% static 'css/tailwind.output.css' %}">
+  {# 🎨 Custom #}
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  {% block extra_css %}{% endblock %}
+</head>
+<body class="h-full layout-fluid">
+
+  <a href="#content" class="visually-hidden-focusable">{% trans "layout.skipLink" %}</a>
+
+  <div class="page">
+    {% include "partials/header.html" %}
+
+    <div class="page-wrapper">
+      {% block page_header %}{% endblock %}
+
+      <main class="page-body" id="content">
+        <div class="container-xl">
+          {% block content %}{% endblock %}
+        </div>
+      </main>
+
+      {% include "partials/footer.html" %}
+    </div>
+  </div>
+
+  {% include "partials/sidebar.html" %}
+  {% include "partials/layout-settings.html" %}
+  {% include "partials/theme-builder.html" %}
+  {% include "partials/confirm-modal.html" %}
+
+  {# 📦 Vendor Scripts #}
+  <script defer src="{% static 'tabler/dist/js/tabler.min.js' %}"></script>
+  <script defer src="{% static 'js/cdn.min.js' %}"></script>
+  <script src="{% static 'js/app.min.js' %}"></script>
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

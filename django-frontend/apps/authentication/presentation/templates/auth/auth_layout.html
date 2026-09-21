@@ -1,0 +1,55 @@
+{% load static i18n %}
+<!DOCTYPE html>
+<html lang="{{ LANGUAGE_CODE|default:'th' }}"
+      x-data="appShell()" x-init="init()"
+      :data-bs-theme="$store.theme.mode"
+      class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{% trans "app.name" %}{% endblock %}</title>
+  <link rel="icon" type="image/x-icon" href="{% static 'img/favicon.ico' %}">
+  <link rel="stylesheet" href="{% static 'tabler/css/tabler.min.css' %}">
+  <link rel="stylesheet" href="{% static 'css/tailwind.output.css' %}">
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  {% block extra_css %}{% endblock %}
+  <style>
+    .auth-logo img { display: block; margin: 0 auto; height: 40px; }
+  </style>
+</head>
+<body class="border-top-wide border-primary d-flex flex-column">
+
+  <div class="page page-center">
+    <div class="container container-tight py-4">
+      <div class="text-center mb-4 position-relative auth-logo">
+        <div class="position-absolute top-0 end-0">
+          {% include "partials/language-selector.html" %}
+        </div>
+        <a href="/" aria-label="{% trans 'layout.header.home' %}">
+          <img x-show="$store.theme.mode === 'light'"
+               src="{% static 'img/logo.svg' %}" alt="Logo">
+          <img x-show="$store.theme.mode === 'dark'"
+               src="{% static 'img/logo-dark.svg' %}" alt="Logo">
+        </a>
+      </div>
+
+      {% block auth_content %}{% endblock %}
+    </div>
+  </div>
+
+  {# 🎨 Theme Builder button (ล่างซ้าย) #}
+  <a href="javascript:void(0)"
+     class="btn btn-floating btn-icon btn-primary"
+     data-bs-toggle="offcanvas" data-bs-target="#themeBuilder"
+     aria-label="{% trans 'layout.settings.title' %}">
+    {% include "partials/icons.html" with icon="palette" %}
+  </a>
+
+  {% include "partials/theme-builder.html" %}
+
+  <script defer src="{% static 'tabler/dist/js/tabler.min.js' %}"></script>
+  <script defer src="{% static 'js/cdn.min.js' %}"></script>
+  <script src="{% static 'js/app.min.js' %}"></script>
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

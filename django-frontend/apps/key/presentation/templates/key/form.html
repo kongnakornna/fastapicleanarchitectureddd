@@ -1,0 +1,43 @@
+{% extends "layout/app_layout.html" %}
+{% load i18n %}
+
+{% block page_header %}
+{% include "partials/page-header.html" with title="key.create" icon="key" %}
+{% endblock %}
+
+{% block content %}
+<div class="page-body">
+  <div class="container-xl">
+    <div class="card">
+      <div class="card-body">
+        {% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+        {% if new_key %}
+          <div class="alert alert-success">
+            <strong>{% trans "key.created" %}:</strong>
+            <div class="input-group mt-2">
+              <input type="text" class="form-control" value="{{ new_key }}" readonly
+                     x-ref="newKey">
+              <button class="btn" type="button"
+                      @click="navigator.clipboard.writeText($refs.newKey.value)">
+                {% trans "common.copy" %}
+              </button>
+            </div>
+          </div>
+        {% else %}
+        <form method="post">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label class="form-label">{% trans "key.field.name" %}</label>
+            <input type="text" name="name" class="form-control" required>
+          </div>
+          <button class="btn btn-primary">{% trans "common.create" %}</button>
+        </form>
+        {% endif %}
+      </div>
+      <div class="card-footer">
+        <a href="{% url 'key:list' %}" class="btn btn-link link-secondary">{% trans "common.back" %}</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

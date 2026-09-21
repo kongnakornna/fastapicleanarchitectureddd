@@ -1,0 +1,43 @@
+{% extends "layout/app_layout.html" %}
+{% load i18n %}
+
+{% block page_header %}
+{% include "partials/page-header.html" with title="notification.list.title" icon="bell" %}
+{% endblock %}
+
+{% block content %}
+<div class="page-body">
+  <div class="container-xl">
+    <div class="card">
+      <div class="list-group list-group-flush">
+        {% for n in notifications %}
+          <div class="list-group-item {% if not n.is_read %}bg-blue-lt{% endif %}">
+            <div class="row align-items-center">
+              <div class="col-auto">
+                <span class="status-dot d-block {% if not n.is_read %}status-dot-animated bg-red{% endif %}"></span>
+              </div>
+              <div class="col">
+                <div><strong>{{ n.title }}</strong></div>
+                <div class="text-secondary">{{ n.body }}</div>
+                <div class="text-secondary small mt-1">{{ n.created_at }}</div>
+              </div>
+              {% if not n.is_read %}
+                <div class="col-auto">
+                  <form method="post" action="{% url 'notification:mark-read' n.id %}">
+                    {% csrf_token %}
+                    <button class="btn btn-sm">{% trans "notification.markRead" %}</button>
+                  </form>
+                </div>
+              {% endif %}
+            </div>
+          </div>
+        {% empty %}
+          <div class="list-group-item text-center text-secondary py-4">
+            {% trans "notification.empty" %}
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

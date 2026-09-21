@@ -1,0 +1,356 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: django-frontend 2.1\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-09-18 00:00+0700\n"
+"PO-Revision-Date: 2026-09-18 00:00+0700\n"
+"Language: th\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+msgid "app.name"
+msgstr "ระบบ ERP IoT"
+
+msgid "common.save"
+msgstr "บันทึก"
+
+msgid "common.cancel"
+msgstr "ยกเลิก"
+
+msgid "common.close"
+msgstr "ปิด"
+
+msgid "common.password"
+msgstr "รหัสผ่าน"
+
+msgid "login.title"
+msgstr "เข้าสู่ระบบ"
+
+msgid "login.username"
+msgstr "ชื่อผู้ใช้"
+
+msgid "login.password"
+msgstr "รหัสผ่าน"
+
+msgid "login.forgotPassword"
+msgstr "ลืมรหัสผ่าน?"
+
+msgid "login.submit"
+msgstr "เข้าสู่ระบบ"
+
+msgid "login.noAccount"
+msgstr "ยังไม่มีบัญชี?"
+
+msgid "login.signUp"
+msgstr "สมัครสมาชิก"
+
+msgid "auth.signUp.title"
+msgstr "สมัครสมาชิก"
+
+msgid "auth.signUp.nameLabel"
+msgstr "ชื่อ-นามสกุล"
+
+msgid "auth.signUp.emailLabel"
+msgstr "อีเมล"
+
+msgid "auth.signUp.passwordLabel"
+msgstr "รหัสผ่าน"
+
+msgid "auth.signUp.confirmPasswordLabel"
+msgstr "ยืนยันรหัสผ่าน"
+
+msgid "auth.signUp.agreeTerms"
+msgstr "ยอมรับข้อตกลงการใช้งาน"
+
+msgid "auth.signUp.submit"
+msgstr "สมัครสมาชิก"
+
+msgid "auth.signUp.hasAccount"
+msgstr "มีบัญชีอยู่แล้ว?"
+
+msgid "auth.signUp.loginLink"
+msgstr "เข้าสู่ระบบ"
+
+msgid "auth.forgotPassword.title"
+msgstr "ลืมรหัสผ่าน"
+
+msgid "auth.forgotPassword.description"
+msgstr "กรอกอีเมลของคุณ เราจะส่งลิงก์สำหรับรีเซ็ตรหัสผ่าน"
+
+msgid "auth.forgotPassword.submit"
+msgstr "ส่งลิงก์รีเซ็ต"
+
+msgid "auth.forgotPassword.successMessage"
+msgstr "ส่งอีเมลเรียบร้อยแล้ว กรุณาตรวจสอบกล่องจดหมาย"
+
+msgid "auth.forgotPassword.backToLogin"
+msgstr "กลับไปหน้าเข้าสู่ระบบ"
+
+msgid "auth.resetPassword.title"
+msgstr "ตั้งรหัสผ่านใหม่"
+
+msgid "auth.resetPassword.newPassword"
+msgstr "รหัสผ่านใหม่"
+
+msgid "auth.resetPassword.confirmPassword"
+msgstr "ยืนยันรหัสผ่าน"
+
+msgid "auth.resetPassword.submit"
+msgstr "ยืนยัน"
+
+msgid "auth.resetPassword.successMessage"
+msgstr "ตั้งรหัสผ่านใหม่สำเร็จ"
+
+msgid "auth.resetPassword.backToLogin"
+msgstr "กลับไปหน้าเข้าสู่ระบบ"
+
+msgid "auth.lockScreen.title"
+msgstr "หน้าจอล็อก"
+
+msgid "auth.lockScreen.description"
+msgstr "กรุณาใส่รหัสผ่านเพื่อปลดล็อก"
+
+msgid "auth.lockScreen.submit"
+msgstr "ปลดล็อก"
+
+msgid "auth.lockScreen.loginAsOther"
+msgstr "เข้าสู่ระบบด้วยบัญชีอื่น"
+
+msgid "auth.twoStepCode.title"
+msgstr "ยืนยันรหัส 2 ขั้นตอน"
+
+msgid "auth.twoStepCode.description"
+msgstr "รหัสถูกส่งไปที่"
+
+msgid "auth.twoStepCode.confirm"
+msgstr "ยืนยัน"
+
+msgid "auth.twoStepCode.cancel"
+msgstr "ยกเลิก"
+
+msgid "auth.twoStepVerification.title"
+msgstr "ตั้งค่าการยืนยัน 2 ขั้นตอน"
+
+msgid "auth.twoStepVerification.submit"
+msgstr "บันทึก"
+
+msgid "auth.twoStepVerification.backToLogin"
+msgstr "กลับไปหน้าเข้าสู่ระบบ"
+
+msgid "auth.passwordsDoNotMatch"
+msgstr "รหัสผ่านไม่ตรงกัน"
+
+msgid "layout.skipLink"
+msgstr "ข้ามไปยังเนื้อหา"
+
+msgid "layout.header.toggleNav"
+msgstr "เปิด/ปิดเมนู"
+
+msgid "layout.header.home"
+msgstr "หน้าแรก"
+
+msgid "layout.header.showNotifications"
+msgstr "ดูการแจ้งเตือน"
+
+msgid "layout.header.notifications"
+msgstr "การแจ้งเตือน"
+
+msgid "layout.header.archiveAll"
+msgstr "เก็บทั้งหมด"
+
+msgid "layout.header.markAllRead"
+msgstr "อ่านทั้งหมด"
+
+msgid "layout.header.showApps"
+msgstr "ดูแอป"
+
+msgid "layout.header.apps"
+msgstr "แอป"
+
+msgid "layout.header.enableDarkMode"
+msgstr "เปิดโหมดมืด"
+
+msgid "layout.header.enableLightMode"
+msgstr "เปิดโหมดสว่าง"
+
+msgid "layout.header.layoutTitle"
+msgstr "การจัดวาง"
+
+msgid "layout.header.layoutFluid"
+msgstr "เต็มหน้าจอ"
+
+msgid "layout.header.layoutBoxed"
+msgstr "กล่อง"
+
+msgid "layout.header.layoutBoxed2"
+msgstr "กล่อง 2"
+
+msgid "layout.header.fullScreen"
+msgstr "เต็มจอ"
+
+msgid "layout.header.toggleSidebar"
+msgstr "เปิด/ปิด sidebar"
+
+msgid "layout.header.openUserMenu"
+msgstr "เปิดเมนูผู้ใช้"
+
+msgid "layout.header.userName"
+msgstr "ผู้ใช้"
+
+msgid "layout.header.userRole"
+msgstr "ผู้ดูแลระบบ"
+
+msgid "layout.header.profile"
+msgstr "โปรไฟล์"
+
+msgid "layout.header.analytics"
+msgstr "วิเคราะห์"
+
+msgid "layout.header.settingsPrivacy"
+msgstr "ตั้งค่า & ความเป็นส่วนตัว"
+
+msgid "layout.header.help"
+msgstr "ช่วยเหลือ"
+
+msgid "layout.header.signOut"
+msgstr "ออกจากระบบ"
+
+msgid "layout.header.language"
+msgstr "ภาษา"
+
+msgid "layout.header.signOutConfirmTitle"
+msgstr "ออกจากระบบ?"
+
+msgid "layout.header.signOutConfirmMessage"
+msgstr "คุณต้องการออกจากระบบใช่หรือไม่"
+
+msgid "layout.header.signOutConfirmButton"
+msgstr "ออกจากระบบ"
+
+msgid "layout.settings.title"
+msgstr "ตั้งค่ารูปลักษณ์"
+
+msgid "layout.settings.colorMode"
+msgstr "โหมดสี"
+
+msgid "layout.settings.lightmode"
+msgstr "โหมดสว่าง"
+
+msgid "layout.settings.darkmode"
+msgstr "โหมดมืด"
+
+msgid "layout.settings.colorScheme"
+msgstr "โทนสี"
+
+msgid "layout.settings.fontFamily"
+msgstr "ฟอนต์"
+
+msgid "layout.settings.fontSansSerif"
+msgstr "Sans-serif"
+
+msgid "layout.settings.fontSerif"
+msgstr "Serif"
+
+msgid "layout.settings.fontMonospace"
+msgstr "Monospace"
+
+msgid "layout.settings.fontComic"
+msgstr "Comic"
+
+msgid "layout.settings.themeBase"
+msgstr "สีพื้นฐาน"
+
+msgid "layout.settings.borderRadius"
+msgstr "ความโค้งของมุม"
+
+msgid "layout.settings.reset"
+msgstr "รีเซ็ต"
+
+msgid "layout.settings.save"
+msgstr "บันทึก"
+
+msgid "layout.footer.about"
+msgstr "เกี่ยวกับ"
+
+msgid "layout.footer.help"
+msgstr "ช่วยเหลือ"
+
+msgid "layout.footer.privacy"
+msgstr "ความเป็นส่วนตัว"
+
+msgid "layout.footer.copyright"
+msgstr "©"
+
+msgid "layout.footer.allRightsReserved"
+msgstr "สงวนลิขสิทธิ์"
+
+msgid "nav.dashboard"
+msgstr "แดชบอร์ด"
+
+msgid "nav.jobs"
+msgstr "งาน"
+
+msgid "nav.jobList"
+msgstr "รายการงาน"
+
+msgid "nav.jobBoard"
+msgstr "บอร์ดงาน"
+
+msgid "nav.jobCreate"
+msgstr "สร้างงาน"
+
+msgid "nav.users"
+msgstr "ผู้ใช้"
+
+msgid "nav.userList"
+msgstr "รายชื่อผู้ใช้"
+
+msgid "nav.roles"
+msgstr "บทบาท"
+
+msgid "nav.settings"
+msgstr "ตั้งค่า"
+
+msgid "layout.header.appDashboard"
+msgstr "แดชบอร์ด"
+
+msgid "layout.header.appUsers"
+msgstr "ผู้ใช้"
+
+msgid "layout.header.appAI"
+msgstr "AI"
+
+msgid "layout.header.appReports"
+msgstr "รายงาน"
+
+msgid "layout.header.appLanguages"
+msgstr "ภาษา"
+
+msgid "layout.header.appSettings"
+msgstr "ตั้งค่า"
+
+msgid "layout.header.notifNewJob"
+msgstr "มีงานใหม่เข้ามา"
+
+msgid "layout.header.notifQuotationApproved"
+msgstr "ใบเสนอราคาได้รับอนุมัติ"
+
+msgid "layout.header.notifLowStock"
+msgstr "สินค้าใกล้หมดสต็อก"
+
+msgid "layout.header.notifTime5min"
+msgstr "5 นาทีที่แล้ว"
+
+msgid "layout.header.notifTime1hour"
+msgstr "1 ชั่วโมงที่แล้ว"
+
+msgid "layout.header.notifTime2hours"
+msgstr "2 ชั่วโมงที่แล้ว"
+
+msgid "dashboard.overview"
+msgstr "ภาพรวม"
+
+msgid "dashboard.title"
+msgstr "แดชบอร์ด"

@@ -1,0 +1,1234 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>WebSocket Test — FastAPI Clean Architecture and DDD Template</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg:#0d1117; --surface:#161b22; --surface-2:#21262d;
+    --border:#30363d; --border-hover:#484f58;
+    --text:#e6edf3; --text-muted:#8b949e; --text-dim:#6e7681;
+    --accent:#388bfd; --accent-dim:#1f4b8e;
+    --green:#3fb950; --green-bg:#0d2b13;
+    --yellow:#d29922; --yellow-bg:#2b2005;
+    --red:#f85149; --red-bg:#2d0f0f;
+    --purple:#bc8cff;
+    --radius:8px; --radius-sm:5px;
+    --font:'SF Mono','Fira Code','Cascadia Code','Consolas',monospace;
+    --font-ui:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
+    --scroll-size:10px;
+    --sidebar-w:400px;
+    --config-max-h:min(560px, 68vh);
+  }
+
+  html { height:100%; }
+  html, body {
+    background:var(--bg); color:var(--text);
+    font-family:var(--font-ui); font-size:14px; line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+    -webkit-text-size-adjust:100%;
+  }
+  body { height:100%; overflow:hidden; }
+
+  .app {
+    display:grid;
+    grid-template-rows:auto 1fr;
+    height:100vh; height:100dvh;
+    min-height:0; max-width:1400px;
+    margin:0 auto; padding:0 16px;
+  }
+
+  /* ══ HEADER ══ */
+  header {
+    display:flex; align-items:center; gap:12px;
+    padding:16px 0 12px;
+    border-bottom:1px solid var(--border);
+    min-width:0;
+  }
+  .logo {
+    width:32px; height:32px; flex-shrink:0;
+    background:linear-gradient(135deg,var(--accent),var(--purple));
+    border-radius:var(--radius-sm);
+    display:flex; align-items:center; justify-content:center;
+    font-size:16px; font-weight:700; color:#fff;
+  }
+  header h1 {
+    font-size:16px; font-weight:600; flex:1; min-width:0;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  header h1 span { color:var(--text-muted); font-weight:400; }
+  .env-badge {
+    padding:4px 10px; border-radius:var(--radius-sm);
+    font-size:11px; font-weight:600; white-space:nowrap;
+    background:var(--surface-2); border:1px solid var(--border);
+  }
+  .env-badge.ok   { background:var(--green-bg);  border-color:var(--green);  color:var(--green); }
+  .env-badge.warn { background:var(--yellow-bg); border-color:var(--yellow); color:var(--yellow); }
+  .env-badge.err  { background:var(--red-bg);    border-color:var(--red);    color:var(--red); }
+  .badge {
+    display:inline-flex; align-items:center; justify-content:center;
+    min-width:18px; height:18px; padding:0 5px;
+    background:var(--red); color:#fff; border-radius:9px;
+    font-size:10px; font-weight:700; flex-shrink:0;
+  }
+  .badge:empty { display:none; }
+
+  /* ══ MAIN ══ */
+  .main {
+    display:grid;
+    grid-template-columns:var(--sidebar-w) 1fr;
+    gap:16px; padding:16px 0;
+    min-height:0; min-width:0;
+  }
+  .sidebar {
+    display:flex; flex-direction:column; gap:12px;
+    min-height:0; min-width:0;
+    overflow-y:auto; overscroll-behavior:contain;
+    padding-right:2px;
+  }
+  .content {
+    display:flex; flex-direction:column; gap:12px;
+    min-height:0; min-width:0;
+  }
+
+  /* ══ CARD ══ */
+  .card {
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    overflow:hidden; min-width:0;
+  }
+  .card-header {
+    display:flex; align-items:center; gap:8px;
+    padding:12px 14px;
+    border-bottom:1px solid var(--border);
+    font-size:12px; font-weight:600;
+    text-transform:uppercase; letter-spacing:.5px;
+    color:var(--text-muted);
+    flex-shrink:0;
+  }
+  .card-header .icon { font-size:14px; }
+  .card-body { padding:14px; }
+
+  /* ══════════════════════════════════════════════
+     CONFIGURATION CARD — responsive + scrollable
+     ══════════════════════════════════════════════ */
+  .card.config-card {
+    display:flex;
+    flex-direction:column;
+    min-height:0;
+  }
+  .config-scroll {
+    display:flex;
+    flex-direction:column;
+    max-height:var(--config-max-h);
+    overflow-y:auto;
+    overscroll-behavior:contain;
+    scrollbar-gutter:stable;
+    padding-right:2px;
+  }
+  .config-fields {
+    padding:14px;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    flex-shrink:0;
+  }
+  .config-actions {
+    padding:0 14px 14px;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    flex-shrink:0;
+  }
+  .config-actions .btn-row {
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:6px;
+  }
+
+  /* Full-width primary buttons + warn/danger */
+  .config-actions > .btn-primary,
+  .config-actions > .btn-success,
+  .config-actions > .btn-warn,
+  .config-actions > .btn-danger { width:100%; }
+
+  /* Status + stats stay fixed at bottom of card (outside scroll) */
+  .config-footer {
+    flex-shrink:0;
+    border-top:1px solid var(--border);
+  }
+  .config-footer .status-row { border-top:none; }
+  .config-footer .stats { border-top:1px solid var(--border); }
+
+  /* ══ FIELDS / BUTTONS ══ */
+  .field { display:flex; flex-direction:column; gap:5px; }
+  .field label { font-size:12px; color:var(--text-muted); font-weight:500; }
+  input[type="text"], input[type="password"], input[type="url"] {
+    background:var(--bg); border:1px solid var(--border);
+    border-radius:var(--radius-sm); color:var(--text);
+    font-family:var(--font); font-size:13px;
+    padding:7px 10px; outline:none; width:100%; min-width:0;
+  }
+  input:focus { border-color:var(--accent); }
+  input::placeholder { color:var(--text-dim); }
+
+  .btn {
+    display:inline-flex; align-items:center; justify-content:center; gap:6px;
+    padding:8px 14px;
+    border:1px solid transparent; border-radius:var(--radius-sm);
+    font-size:13px; font-weight:500; cursor:pointer;
+    font-family:var(--font-ui);
+    white-space:nowrap; min-width:0;
+    transition:filter .12s, background .12s, border-color .12s;
+  }
+  .btn:disabled { opacity:.4; cursor:not-allowed; }
+  .btn:not(:disabled):hover { filter:brightness(1.12); }
+  .btn-primary   { background:var(--accent); color:#fff; }
+  .btn-success   { background:var(--green); color:#fff; }
+  .btn-danger    { background:transparent; border-color:var(--red); color:var(--red); }
+  .btn-secondary { background:var(--surface-2); border-color:var(--border); color:var(--text); }
+  .btn-warn      { background:transparent; border-color:var(--yellow); color:var(--yellow); }
+  .btn-sm { padding:4px 10px; font-size:12px; }
+
+  /* ══ STATUS / STATS ══ */
+  .status-row {
+    display:flex; align-items:center; gap:8px;
+    padding:10px 14px;
+    background:var(--bg); border-top:1px solid var(--border);
+  }
+  .dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+  .dot-green  { background:var(--green);  box-shadow:0 0 6px var(--green); }
+  .dot-red    { background:var(--red);    box-shadow:0 0 6px var(--red); }
+  .dot-yellow { background:var(--yellow); box-shadow:0 0 6px var(--yellow); }
+  .dot-gray   { background:var(--text-dim); }
+  .status-text { font-size:12px; color:var(--text-muted); flex:1; min-width:0; }
+  .status-text strong { color:var(--text); }
+
+  .env-row {
+    display:flex; flex-direction:column; gap:2px;
+    padding:8px 14px; background:var(--bg);
+    border-top:1px solid var(--border);
+    font-size:11px; color:var(--text-muted); font-family:var(--font);
+  }
+  .env-row code {
+    background:var(--surface-2); padding:1px 5px; border-radius:3px;
+    color:var(--text); font-size:10px; word-break:break-all;
+  }
+  .env-row .label {
+    color:var(--text-dim); font-size:10px;
+    text-transform:uppercase; letter-spacing:.3px;
+  }
+
+  .stats {
+    display:grid; grid-template-columns:repeat(3,1fr); gap:1px;
+    background:var(--border); border-top:1px solid var(--border);
+  }
+  .stat { background:var(--surface); padding:10px 8px; text-align:center; }
+  .stat-val { font-family:var(--font); font-size:20px; font-weight:700; }
+  .stat-val.green  { color:var(--green); }
+  .stat-val.yellow { color:var(--yellow); }
+  .stat-val.red    { color:var(--red); }
+  .stat-label {
+    font-size:10px; color:var(--text-dim);
+    text-transform:uppercase; letter-spacing:.4px; margin-top:2px;
+  }
+
+  /* ══ EVENT LOG ══ */
+  .content .card { flex:1; display:flex; flex-direction:column; min-height:0; }
+  .log-toolbar { display:flex; align-items:center; gap:6px; margin-left:auto; }
+  #log {
+    flex:1; overflow-y:auto; overscroll-behavior:contain;
+    padding:12px 14px;
+    font-family:var(--font); font-size:12px; line-height:1.7;
+    min-height:0;
+  }
+  .log-empty {
+    display:flex; align-items:center; justify-content:center;
+    height:100%; color:var(--text-dim);
+    font-family:var(--font-ui); font-size:13px;
+  }
+  .log-entry {
+    display:grid; grid-template-columns:90px 60px 1fr; gap:10px;
+    padding:5px 0; border-bottom:1px solid #1c2128;
+  }
+  .log-time { color:var(--text-dim); user-select:none; white-space:nowrap; }
+  .log-tag {
+    font-size:10px; font-weight:600; padding:1px 6px; border-radius:3px;
+    text-transform:uppercase; letter-spacing:.4px;
+    white-space:nowrap; align-self:start; justify-self:start;
+  }
+  .tag-info   { background:var(--accent-dim); color:var(--accent); }
+  .tag-recv   { background:var(--green-bg);   color:var(--green); }
+  .tag-warn   { background:var(--yellow-bg);  color:var(--yellow); }
+  .tag-error  { background:var(--red-bg);     color:var(--red); }
+  .tag-system { background:#1c1c2e;           color:var(--purple); }
+  .log-msg { color:var(--text); word-break:break-word; min-width:0; }
+  .log-msg pre {
+    background:var(--surface-2); border:1px solid var(--border);
+    border-radius:4px; padding:8px 10px; margin-top:5px;
+    white-space:pre-wrap; word-break:break-word;
+    font-size:11.5px; color:var(--text-muted);
+    overflow-x:auto;
+  }
+
+  /* ══ NOTIFICATIONS ══ */
+  .notif-list {
+    padding:6px 0; max-height:280px;
+    overflow-y:auto; overscroll-behavior:contain;
+  }
+  .notif-item {
+    display:flex; align-items:flex-start; gap:10px;
+    padding:10px 14px; border-bottom:1px solid var(--border);
+    transition:background .1s;
+  }
+  .notif-item:last-child { border-bottom:none; }
+  .notif-item:hover { background:var(--surface-2); }
+  .notif-item.is-unread .notif-title { color:var(--text); font-weight:600; }
+  .notif-item.is-read   .notif-title { color:var(--text-muted); font-weight:400; }
+  .notif-dot { width:7px; height:7px; border-radius:50%; margin-top:5px; flex-shrink:0; }
+  .notif-dot.unread { background:var(--accent); }
+  .notif-dot.read { background:var(--text-dim); }
+  .notif-body { flex:1; min-width:0; }
+  .notif-title { font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .notif-meta { font-size:11px; color:var(--text-dim); margin-top:2px; }
+  .notif-type {
+    font-size:10px; font-weight:600; text-transform:uppercase;
+    letter-spacing:.3px; color:var(--purple); white-space:nowrap;
+  }
+  .notif-actions { display:flex; align-items:center; gap:4px; flex-shrink:0; }
+  .notif-empty { padding:20px; text-align:center; color:var(--text-dim); font-size:12px; }
+
+  /* ══ HINT BOXES ══ */
+  .hint-box {
+    padding:10px 12px; border-radius:var(--radius-sm);
+    font-size:12px; line-height:1.6; margin:6px 0;
+    word-break:break-word;
+  }
+  .hint-box.error { background:var(--red-bg);    border:1px solid var(--red);    color:var(--red); }
+  .hint-box.warn  { background:var(--yellow-bg); border:1px solid var(--yellow); color:var(--yellow); }
+  .hint-box.info  { background:var(--accent-dim);border:1px solid var(--accent); color:var(--accent); }
+  .hint-box.ok    { background:var(--green-bg);  border:1px solid var(--green);  color:var(--green); }
+  .hint-box code {
+    background:rgba(0,0,0,.3); padding:1px 5px;
+    border-radius:3px; font-family:var(--font); word-break:break-all;
+  }
+
+  /* ══ TOASTS ══ */
+  .toast-area {
+    position:fixed; bottom:20px; right:20px;
+    display:flex; flex-direction:column; gap:8px;
+    z-index:999; pointer-events:none;
+    max-width:calc(100vw - 40px);
+  }
+  .toast {
+    padding:10px 16px; border-radius:var(--radius);
+    font-size:13px; font-weight:500; max-width:320px;
+    animation:slideIn .2s ease, fadeOut .3s ease 2.7s forwards;
+  }
+  .toast-info  { background:var(--accent-dim); color:var(--accent); border:1px solid var(--accent); }
+  .toast-recv  { background:var(--green-bg);   color:var(--green);  border:1px solid var(--green); }
+  .toast-error { background:var(--red-bg);     color:var(--red);    border:1px solid var(--red); }
+  @keyframes slideIn { from { transform:translateX(20px); opacity:0; } to { transform:translateX(0); opacity:1; } }
+  @keyframes fadeOut { from { opacity:1; } to { opacity:0; } }
+
+  /* ══════════════════════════════════════════════
+     CUSTOM SCROLLBARS
+     ══════════════════════════════════════════════ */
+  * {
+    scrollbar-width:thin;
+    scrollbar-color:var(--border-hover) rgba(255,255,255,0.03);
+  }
+  ::-webkit-scrollbar {
+    width:var(--scroll-size);
+    height:var(--scroll-size);
+  }
+  ::-webkit-scrollbar-track {
+    background:rgba(255,255,255,0.03);
+    border-radius:var(--scroll-size);
+  }
+  ::-webkit-scrollbar-thumb {
+    background:var(--border-hover);
+    border:2px solid var(--bg);
+    border-radius:var(--scroll-size);
+    min-height:40px;
+  }
+  ::-webkit-scrollbar-thumb:hover  { background:var(--accent); }
+  ::-webkit-scrollbar-thumb:active { background:var(--accent-dim); }
+  ::-webkit-scrollbar-corner { background:transparent; }
+
+  /* ══════════════════════════════════════════════
+     RESPONSIVE
+     ══════════════════════════════════════════════ */
+
+  @media (min-width:1500px) {
+    :root { --sidebar-w:440px; --config-max-h:min(620px, 70vh); }
+  }
+
+  @media (max-width:1180px) {
+    :root { --sidebar-w:360px; --config-max-h:min(520px, 66vh); }
+    .main { gap:14px; }
+  }
+
+  @media (max-width:1024px) {
+    :root { --sidebar-w:320px; --config-max-h:min(500px, 64vh); }
+    .app { padding:0 12px; }
+    header h1 span { display:none; }
+    .log-entry { grid-template-columns:82px 56px 1fr; gap:8px; }
+  }
+
+  /* Tablet portrait — stack columns, config card gets taller allowance */
+  @media (max-width:820px) {
+    body { overflow-y:auto; overflow-x:hidden; height:auto; min-height:100%; }
+    .app {
+      height:auto; min-height:100vh; min-height:100dvh;
+      grid-template-rows:auto auto; padding:0 12px;
+    }
+    header {
+      position:sticky; top:0; z-index:50;
+      background:rgba(13,17,23,.96);
+      backdrop-filter:blur(10px);
+      -webkit-backdrop-filter:blur(10px);
+      flex-wrap:wrap; padding:12px 0 10px; row-gap:8px;
+    }
+    header h1 {
+      flex:1 1 auto; font-size:14px; order:3;
+      width:100%; white-space:normal; overflow:visible;
+    }
+    header h1 span { display:inline; }
+
+    .main {
+      grid-template-columns:1fr;
+      padding:12px 0 28px;
+      gap:12px;
+    }
+    .sidebar {
+      overflow:visible; padding-right:0; min-height:auto;
+    }
+
+    /* Configuration card: give it more breathing room on tablet */
+    :root { --config-max-h:min(600px, 72vh); }
+
+    .content { min-height:auto; }
+    .content .card {
+      flex:none; min-height:480px;
+      height:70vh; max-height:720px;
+    }
+    #log { max-height:none; min-height:280px; }
+    .notif-list { max-height:none; }
+
+    .toast-area { left:12px; right:12px; bottom:12px; align-items:stretch; }
+    .toast { max-width:none; }
+  }
+
+  /* Phones */
+  @media (max-width:560px) {
+    .app { padding:0 10px; }
+    header { gap:8px; row-gap:6px; }
+    .logo { width:28px; height:28px; font-size:14px; border-radius:4px; }
+    header h1 { font-size:13px; line-height:1.35; }
+    .env-badge { font-size:10px; padding:3px 8px; }
+
+    .card-header { padding:10px 12px; font-size:11px; }
+    .config-fields { padding:12px; gap:9px; }
+    .config-actions { padding:0 12px 12px; gap:7px; }
+    .status-row, .env-row { padding-left:12px; padding-right:12px; }
+    .notif-item { padding:10px 12px; }
+    #log { padding:10px 12px; font-size:11.5px; }
+
+    /* Config max-height scales with viewport on phones */
+    :root { --config-max-h:min(520px, 70vh); }
+
+    /* Log entry stacks */
+    .log-entry {
+      grid-template-columns:auto 1fr;
+      grid-template-areas:
+        "time tag"
+        "msg  msg";
+      gap:4px 8px; padding:7px 0;
+    }
+    .log-time { grid-area:time; }
+    .log-tag  { grid-area:tag; }
+    .log-msg  { grid-area:msg; }
+
+    .stat-val { font-size:17px; }
+    .stat { padding:8px 4px; }
+    .btn { padding:8px 10px; font-size:12.5px; }
+    .hint-box { font-size:11.5px; }
+
+    .content .card { min-height:420px; height:65vh; }
+  }
+
+  /* Small phones */
+  @media (max-width:440px) {
+    /* Buttons in config stack to 1 column for easier tapping */
+    .config-actions .btn-row { grid-template-columns:1fr; }
+  }
+
+  @media (max-width:400px) {
+    header h1 { font-size:12px; }
+    header h1 span { display:none; }
+    .stat-label { font-size:9px; letter-spacing:.2px; }
+    .content .card { height:60vh; min-height:380px; }
+    :root { --config-max-h:min(480px, 68vh); }
+  }
+
+  /* Landscape phones */
+  @media (max-height:560px) and (orientation:landscape) {
+    .content .card { height:80vh; min-height:320px; }
+    header h1 span { display:none; }
+    .app { padding:0 10px; }
+    .main { padding:10px 0; }
+    /* Short viewport → shorter config scroll area */
+    :root { --config-max-h:min(400px, 78vh); }
+    .config-actions .btn-row { grid-template-columns:1fr 1fr; }
+  }
+
+  @media (prefers-reduced-motion:reduce) {
+    .toast { animation:fadeOut .3s ease 2.7s forwards; }
+    .btn { transition:none; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="logo">W</div>
+    <h1>WebSocket Test <span>— FastAPI Clean Architecture and DDD Template</span></h1>
+    <span id="envBadge" class="env-badge">checking…</span>
+    <span id="unreadBadge" class="badge"></span>
+  </header>
+
+  <div class="main">
+    <div class="sidebar">
+
+      <!-- Environment -->
+      <div class="card">
+        <div class="card-header"><span class="icon">🌐</span> Environment</div>
+        <div class="env-row"><span class="label">Page URL</span><code id="envPageUrl">—</code></div>
+        <div class="env-row"><span class="label">Protocol</span><code id="envProtocol">—</code></div>
+        <div class="env-row"><span class="label">Origin</span><code id="envOrigin">—</code></div>
+        <div class="env-row"><span class="label">Server (auto)</span><code id="envServerAuto">—</code></div>
+        <div class="env-row"><span class="label">Server (using)</span><code id="envServer">—</code></div>
+      </div>
+
+      <!-- ═══ CONFIGURATION (responsive + scrollable) ═══ -->
+      <div class="card config-card">
+        <div class="card-header"><span class="icon">⚙</span> Configuration</div>
+
+        <!-- Scrollable region: fields + action buttons -->
+        <div class="config-scroll">
+          <div class="config-fields">
+            <div class="field"><label>Base URL</label><input id="baseUrl" type="url" value="http://localhost:8000" /></div>
+            <div class="field"><label>E-mail</label><input id="email" type="text" value="admin@example.com" /></div>
+            <div class="field"><label>Password</label><input id="password" type="password" value="MyP@ssword123" /></div>
+          </div>
+
+          <div class="config-actions">
+            <button class="btn btn-primary" onclick="checkHealth()">💚 Health Check</button>
+            <button class="btn btn-primary" onclick="autoFixBase()">🔧 Auto-fix Base URL</button>
+            <button class="btn btn-success" id="btnLogin" onclick="login()">🔑 Login & Connect</button>
+            <button class="btn btn-primary" id="btnAutoTest" onclick="autoTest()">⚡ Auto Test (Signup → Login → WS)</button>
+            <div class="btn-row">
+              <button class="btn btn-secondary" onclick="checkMe()">👤 /me</button>
+              <button class="btn btn-secondary" onclick="fetchNotifications()">🔔 Refresh</button>
+            </div>
+            <div class="btn-row">
+              <button class="btn btn-secondary" onclick="showCookies()">🍪 Cookies</button>
+              <button class="btn btn-secondary" onclick="showCorsHelp()">🔍 CORS Help</button>
+            </div>
+            <button class="btn btn-warn" onclick="testHttpRef()">🧪 Test HTTP 426</button>
+            <button class="btn btn-danger" id="btnDisconnect" onclick="disconnect()" disabled>✕ Disconnect</button>
+          </div>
+        </div>
+
+        <!-- Fixed footer: status + stats (always visible) -->
+        <div class="config-footer">
+          <div class="status-row">
+            <div class="dot dot-gray" id="statusDot"></div>
+            <span class="status-text" id="statusText">Not connected</span>
+          </div>
+          <div class="stats">
+            <div class="stat"><div class="stat-val green" id="statReceived">0</div><div class="stat-label">Received</div></div>
+            <div class="stat"><div class="stat-val yellow" id="statUnread">0</div><div class="stat-label">Unread</div></div>
+            <div class="stat"><div class="stat-val red" id="statErrors">0</div><div class="stat-label">Errors</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Notifications -->
+      <div class="card" style="flex:1; display:flex; flex-direction:column; min-height:0;">
+        <div class="card-header">
+          <span class="icon">🔔</span> Notifications
+          <span style="margin-left:auto; display:flex; gap:6px;">
+            <button class="btn btn-secondary btn-sm" onclick="fetchNotifications()" title="Refresh">↻</button>
+          </span>
+        </div>
+        <div class="notif-list" id="notifList">
+          <div class="notif-empty">Login to load notifications.</div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="content">
+      <div class="card">
+        <div class="card-header">
+          <span class="icon">📡</span> Event Log
+          <div class="log-toolbar">
+            <button class="btn btn-secondary btn-sm" onclick="copyLog()">📋 Copy</button>
+            <button class="btn btn-secondary btn-sm" onclick="clearLog()">Clear</button>
+          </div>
+        </div>
+        <div id="log"><div class="log-empty" id="logEmpty">Waiting for events…</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast-area" id="toastArea"></div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   STATE
+   ═══════════════════════════════════════════════════════════════ */
+let ws = null;
+let statReceived = 0;
+let statErrors = 0;
+let statUnread = 0;
+let reconnectCount = 0;
+let intentionalClose = false;
+
+/* ═══════════════════════════════════════════════════════════════
+   HELPERS
+   ═══════════════════════════════════════════════════════════════ */
+const $ = id => document.getElementById(id);
+const httpBase = () => $('baseUrl').value.replace(/\/+$/, '');
+
+function wsUrl() {
+  const base = httpBase();
+  const proto = base.startsWith('https') ? 'wss' : 'ws';
+  const host = base.replace(/^https?:\/\//, '');
+  return `${proto}://${host}/api/v1/websocket/connect/`;
+}
+
+function timestamp() {
+  const d = new Date();
+  return d.toTimeString().slice(0, 8) + '.' + String(d.getMilliseconds()).padStart(3, '0');
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function extractError(data, status) {
+  if (!data || typeof data !== 'object') return `HTTP ${status}`;
+  if (data.details) {
+    if (typeof data.details === 'string') return data.details;
+    if (data.details.message) return data.details.message;
+    if (data.details.data) {
+      if (typeof data.details.data === 'string') return data.details.data;
+      if (data.details.data.errors) return data.details.data.errors;
+      if (data.details.data.errors_th) return data.details.data.errors_th;
+      if (data.details.data.detail) return data.details.data.detail;
+    }
+  }
+  if (data.detail) {
+    if (typeof data.detail === 'string') return data.detail;
+    if (Array.isArray(data.detail) && data.detail.length)
+      return data.detail.map(e => e.msg || JSON.stringify(e)).join('; ');
+  }
+  if (data.message) return data.message;
+  if (data.errors) return data.errors;
+  return `HTTP ${status}`;
+}
+
+function extractData(data) {
+  if (!data || typeof data !== 'object') return data;
+  if (data.details?.data !== undefined) return data.details.data;
+  if (data.details !== undefined) return data.details;
+  if (data.data !== undefined) return data.data;
+  return data;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   LOG
+   ═══════════════════════════════════════════════════════════════ */
+function log(type, message, detail) {
+  const empty = $('logEmpty');
+  if (empty) empty.remove();
+  const entry = document.createElement('div');
+  entry.className = 'log-entry';
+  const tagClass = { info:'tag-info', recv:'tag-recv', warn:'tag-warn', error:'tag-error', system:'tag-system' }[type] || 'tag-info';
+  const detailHtml = detail !== undefined
+    ? `<pre>${escHtml(typeof detail === 'string' ? detail : JSON.stringify(detail, null, 2))}</pre>`
+    : '';
+  entry.innerHTML = `
+    <span class="log-time">${timestamp()}</span>
+    <span class="log-tag ${tagClass}">${type}</span>
+    <span class="log-msg">${message}${detailHtml}</span>`;
+  const logEl = $('log');
+  logEl.appendChild(entry);
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+function logHtml(html) {
+  const empty = $('logEmpty');
+  if (empty) empty.remove();
+  const entry = document.createElement('div');
+  entry.className = 'log-entry';
+  entry.innerHTML = `
+    <span class="log-time">${timestamp()}</span>
+    <span class="log-tag tag-system">hint</span>
+    <span class="log-msg">${html}</span>`;
+  const logEl = $('log');
+  logEl.appendChild(entry);
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+function clearLog() { $('log').innerHTML = '<div class="log-empty" id="logEmpty">Waiting for events…</div>'; }
+function copyLog() {
+  navigator.clipboard.writeText($('log').innerText).then(
+    () => toast('info', '📋 Log copied'),
+    () => toast('error', 'Copy failed')
+  );
+}
+
+function toast(type, msg) {
+  const el = document.createElement('div');
+  el.className = `toast toast-${type}`;
+  el.textContent = msg;
+  $('toastArea').appendChild(el);
+  setTimeout(() => el.remove(), 3100);
+}
+
+function setStatus(dot, text) {
+  $('statusDot').className = 'dot dot-' + dot;
+  $('statusText').innerHTML = text;
+}
+
+function updateStats({ received, unread, errors } = {}) {
+  if (received !== undefined) { statReceived = received; $('statReceived').textContent = received; }
+  if (unread !== undefined) { statUnread = unread; $('statUnread').textContent = unread; $('unreadBadge').textContent = unread > 0 ? unread : ''; }
+  if (errors !== undefined) { statErrors = errors; $('statErrors').textContent = errors; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ENVIRONMENT DETECTION
+   ═══════════════════════════════════════════════════════════════ */
+function detectEnvironment() {
+  const pageUrl = window.location.href;
+  const proto = window.location.protocol;
+  const origin = window.location.origin;
+  const host = window.location.hostname;
+
+  $('envPageUrl').textContent = pageUrl;
+  $('envProtocol').textContent = proto;
+  $('envOrigin').textContent = origin;
+
+  let autoServer = 'http://localhost:8000';
+  if ((proto === 'http:' || proto === 'https:') && (host === 'localhost' || host === '127.0.0.1')) {
+    autoServer = origin;
+  } else if (proto === 'http:' || proto === 'https:') {
+    autoServer = origin;
+  }
+
+  $('envServerAuto').textContent = autoServer;
+  return { pageUrl, proto, origin, host, autoServer };
+}
+
+function autoFixBase() {
+  const env = detectEnvironment();
+  $('baseUrl').value = env.autoServer;
+  $('envServer').textContent = env.autoServer;
+  log('system', `✓ Base URL auto-fixed → ${env.autoServer}`);
+  toast('info', '🔧 Base URL fixed');
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   PRE-FLIGHT
+   ═══════════════════════════════════════════════════════════════ */
+async function preflight() {
+  const env = detectEnvironment();
+  const base = httpBase();
+
+  $('envServer').textContent = base;
+
+  if (env.proto === 'file:') {
+    log('error', '❌ เปิด HTML จาก file:// — browser จะ block ทุก fetch', {
+      pageUrl: env.pageUrl,
+      protocol: env.proto,
+      correctUrl: `${env.autoServer}/devtools/websocket_demo.html`,
+    });
+    logHtml(`
+      <div class="hint-box error">
+        <strong>❌ เปิดไฟล์ผิดวิธี</strong><br>
+        คุณเปิด HTML จาก <code>file://</code> — browser จะ block ทุก fetch<br><br>
+        <strong>แก้:</strong> เปิดจาก URL นี้แทน<br>
+        <code>${escHtml(env.autoServer)}/devtools/websocket_demo.html</code>
+      </div>`);
+    $('envBadge').className = 'env-badge err';
+    $('envBadge').textContent = '❌ file://';
+    return { ok: false, reason: 'file_protocol' };
+  }
+
+  const healthUrl = `${base}/health`;
+  log('info', `Pre-flight → GET ${healthUrl}`);
+
+  try {
+    const t0 = performance.now();
+    const res = await fetch(healthUrl, { method: 'GET', cache: 'no-store' });
+    const ms = Math.round(performance.now() - t0);
+    if (!res.ok) {
+      log('error', `❌ /health returned ${res.status} (${ms}ms)`);
+      $('envBadge').className = 'env-badge err';
+      $('envBadge').textContent = `❌ ${res.status}`;
+      return { ok: false, status: res.status };
+    }
+    const data = await res.json().catch(() => ({}));
+    log('system', `✓ Server reachable (${res.status}, ${ms}ms)`, data);
+    $('envBadge').className = 'env-badge ok';
+    $('envBadge').textContent = `✓ server ${res.status}`;
+    return { ok: true, status: res.status, data };
+  } catch (err) {
+    log('error', `❌ Cannot reach server: ${err.name}: ${err.message}`, {
+      requestUrl: healthUrl,
+      pageUrl: env.pageUrl,
+      origin: env.origin,
+      protocol: env.proto,
+      cause: err.cause?.message || null,
+    });
+
+    if (env.origin && env.origin !== base && env.proto !== 'file:') {
+      log('info', `🔄 ลอง origin เดียวกัน: ${env.origin}`);
+      try {
+        const res2 = await fetch(`${env.origin}/health`, { cache: 'no-store' });
+        if (res2.ok) {
+          log('system', `✓ Same-origin OK — auto-fix Base URL → ${env.origin}`);
+          $('baseUrl').value = env.origin;
+          $('envServer').textContent = env.origin;
+          $('envBadge').className = 'env-badge ok';
+          $('envBadge').textContent = '✓ server (auto-fixed)';
+          return { ok: true, status: res2.status };
+        }
+      } catch (_) { log('warn', `Same-origin fallback failed`); }
+    }
+
+    $('envBadge').className = 'env-badge err';
+    $('envBadge').textContent = '❌ unreachable';
+    logHtml(`
+      <div class="hint-box error">
+        <strong>❌ Network error</strong> — browser ไม่สามารถติดต่อ server<br><br>
+        <strong>สาเหตุที่เป็นไปได้:</strong><br>
+        1. <strong>Server ไม่รัน</strong> — <code>make dev</code><br>
+        2. <strong>CORS</strong> — origin <code>${escHtml(env.origin)}</code> ไม่อยู่ใน allow_origins<br>
+        3. <strong>Base URL ผิด</strong> — ปัจจุบัน <code>${escHtml(base)}</code><br>
+        4. <strong>Mixed content</strong> — https page เรียก http
+      </div>`);
+    return { ok: false, error: err };
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   DIAGNOSTIC BUTTONS
+   ═══════════════════════════════════════════════════════════════ */
+async function checkHealth() {
+  const r = await preflight();
+  if (r.ok) toast('info', `✓ Server OK (${r.status})`);
+  else toast('error', '✗ Server unreachable');
+}
+
+async function checkMe() {
+  log('info', `GET ${httpBase()}/api/v1/user/me/`);
+  try {
+    const res = await fetch(`${httpBase()}/api/v1/user/me/`, { credentials: 'include' });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok) {
+      log('system', `✓ Session valid (${res.status})`, data);
+      sessionStorage.setItem('logged_in', '1');
+    } else {
+      log('warn', `Session invalid (${res.status}): ${extractError(data, res.status)}`);
+      sessionStorage.removeItem('logged_in');
+    }
+  } catch (err) { log('error', `❌ /me failed: ${err.message}`); }
+}
+
+function showCookies() {
+  const cookies = document.cookie.split(';').map(c => c.trim()).filter(Boolean);
+  log('info', `📋 Visible cookies: ${cookies.length}`, cookies.length ? cookies : '(empty)');
+  logHtml(`
+    <div class="hint-box info">
+      <strong>Note:</strong> HttpOnly cookies (access_token, refresh_token, hub_session_id)
+      ไม่ปรากฏใน <code>document.cookie</code> — browser ซ่อนไว้
+    </div>`);
+}
+
+function showCorsHelp() {
+  logHtml(`
+    <div class="hint-box warn">
+      <strong>🔍 CORS Diagnostic</strong><br><br>
+      ถ้า curl ผ่าน แต่ browser fail → CORS หรือ origin mismatch<br><br>
+      <strong>ตรวจสอบ (ใน terminal):</strong><br>
+      1. <code>Get-Content app\\app.py | Select-String "CORS"</code><br>
+      2. ตรวจว่า <code>allow_origins</code> มี <code>${escHtml(window.location.origin)}</code><br><br>
+      <strong>⚠ สำคัญ:</strong> <code>allow_credentials=True</code> + <code>allow_origins=["*"]</code> = browser block!
+    </div>`);
+}
+
+async function testHttpRef() {
+  const url = `${httpBase()}/api/v1/websocket/connect/`;
+  log('info', `GET ${url} — expect 426`);
+  try {
+    const res = await fetch(url, { credentials: 'include' });
+    const data = await res.json().catch(() => ({}));
+    if (res.status === 426) {
+      log('system', '✓ 426 Upgrade Required', data);
+      toast('info', '✓ 426');
+    } else {
+      log('warn', `Unexpected ${res.status}`, data);
+      toast('error', `Got ${res.status}`);
+    }
+  } catch (err) { log('error', `426 test failed: ${err.message}`); }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   LOGIN
+   ═══════════════════════════════════════════════════════════════ */
+async function login() {
+  const email = $('email').value.trim();
+  const pass = $('password').value;
+  if (!email || !pass) { toast('error', 'E-mail and password required'); return; }
+
+  $('btnLogin').disabled = true;
+  $('btnAutoTest').disabled = true;
+  setStatus('yellow', '<strong>Logging in…</strong>');
+
+  const pf = await preflight();
+  if (!pf.ok) {
+    setStatus('red', '<strong>Server unreachable</strong>');
+    $('btnLogin').disabled = false;
+    $('btnAutoTest').disabled = false;
+    return;
+  }
+
+  const url = `${httpBase()}/api/v1/authentication/login/`;
+  log('info', `POST ${url}`);
+
+  try {
+    const body = new URLSearchParams({
+      username: email,
+      password: pass,
+      grant_type: 'password',
+    });
+
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      credentials: 'include',
+      body,
+    });
+
+    log('info', `Response: ${res.status} ${res.statusText}`);
+
+    const data = await res.json().catch(() => ({}));
+    log('info', 'Response body', data);
+
+    if (!res.ok) {
+      const msg = extractError(data, res.status);
+      log('error', `Login failed — ${escHtml(msg)}`);
+      toast('error', `Login failed: ${msg}`);
+      setStatus('red', `<strong>Login failed</strong> (${res.status})`);
+      updateStats({ errors: statErrors + 1 });
+      $('btnLogin').disabled = false;
+      $('btnAutoTest').disabled = false;
+      return;
+    }
+
+    log('system', '✅ Login successful');
+    toast('info', '✓ Logged in');
+    setStatus('yellow', '<strong>Connecting WS…</strong>');
+
+    sessionStorage.setItem('logged_in', '1');
+    sessionStorage.setItem('login_at', String(Date.now()));
+
+    await fetchNotifications();
+    connect();
+
+  } catch (err) {
+    console.error('LOGIN FETCH ERROR:', err);
+    log('error', `❌ NETWORK ERROR: ${escHtml(err.message)}`, {
+      name: err.name,
+      message: err.message,
+      cause: err.cause?.message || null,
+      requestUrl: url,
+      pageUrl: window.location.href,
+    });
+    toast('error', `❌ ${err.message}`);
+    setStatus('red', '<strong>Network error</strong>');
+    updateStats({ errors: statErrors + 1 });
+    $('btnLogin').disabled = false;
+    $('btnAutoTest').disabled = false;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   AUTO TEST
+   ═══════════════════════════════════════════════════════════════ */
+async function autoTest() {
+  const email = $('email').value.trim();
+  const pass = $('password').value;
+  const username = email.split('@')[0] || 'user';
+
+  log('system', '═══ AUTO TEST ═══');
+
+  const pf = await preflight();
+  if (!pf.ok) return;
+
+  log('info', `POST sign-up (best-effort)`);
+  try {
+    const su = await fetch(`${httpBase()}/api/v1/authentication/sign-up/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({
+        full_name: username, username, email,
+        password: pass, confirm_password: pass, agree_terms: true,
+      }),
+    });
+    const suData = await su.json().catch(() => ({}));
+    if (su.status === 201) log('system', '✓ Sign-up OK');
+    else if (su.status === 409) log('info', 'User exists — proceed to login');
+    else log('warn', `Sign-up → ${su.status}`, suData);
+  } catch (e) {
+    log('warn', `Sign-up attempt failed: ${e.message}`);
+  }
+
+  await login();
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   WEBSOCKET
+   ═══════════════════════════════════════════════════════════════ */
+function connect() {
+  if (ws) { intentionalClose = true; ws.close(1000, 'Reconnect'); ws = null; }
+  intentionalClose = false;
+
+  const url = wsUrl();
+  log('system', `Connecting → ${url}`);
+
+  try {
+    ws = new WebSocket(url);
+  } catch (err) {
+    log('error', `WS constructor error: ${escHtml(err.message)}`);
+    setStatus('red', '<strong>Failed</strong>');
+    updateStats({ errors: statErrors + 1 });
+    return;
+  }
+
+  ws.onopen = () => {
+    reconnectCount = 0;
+    log('system', '✅ WebSocket CONNECTED');
+    toast('info', '✓ WS connected');
+    setStatus('green', '<strong>Connected</strong>');
+    $('btnDisconnect').disabled = false;
+    $('btnLogin').disabled = true;
+    $('btnAutoTest').disabled = true;
+  };
+
+  ws.onmessage = (evt) => {
+    updateStats({ received: statReceived + 1 });
+    let parsed;
+    try { parsed = JSON.parse(evt.data); }
+    catch { log('warn', 'Non-JSON message', { raw: evt.data }); return; }
+    const type = parsed?.message_type ?? 'unknown';
+    log('recv', `📨 Message — type: <strong>${escHtml(type)}</strong>`, parsed);
+    toast('recv', `📨 ${type}`);
+
+    if (type === 'notification') {
+      fetchNotifications();
+    }
+  };
+
+  ws.onerror = () => {
+    log('error', '⚠ WebSocket error (see server console)');
+    updateStats({ errors: statErrors + 1 });
+  };
+
+  ws.onclose = (evt) => {
+    const codeMap = {
+      1000:'ปกติ', 1001:'Server ปิด', 1002:'Protocol error', 1003:'Unsupported data',
+      1005:'No status', 1006:'Handshake rejected — cookie/session ไม่ผ่าน',
+      1007:'Invalid payload', 1008:'Policy violation — auth/origin ไม่ผ่าน',
+      1009:'Message too big', 1010:'Extension missing',
+      1011:'Server internal error', 1012:'Service restart', 1013:'Try later',
+      1015:'TLS failed',
+    };
+    const explanation = codeMap[evt.code] || 'unknown';
+    const reason = evt.reason ? ` — "${evt.reason}"` : '';
+    log('warn', `🔌 WS closed — code <strong>${evt.code}</strong> (${escHtml(explanation)})${escHtml(reason)}`);
+    toast('error', `WS closed (${evt.code})`);
+    setStatus('red', `<strong>Disconnected</strong> (${evt.code})`);
+    $('btnDisconnect').disabled = true;
+    $('btnLogin').disabled = false;
+    $('btnAutoTest').disabled = false;
+    ws = null;
+
+    if (!intentionalClose && [1006, 1012, 1013].includes(evt.code) && reconnectCount < 3) {
+      reconnectCount++;
+      const delay = Math.min(1000 * Math.pow(2, reconnectCount), 10000);
+      log('warn', `⏳ Auto-reconnect #${reconnectCount} in ${delay}ms…`);
+      setTimeout(() => connect(), delay);
+    }
+  };
+}
+
+function disconnect() {
+  if (ws) {
+    intentionalClose = true;
+    log('system', 'Closing…');
+    ws.close(1000, 'User closed');
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   NOTIFICATIONS
+   ═══════════════════════════════════════════════════════════════ */
+async function fetchNotifications() {
+  try {
+    const res = await fetch(`${httpBase()}/api/v1/notification?page=1&limit=20`, {
+      credentials: 'include',
+    });
+
+    if (res.status === 401) { log('warn', 'GET /notification — 401 Unauthorized'); return; }
+    if (res.status === 404) { log('warn', 'GET /notification — 404 (not implemented)'); return; }
+    if (!res.ok) { log('warn', `GET /notification — HTTP ${res.status}`); return; }
+
+    const raw = await res.json().catch(() => ({}));
+    const payload = extractData(raw);
+
+    const list =
+      payload?.notifications ??
+      payload?.Notification ??
+      payload?.items ??
+      (Array.isArray(payload) ? payload : []);
+
+    const pagination = payload?.pagination ?? payload?.meta ?? {};
+    const total = pagination.total ?? list.length;
+    const unread = list.filter(n => !(n.is_read ?? n.isRead ?? n.read)).length;
+
+    log('info', `Fetched ${list.length}/${total} notification(s) — ${unread} unread.`);
+    updateStats({ unread });
+    renderNotifications(list, total);
+
+  } catch (err) {
+    log('error', `fetchNotifications error: ${escHtml(err.message)}`);
+  }
+}
+
+function renderNotifications(list, total) {
+  const el = $('notifList');
+
+  if (!list.length) {
+    el.innerHTML = '<div class="notif-empty">No notifications found.</div>';
+    return;
+  }
+
+  el.innerHTML = list.map(n => {
+    const date = n.created_at
+      ? new Date(n.created_at).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })
+      : '';
+    const isRead = !!(n.is_read ?? n.isRead ?? n.read);
+
+    return `
+      <div class="notif-item ${isRead ? 'is-read' : 'is-unread'}" id="notif-${escHtml(n.id)}">
+        <div class="notif-dot ${isRead ? 'read' : 'unread'}"></div>
+        <div class="notif-body">
+          <div class="notif-title" title="${escHtml(n.title ?? '')}">${escHtml(n.title ?? '(no title)')}</div>
+          <div class="notif-meta">
+            <span class="notif-type">${escHtml(n.notification_type ?? '')}</span>
+            ${date ? ` · ${escHtml(date)}` : ''}
+          </div>
+        </div>
+        <div class="notif-actions">
+          ${!isRead ? `<button class="btn btn-secondary btn-sm" onclick="markAsRead('${escHtml(n.id)}')" title="Mark as read">✓</button>` : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+async function markAsRead(id) {
+  log('info', `PATCH ${httpBase()}/api/v1/notification/${id}`);
+  try {
+    const res = await fetch(`${httpBase()}/api/v1/notification/${id}`, {
+      method: 'PATCH',
+      credentials: 'include',
+    });
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      log('error', `Mark as read failed — HTTP ${res.status}`, data);
+      toast('error', `Failed (${res.status})`);
+      return;
+    }
+
+    log('info', `Notification ${id} marked as read.`);
+    toast('info', '✓ Marked as read');
+    await fetchNotifications();
+
+  } catch (err) {
+    log('error', `markAsRead error: ${escHtml(err.message)}`);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   CLEANUP
+   ═══════════════════════════════════════════════════════════════ */
+window.addEventListener('beforeunload', () => {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    intentionalClose = true;
+    ws.close(1000, 'Unload');
+  }
+});
+
+/* ═══════════════════════════════════════════════════════════════
+   INIT
+   ═══════════════════════════════════════════════════════════════ */
+(function init() {
+  log('system', '🚀 Test page ready');
+
+  const env = detectEnvironment();
+
+  if (env.proto === 'http:' || env.proto === 'https:') {
+    if (env.origin !== $('baseUrl').value) {
+      log('info', `Auto-fix Base URL → ${env.origin}`);
+      $('baseUrl').value = env.origin;
+    }
+  }
+
+  if (env.proto === 'file:') {
+    log('error', '❌ เปิดจาก file:// — ต้องเปิดจาก http server');
+    logHtml(`
+      <div class="hint-box error">
+        <strong>❌ เปิดไฟล์ผิดวิธี</strong><br><br>
+        เปิดจาก URL นี้แทน:<br>
+        <code>${escHtml(env.autoServer)}/devtools/websocket_demo.html</code>
+      </div>`);
+    $('envBadge').className = 'env-badge err';
+    $('envBadge').textContent = '❌ file://';
+    return;
+  }
+
+  log('info', '💚 Health Check — ตรวจ server');
+  log('info', '🔧 Auto-fix Base URL — ถ้า server คนละที่');
+  log('info', '🔑 Login & Connect — login + WS');
+  log('info', '⚡ Auto Test — signup + login + WS ครบ');
+  log('info', '🔔 Notifications — โหลดรายการอัตโนมัติหลัง login');
+
+  setTimeout(checkHealth, 500);
+})();
+</script>
+</body>
+</html>

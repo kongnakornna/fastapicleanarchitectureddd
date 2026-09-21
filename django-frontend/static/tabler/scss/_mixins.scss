@@ -1,0 +1,35 @@
+@use 'variables' as *;
+
+@forward 'mixins/mixins';
+@forward 'mixins/functions' hide divide, escape-svg, str-replace, $color-contrast-dark, $color-contrast-light, $min-contrast-ratio, $prefix with (
+  $color-contrast-dark: $color-contrast-dark,
+  $color-contrast-light: $color-contrast-light,
+  $min-contrast-ratio: $min-contrast-ratio,
+  $prefix: $prefix,
+);
+@forward 'mixins/bootstrap/rfs' hide $enable-rfs with ($enable-rfs: false);
+@forward 'mixins/bootstrap/deprecate';
+@forward 'mixins/bootstrap/breakpoints';
+@forward 'mixins/bootstrap/color-mode';
+@forward 'mixins/bootstrap/color-scheme';
+@forward 'mixins/bootstrap/image';
+@forward 'mixins/bootstrap/resize';
+@forward 'mixins/bootstrap/visually-hidden';
+@forward 'mixins/bootstrap/reset-text';
+@forward 'mixins/bootstrap/text-truncate';
+@forward 'mixins/bootstrap/utilities';
+@forward 'mixins/bootstrap/alert';
+@forward 'mixins/bootstrap/backdrop';
+@forward 'mixins/bootstrap/buttons';
+@forward 'mixins/bootstrap/caret';
+@forward 'mixins/bootstrap/pagination';
+@forward 'mixins/bootstrap/lists';
+@forward 'mixins/bootstrap/forms';
+@forward 'mixins/bootstrap/table-variants';
+@forward 'mixins/bootstrap/border-radius';
+@forward 'mixins/bootstrap/box-shadow';
+@forward 'mixins/bootstrap/gradients';
+@forward 'mixins/bootstrap/transition';
+@forward 'mixins/bootstrap/clearfix';
+@forward 'mixins/bootstrap/container';
+@forward 'mixins/bootstrap/grid';

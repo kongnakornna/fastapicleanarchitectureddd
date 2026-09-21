@@ -1,0 +1,6 @@
+/* static/css/tailwind.output.css
+   Fallback: ใช้ utility จาก Tabler แทน
+   ถ้า build แล้วไฟล์นี้จะถูก override
+   รัน `npm run build:css` เพื่อสร้างจริง
+*/
+/* Placeholder — Tabler จัดการ utility ให้แล้ว */

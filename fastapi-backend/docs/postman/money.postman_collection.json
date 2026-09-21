@@ -1,0 +1,167 @@
+{
+    "info":  {
+                 "name":  "ERPIoT - Money",
+                 "_postman_id":  "0697ec72-0ce6-4c8e-864a-6c8db11ba1e4",
+                 "schema":  "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+             },
+    "variable":  [
+                     {
+                         "key":  "base_url",
+                         "value":  "http://localhost:8000"
+                     },
+                     {
+                         "key":  "token",
+                         "value":  ""
+                     },
+                     {
+                         "key":  "tenant_id",
+                         "value":  "00000000-0000-0000-0000-000000000001"
+                     },
+                     {
+                         "key":  "entity_id",
+                         "value":  ""
+                     }
+                 ],
+    "auth":  {
+                 "bearer":  [
+                                {
+                                    "key":  "token",
+                                    "type":  "string",
+                                    "value":  "{{token}}"
+                                }
+                            ],
+                 "type":  "bearer"
+             },
+    "item":  [
+                 {
+                     "name":  "Money - POST /api/v1/money/add/",
+                     "request":  {
+                                     "method":  "POST",
+                                     "header":  [
+                                                    {
+                                                        "key":  "Content-Type",
+                                                        "value":  "application/json"
+                                                    },
+                                                    {
+                                                        "key":  "Idempotency-Key",
+                                                        "value":  "{{$guid}}"
+                                                    }
+                                                ],
+                                     "url":  "{{base_url}}/api/v1/money/add/",
+                                     "body":  {
+                                                  "raw":  "{\"code\":\"X-001\",\"name\":\"Sample\",\"amount\":\"100.00\",\"currency\":\"THB\"}",
+                                                  "options":  {
+                                                                  "raw":  {
+                                                                              "language":  "json"
+                                                                          }
+                                                              },
+                                                  "mode":  "raw"
+                                              }
+                                 }
+                 },
+                 {
+                     "name":  "Money - POST /api/v1/money/subtract/",
+                     "request":  {
+                                     "method":  "POST",
+                                     "header":  [
+                                                    {
+                                                        "key":  "Content-Type",
+                                                        "value":  "application/json"
+                                                    },
+                                                    {
+                                                        "key":  "Idempotency-Key",
+                                                        "value":  "{{$guid}}"
+                                                    }
+                                                ],
+                                     "url":  "{{base_url}}/api/v1/money/subtract/",
+                                     "body":  {
+                                                  "raw":  "{\"code\":\"X-001\",\"name\":\"Sample\",\"amount\":\"100.00\",\"currency\":\"THB\"}",
+                                                  "options":  {
+                                                                  "raw":  {
+                                                                              "language":  "json"
+                                                                          }
+                                                              },
+                                                  "mode":  "raw"
+                                              }
+                                 }
+                 },
+                 {
+                     "name":  "Money - POST /api/v1/money/vat/calculate/",
+                     "request":  {
+                                     "method":  "POST",
+                                     "header":  [
+                                                    {
+                                                        "key":  "Content-Type",
+                                                        "value":  "application/json"
+                                                    },
+                                                    {
+                                                        "key":  "Idempotency-Key",
+                                                        "value":  "{{$guid}}"
+                                                    }
+                                                ],
+                                     "url":  "{{base_url}}/api/v1/money/vat/calculate/",
+                                     "body":  {
+                                                  "raw":  "{\"code\":\"X-001\",\"name\":\"Sample\",\"amount\":\"100.00\",\"currency\":\"THB\"}",
+                                                  "options":  {
+                                                                  "raw":  {
+                                                                              "language":  "json"
+                                                                          }
+                                                              },
+                                                  "mode":  "raw"
+                                              }
+                                 }
+                 },
+                 {
+                     "name":  "Money - POST /api/v1/money/vat/extract/",
+                     "request":  {
+                                     "method":  "POST",
+                                     "header":  [
+                                                    {
+                                                        "key":  "Content-Type",
+                                                        "value":  "application/json"
+                                                    },
+                                                    {
+                                                        "key":  "Idempotency-Key",
+                                                        "value":  "{{$guid}}"
+                                                    }
+                                                ],
+                                     "url":  "{{base_url}}/api/v1/money/vat/extract/",
+                                     "body":  {
+                                                  "raw":  "{\"code\":\"X-001\",\"name\":\"Sample\",\"amount\":\"100.00\",\"currency\":\"THB\"}",
+                                                  "options":  {
+                                                                  "raw":  {
+                                                                              "language":  "json"
+                                                                          }
+                                                              },
+                                                  "mode":  "raw"
+                                              }
+                                 }
+                 },
+                 {
+                     "name":  "Money - POST /api/v1/money/convert/",
+                     "request":  {
+                                     "method":  "POST",
+                                     "header":  [
+                                                    {
+                                                        "key":  "Content-Type",
+                                                        "value":  "application/json"
+                                                    },
+                                                    {
+                                                        "key":  "Idempotency-Key",
+                                                        "value":  "{{$guid}}"
+                                                    }
+                                                ],
+                                     "url":  "{{base_url}}/api/v1/money/convert/",
+                                     "body":  {
+                                                  "raw":  "{\"code\":\"X-001\",\"name\":\"Sample\",\"amount\":\"100.00\",\"currency\":\"THB\"}",
+                                                  "options":  {
+                                                                  "raw":  {
+                                                                              "language":  "json"
+                                                                          }
+                                                              },
+                                                  "mode":  "raw"
+                                              }
+                                 }
+                 }
+             ]
+}

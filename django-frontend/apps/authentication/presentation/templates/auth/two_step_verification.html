@@ -1,0 +1,50 @@
+{% extends "auth/auth_layout.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "auth.twoStepVerification.title" %}{% endblock %}
+
+{% block auth_content %}
+<form method="post" class="card card-md" x-data="{ loading: false, countryCode: '+1' }"
+      novalidate autocomplete="off">
+  {% csrf_token %}
+  <div class="card-body">
+    <h2 class="card-title text-center mb-4">
+      {% trans "auth.twoStepVerification.title" %}
+    </h2>
+
+    {% if error %}<div class="alert alert-danger mb-3">{{ error }}</div>{% endif %}
+
+    <div class="mb-3">
+      <label class="form-label">{% trans "auth.twoStepVerification.countryLabel" %}</label>
+      <select class="form-select" name="country_code" x-model="countryCode">
+        {% for c in countries %}
+          <option value="{{ c.dial }}">{{ c.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="mb-4">
+      <label class="form-label">{% trans "auth.twoStepVerification.phoneLabel" %}</label>
+      <div class="input-group">
+        <span class="input-group-text" x-text="countryCode"></span>
+        <input type="text" class="form-control" name="phone_number"
+               placeholder="{% trans 'auth.twoStepVerification.phonePlaceholder' %}">
+      </div>
+    </div>
+
+    <div class="text-secondary mb-3">
+      {% trans "auth.twoStepVerification.description" %}
+    </div>
+
+    <div class="form-footer">
+      <button type="submit" class="btn btn-primary w-100" :disabled="loading">
+        <span x-show="loading" class="spinner-border spinner-border-sm me-2"></span>
+        {% trans "auth.twoStepVerification.submit" %}
+      </button>
+    </div>
+  </div>
+</form>
+<div class="text-center text-secondary mt-3">
+  <a href="{% url 'auth:login' %}">{% trans "auth.twoStepVerification.backToLogin" %}</a>
+</div>
+{% endblock %}

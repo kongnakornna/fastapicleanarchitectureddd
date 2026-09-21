@@ -1,0 +1,35 @@
+{% load i18n %}
+{# HTMX partial — swap ใน header dropdown #}
+<div class="list-group list-group-flush list-group-hoverable">
+  {% for n in notifications %}
+    <div class="list-group-item" hx-post="{% url 'notification:mark-read' n.id %}"
+         hx-swap="none">
+      <div class="row align-items-center">
+        <div class="col-auto">
+          <span class="status-dot d-block {% if not n.is_read %}status-dot-animated bg-red{% endif %}"></span>
+        </div>
+        <div class="col text-truncate">
+          <a href="javascript:void(0)" class="text-body d-block">{{ n.title }}</a>
+          <div class="d-block text-secondary text-truncate mt-n1">{{ n.body }}</div>
+        </div>
+      </div>
+    </div>
+  {% empty %}
+    <div class="list-group-item text-center text-secondary">{% trans "notification.empty" %}</div>
+  {% endfor %}
+</div>
+<div class="card-body">
+  <div class="row">
+    <div class="col">
+      <a href="javascript:void(0)" class="btn btn-outline-secondary w-100"
+         hx-post="{% url 'notification:mark-all-read' %}"
+         hx-target="closest .dropdown-menu"
+         hx-swap="innerHTML">{% trans "layout.header.archiveAll" %}</a>
+    </div>
+    <div class="col">
+      <a href="{% url 'notification:list' %}" class="btn btn-outline-secondary w-100">
+        {% trans "common.viewAll" %}
+      </a>
+    </div>
+  </div>
+</div>

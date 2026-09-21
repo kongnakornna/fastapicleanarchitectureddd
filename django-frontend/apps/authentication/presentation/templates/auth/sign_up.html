@@ -1,0 +1,98 @@
+{% extends "auth/auth_layout.html" %}
+{% load i18n icons %}
+
+{% block title %}{% trans "auth.signUp.title" %}{% endblock %}
+
+{% block auth_content %}
+<div x-data="signUpForm()">
+  <form method="post" class="card card-md" novalidate autocomplete="off">
+    {% csrf_token %}
+    <div class="card-body">
+      <h2 class="card-title text-center mb-4">{% trans "auth.signUp.title" %}</h2>
+
+      {% if error %}<div class="alert alert-danger mb-3">{{ error }}</div>{% endif %}
+      {% if form.non_field_errors %}
+        <div class="alert alert-danger mb-3">{{ form.non_field_errors.0 }}</div>
+      {% endif %}
+
+      <div class="mb-3">
+        <label class="form-label">{% trans "auth.signUp.nameLabel" %}</label>
+        {{ form.full_name }}
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Username</label>
+        {{ form.username }}
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">{% trans "auth.signUp.emailLabel" %}</label>
+        {{ form.email }}
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Phone Number</label>
+        {{ form.phone_number }}
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">{% trans "auth.signUp.passwordLabel" %}</label>
+        <div class="input-group input-group-flat">
+          <input :type="passwordVisible ? 'text' : 'password'"
+                 class="form-control" name="password"
+                 placeholder="{% trans 'auth.signUp.passwordPlaceholder' %}"
+                 x-model="password" required autocomplete="new-password">
+          <span class="input-group-text">
+            {% include "partials/password-toggle.html" %}
+          </span>
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">{% trans "auth.signUp.confirmPasswordLabel" %}</label>
+        <input type="password" class="form-control" name="confirm_password"
+               placeholder="{% trans 'auth.signUp.confirmPasswordPlaceholder' %}"
+               x-model="confirmPassword" required autocomplete="new-password">
+        <div x-show="password && confirmPassword && password !== confirmPassword"
+             class="text-danger small mt-1">
+          {% trans "auth.passwordsDoNotMatch" %}
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-check">
+          <input type="checkbox" class="form-check-input" name="agree_terms"
+                 x-model="agreeTerms" required>
+          <span class="form-check-label">
+            {% trans "auth.signUp.agreeTerms" %}
+          </span>
+        </label>
+      </div>
+
+      <div class="form-footer">
+        <button type="submit" class="btn btn-primary w-100"
+                :disabled="loading || !agreeTerms || (password && confirmPassword && password !== confirmPassword)">
+          <span x-show="loading" class="spinner-border spinner-border-sm me-2"></span>
+          {% trans "auth.signUp.submit" %}
+        </button>
+      </div>
+    </div>
+  </form>
+
+  <div class="text-center text-secondary mt-3">
+    {% trans "auth.signUp.hasAccount" %}
+    <a href="{% url 'auth:login' %}">{% trans "auth.signUp.loginLink" %}</a>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  function signUpForm() {
+    return {
+      password: '', confirmPassword: '', agreeTerms: false,
+      passwordVisible: false, loading: false,
+    };
+  }
+</script>
+{% endblock %}

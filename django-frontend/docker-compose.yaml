@@ -1,0 +1,18 @@
+services:
+  web:
+    build: .
+    image: django-frontend:2.1.0
+    env_file: .env
+    ports:
+      - "8001:8001"
+    environment:
+      # Point Django at the FastAPI service (compose service name)
+      FASTAPI_BASE_URL: http://fastapi:2000
+    depends_on:
+      - fastapi
+
+  # Your FastAPI backend (adjust image/build to match your setup)
+  fastapi:
+    image: your-fastapi-image:latest
+    ports:
+      - "2000:2000"
