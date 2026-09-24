@@ -1,8 +1,8 @@
 <div align="center">
 
 # ERP-IoT
-
-**A production-shaped Python backend template — Clean Architecture, Domain-Driven Design, and everything already wired.**
+**A production-shaped Python backend template**
+**Clean Architecture, Domain-Driven Design, and everything already wired.**
 
 [![Python](https://img.shields.io/badge/Python-3.14-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.136-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
