@@ -19,9 +19,6 @@
 [![Forks](https://img.shields.io/github/forks/BrunoTanabe/fastapi-clean-architecture-ddd-template?style=flat&logo=github)](https://github.com/kongnakornna/fastapicleanarchitectureddd//fastapi-clean-architecture-ddd-template/network/members)
 [![Issues](https://img.shields.io/github/issues/BrunoTanabe/fastapi-clean-architecture-ddd-template?style=flat&logo=github)](https://github.com/kongnakornna/fastapicleanarchitectureddd//fastapi-clean-architecture-ddd-template/issues)
 [![Last commit](https://img.shields.io/github/last-commit/BrunoTanabe/fastapi-clean-architecture-ddd-template?style=flat&logo=github)](https://github.com/kongnakornna/fastapicleanarchitectureddd//fastapi-clean-architecture-ddd-template/commits)
-
-**English** · [Português](README-PTBR.md)
-
 </div>
 
 ---
