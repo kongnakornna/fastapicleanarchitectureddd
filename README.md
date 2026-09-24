@@ -21,8 +21,7 @@
 [![Last commit](https://img.shields.io/github/last-commit/BrunoTanabe/fastapi-clean-architecture-ddd-template?style=flat&logo=github)](https://github.com/kongnakornna/fastapicleanarchitectureddd//fastapi-clean-architecture-ddd-template/commits)
 </div>
 
-
-![alt text](py-1.png)
+ 
 
 ![alt text](py-3.png)
 
