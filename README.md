@@ -1345,15 +1345,15 @@ If this template saved you time, consider leaving a ⭐
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    PRESENTATION LAYER                        │
+│                    PRESENTATION LAYER                       │
 │  routers · schemas · docs · dependencies                    │
-│  (payload → mapper → use case → mapper → return)           │
+│  (payload → mapper → use case → mapper → return)            │
 └──────────────────────────┬──────────────────────────────────┘
                            │
 ┌──────────────────────────▼──────────────────────────────────┐
-│                    APPLICATION LAYER                         │
+│                    APPLICATION LAYER                        │
 │  use_cases · interfaces (Protocol) · mappers · exceptions   │
-│  (business rules live here)                                  │
+│  (business rules live here)                                 │
 └──────────────────────────┬──────────────────────────────────┘
                            │
 ┌──────────────────────────▼──────────────────────────────────┐
@@ -1363,9 +1363,9 @@ If this template saved you time, consider leaving a ⭐
 └──────────────────────────┬──────────────────────────────────┘
                            │
 ┌──────────────────────────▼──────────────────────────────────┐
-│                  INFRASTRUCTURE LAYER                        │
+│                  INFRASTRUCTURE LAYER                       │
 │  models (SQLAlchemy) · repositories · caches · services     │
-│  (flush() never commit())                                    │
+│  (flush() never commit())                                   │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -1672,9 +1672,9 @@ except Exception as e:
 ### 10.1 Money Path
 
 ```
-┌─────────┐    ┌─────────┐    ┌─────────┐    ┌─────────┐    ┌─────────┐
-│  Order  │───▶│ Invoice │───▶│ Ledger  │───▶│ Outbox  │───▶│ Cloud   │
-└─────────┘    └─────────┘    └─────────┘    └─────────┘    └─────────┘
+┌─────────┐     ┌─────────┐     ┌─────────┐     ┌─────────┐    ┌─────────┐
+│  Order  │───▶ │ Invoice │───▶│ Ledger  │───▶│ Outbox  │───▶│ Cloud   │
+└─────────┘     └─────────┘     └─────────┘     └─────────┘    └─────────┘
                                                                    │
                     ┌──────────────────────────────────────────────┘
                     ▼
@@ -1689,7 +1689,7 @@ except Exception as e:
 
 ```
 ┌─────┐   ┌─────────┐   ┌─────┐   ┌───────┐   ┌───────┐   ┌─────────┐   ┌──────┐   ┌──────┐
-│ PO  │──▶│ Receive │──▶│ Lot │──▶│ Store │──▶│ Issue │──▶│ Produce │──▶│ Ship │──▶│ Sell │
+│ PO  │──▶│ Receive │──▶│ Lot │──▶│ Store │──▶│ Issue │──▶│ Produce │──▶│ Ship  │──▶│ Sell │
 └─────┘   └─────────┘   └─────┘   └───────┘   └───────┘   └─────────┘   └──────┘   └──────┘
 ```
 
@@ -2963,8 +2963,11 @@ curl -X POST http://localhost:8000/api/v1/invoice/ \
  
 
 **ผู้แต่ง:** Kongnakorn Jantakun
+
 **อีเมล:** kongnakornjantakun@gmail.com
+
 **เวอร์ชัน:** 2.0.0
+
 **อัปเดต:** 2026-09-17
 
  
