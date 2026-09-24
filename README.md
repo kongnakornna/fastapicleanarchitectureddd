@@ -15,10 +15,10 @@
 [![Ruff](https://img.shields.io/badge/Ruff-linted-D7FF64?logo=ruff&logoColor=black)](https://docs.astral.sh/ruff/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-[![Stars](https://img.shields.io/github/stars/BrunoTanabe/fastapi-clean-architecture-ddd-template?style=flat&logo=github)](https://github.com/kongnakornna/fastapi-clean-architecture-ddd-erp-iot/fastapi-clean-architecture-ddd-template/stargazers)
-[![Forks](https://img.shields.io/github/forks/BrunoTanabe/fastapi-clean-architecture-ddd-template?style=flat&logo=github)](https://github.com/kongnakornna/fastapi-clean-architecture-ddd-erp-iot/fastapi-clean-architecture-ddd-template/network/members)
-[![Issues](https://img.shields.io/github/issues/BrunoTanabe/fastapi-clean-architecture-ddd-template?style=flat&logo=github)](https://github.com/kongnakornna/fastapi-clean-architecture-ddd-erp-iot/fastapi-clean-architecture-ddd-template/issues)
-[![Last commit](https://img.shields.io/github/last-commit/BrunoTanabe/fastapi-clean-architecture-ddd-template?style=flat&logo=github)](https://github.com/kongnakornna/fastapi-clean-architecture-ddd-erp-iot/fastapi-clean-architecture-ddd-template/commits)
+[![Stars](https://img.shields.io/github/stars/BrunoTanabe/fastapi-clean-architecture-ddd-template?style=flat&logo=github)]([https://github.com/kongnakornna/fastapicleanarchitectureddd/](https://github.com/kongnakornna/fastapicleanarchitectureddd/)/fastapi-clean-architecture-ddd-template/stargazers)
+[![Forks](https://img.shields.io/github/forks/BrunoTanabe/fastapi-clean-architecture-ddd-template?style=flat&logo=github)](https://github.com/kongnakornna/fastapicleanarchitectureddd//fastapi-clean-architecture-ddd-template/network/members)
+[![Issues](https://img.shields.io/github/issues/BrunoTanabe/fastapi-clean-architecture-ddd-template?style=flat&logo=github)](https://github.com/kongnakornna/fastapicleanarchitectureddd//fastapi-clean-architecture-ddd-template/issues)
+[![Last commit](https://img.shields.io/github/last-commit/BrunoTanabe/fastapi-clean-architecture-ddd-template?style=flat&logo=github)](https://github.com/kongnakornna/fastapicleanarchitectureddd//fastapi-clean-architecture-ddd-template/commits)
 
 **English** · [Português](README-PTBR.md)
 
