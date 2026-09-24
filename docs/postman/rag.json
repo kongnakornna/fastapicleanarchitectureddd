@@ -1,0 +1,197 @@
+{
+  "info": {
+    "name": "rag API",
+    "_postman_id": "68465ab0-fec0-4d9f-bed4-907dee2c211e",
+    "description": "RAG Pipeline",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000"
+    },
+    {
+      "key": "tenant_id",
+      "value": "00000000-0000-0000-0000-000000000001"
+    },
+    {
+      "key": "user_id",
+      "value": "00000000-0000-0000-0000-000000000002"
+    }
+  ],
+  "item": [
+    {
+      "name": "Ingest",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Tenant-Id",
+            "value": "{{tenant_id}}"
+          },
+          {
+            "key": "X-User-Id",
+            "value": "{{user_id}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/rag/ingest",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "rag",
+            "ingest"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"content\":\"This is a test document.\",\"source_uri\":\"test://doc1\",\"title\":\"Test\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Query",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Tenant-Id",
+            "value": "{{tenant_id}}"
+          },
+          {
+            "key": "X-User-Id",
+            "value": "{{user_id}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/rag/query",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "rag",
+            "query"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"query\":\"What is this document about?\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "List Documents",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-Tenant-Id",
+            "value": "{{tenant_id}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/rag/documents?limit=20",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "rag",
+            "documents"
+          ],
+          "query": [
+            {
+              "key": "limit",
+              "value": "20"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "List Pipelines",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-Tenant-Id",
+            "value": "{{tenant_id}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/rag/pipelines",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "rag",
+            "pipelines"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Create Pipeline",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Tenant-Id",
+            "value": "{{tenant_id}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/rag/pipelines",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "rag",
+            "pipelines"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"name\":\"quality\",\"chunker_type\":\"recursive\",\"retriever_type\":\"hybrid\",\"top_k\":10}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,152 @@
+{
+  "info": {
+    "name": "ai_evaluation API",
+    "_postman_id": "52ae87a2-7fa4-4314-ba3a-8bb238020f8d",
+    "description": "AI Evaluation",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000"
+    },
+    {
+      "key": "tenant_id",
+      "value": "00000000-0000-0000-0000-000000000001"
+    },
+    {
+      "key": "user_id",
+      "value": "00000000-0000-0000-0000-000000000002"
+    }
+  ],
+  "item": [
+    {
+      "name": "Create Dataset",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Tenant-Id",
+            "value": "{{tenant_id}}"
+          },
+          {
+            "key": "X-User-Id",
+            "value": "{{user_id}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/eval/datasets",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "eval",
+            "datasets"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"name\":\"qa_baseline\",\"task_type\":\"qa\",\"cases\":[{\"question\":\"What is 2+2?\",\"ground_truth\":\"4\"}]}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Run Evaluation",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Tenant-Id",
+            "value": "{{tenant_id}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/eval/run",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "eval",
+            "run"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"dataset_id\":\"REPLACE\",\"target_kind\":\"model\",\"target_ref\":\"gpt-4o-mini\",\"metrics\":[\"faithfulness\",\"answer_relevance\"]}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Get Report",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-Tenant-Id",
+            "value": "{{tenant_id}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/eval/runs/REPLACE/report",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "eval",
+            "runs",
+            "REPLACE",
+            "report"
+          ]
+        }
+      }
+    },
+    {
+      "name": "List Metrics",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-Tenant-Id",
+            "value": "{{tenant_id}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/eval/metrics",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "eval",
+            "metrics"
+          ]
+        }
+      }
+    }
+  ]
+}

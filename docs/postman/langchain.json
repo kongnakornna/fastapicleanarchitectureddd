@@ -1,0 +1,271 @@
+{
+  "info": {
+    "name": "langchain API",
+    "_postman_id": "7745e653-7a12-486c-9826-c903651ca16f",
+    "description": "LangChain Wrapper",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000"
+    },
+    {
+      "key": "tenant_id",
+      "value": "00000000-0000-0000-0000-000000000001"
+    },
+    {
+      "key": "user_id",
+      "value": "00000000-0000-0000-0000-000000000002"
+    },
+    {
+      "key": "chain_id",
+      "value": "REPLACE_WITH_CHAIN_UUID"
+    },
+    {
+      "key": "agent_id",
+      "value": "REPLACE_WITH_AGENT_UUID"
+    }
+  ],
+  "item": [
+    {
+      "name": "List Chains",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-Tenant-Id",
+            "value": "{{tenant_id}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/lc/chains",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "lc",
+            "chains"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Create Chain (LCEL)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Tenant-Id",
+            "value": "{{tenant_id}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/lc/chains",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "lc",
+            "chains"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"name\":\"my_chain\",\"chain_type\":\"lcel\",\"config\":{\"model\":\"gpt-4o-mini\"}}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Invoke Chain",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Tenant-Id",
+            "value": "{{tenant_id}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/lc/chains/{{chain_id}}/invoke",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "lc",
+            "chains",
+            "{{chain_id}}",
+            "invoke"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"inputs\":{\"input\":\"Say hello in French\"}}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Create Agent",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Tenant-Id",
+            "value": "{{tenant_id}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/lc/agents",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "lc",
+            "agents"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"name\":\"my_agent\",\"agent_type\":\"react\",\"tools\":[\"get_weather\"],\"model\":\"gpt-4o-mini\",\"max_iterations\":5}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Invoke Agent",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Tenant-Id",
+            "value": "{{tenant_id}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/lc/agents/{{agent_id}}/invoke",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "lc",
+            "agents",
+            "{{agent_id}}",
+            "invoke"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"question\":\"What is the weather in Bangkok?\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Get Run Trace",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-Tenant-Id",
+            "value": "{{tenant_id}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/lc/runs/REPLACE/trace",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "lc",
+            "runs",
+            "REPLACE",
+            "trace"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Update Memory",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Tenant-Id",
+            "value": "{{tenant_id}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/lc/memory",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "lc",
+            "memory"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"conversation_id\":\"00000000-0000-0000-0000-000000000099\",\"memory_type\":\"buffer\",\"messages\":[{\"role\":\"user\",\"content\":\"hi\"},{\"role\":\"assistant\",\"content\":\"hello\"}]}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    }
+  ]
+}

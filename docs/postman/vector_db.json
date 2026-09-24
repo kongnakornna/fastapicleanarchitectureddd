@@ -1,0 +1,228 @@
+{
+  "info": {
+    "name": "vector_db API",
+    "_postman_id": "fd0bf9c7-0feb-4848-9968-aa2bece0497c",
+    "description": "Vector Database",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000"
+    },
+    {
+      "key": "tenant_id",
+      "value": "00000000-0000-0000-0000-000000000001"
+    },
+    {
+      "key": "collection_id",
+      "value": "REPLACE_WITH_COLLECTION_UUID"
+    }
+  ],
+  "item": [
+    {
+      "name": "List Collections",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-Tenant-Id",
+            "value": "{{tenant_id}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/vdb/collections",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "vdb",
+            "collections"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Create Collection",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Tenant-Id",
+            "value": "{{tenant_id}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/vdb/collections",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "vdb",
+            "collections"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"name\":\"my_collection\",\"dimension\":1536,\"metric\":\"cosine\",\"backend\":\"pgvector\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Upsert Vectors",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Tenant-Id",
+            "value": "{{tenant_id}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/vdb/collections/{{collection_id}}/upsert",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "vdb",
+            "collections",
+            "{{collection_id}}",
+            "upsert"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"items\":[{\"source_id\":\"doc1\",\"vector\":[0.1,0.2],\"metadata\":{\"tag\":\"a\"}}]}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Query Vectors",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Tenant-Id",
+            "value": "{{tenant_id}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/vdb/collections/{{collection_id}}/query",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "vdb",
+            "collections",
+            "{{collection_id}}",
+            "query"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"vector\":[0.1,0.2],\"top_k\":5,\"metric\":\"cosine\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Build Index",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Tenant-Id",
+            "value": "{{tenant_id}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/vdb/collections/{{collection_id}}/indexes",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "vdb",
+            "collections",
+            "{{collection_id}}",
+            "indexes"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"index_type\":\"hnsw\",\"params\":{\"m\":16,\"ef_construction\":64}}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Stats",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-Tenant-Id",
+            "value": "{{tenant_id}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/vdb/collections/{{collection_id}}/stats",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "vdb",
+            "collections",
+            "{{collection_id}}",
+            "stats"
+          ]
+        }
+      }
+    }
+  ]
+}

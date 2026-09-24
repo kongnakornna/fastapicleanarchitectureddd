@@ -1,0 +1,2015 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>iot Test Dashboard — Login + Score Bars</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg:#0d1117; --surface:#161b22; --surface-2:#21262d;
+    --border:#30363d; --border-hover:#484f58;
+    --text:#e6edf3; --text-muted:#8b949e; --text-dim:#6e7681;
+    --accent:#388bfd; --accent-dim:#1f4b8e;
+    --green:#3fb950; --green-bg:#0d2b13;
+    --yellow:#d29922; --yellow-bg:#2b2005;
+    --red:#f85149; --red-bg:#2d0f0f;
+    --orange:#ff8c42; --orange-bg:#3d1f0a;
+    --purple:#bc8cff; --purple-bg:#2a1e3d;
+    --teal:#5fd0d0; --teal-bg:#0a2e2e;
+    --radius:8px; --radius-sm:5px;
+    --font:'SF Mono','Fira Code','Cascadia Code','Consolas',monospace;
+    --font-ui:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
+    --sidebar-w:460px;
+  }
+  html, body {
+    background:var(--bg); color:var(--text);
+    font-family:var(--font-ui); font-size:14px; line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  body { height:100%; overflow:hidden; }
+  .app {
+    display:grid; grid-template-rows:auto auto 1fr;
+    height:100vh; height:100dvh;
+    max-width:1600px; margin:0 auto; padding:0 16px;
+  }
+
+  /* HEADER */
+  header {
+    display:flex; align-items:center; gap:12px;
+    padding:16px 0 12px;
+    border-bottom:1px solid var(--border);
+  }
+  .logo {
+    width:32px; height:32px; flex-shrink:0;
+    background:linear-gradient(135deg,#ff8c42,var(--red));
+    border-radius:var(--radius-sm);
+    display:flex; align-items:center; justify-content:center;
+    font-size:18px; color:#fff;
+  }
+  header h1 { font-size:16px; font-weight:600; flex:1; }
+  header h1 span { color:var(--text-muted); font-weight:400; }
+  .auth-badge, .env-badge {
+    padding:4px 10px; border-radius:var(--radius-sm);
+    font-size:11px; font-weight:600;
+    background:var(--surface-2); border:1px solid var(--border);
+  }
+  .auth-badge.ok { background:var(--teal-bg); border-color:var(--teal); color:var(--teal); }
+  .auth-badge.warn { background:var(--yellow-bg); border-color:var(--yellow); color:var(--yellow); }
+  .env-badge.ok { background:var(--green-bg); border-color:var(--green); color:var(--green); }
+  .env-badge.err { background:var(--red-bg); border-color:var(--red); color:var(--red); }
+
+  /* ═══════════════════════════════════════════════════════════
+     MASTER SCORE BAR
+     ═══════════════════════════════════════════════════════════ */
+  .score-master {
+    display:grid;
+    grid-template-columns:auto 1fr auto;
+    gap:16px; align-items:center;
+    padding:14px 18px;
+    background:linear-gradient(135deg, var(--surface), var(--surface-2));
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    margin:10px 0;
+    position:relative; overflow:hidden;
+  }
+  .score-master::before {
+    content:''; position:absolute; top:0; left:0; right:0; height:3px;
+    background:linear-gradient(90deg, transparent, var(--accent), transparent);
+    opacity:.3;
+  }
+  .score-master.pass::before { background:linear-gradient(90deg, transparent, var(--green), transparent); opacity:.8; }
+  .score-master.warn::before { background:linear-gradient(90deg, transparent, var(--yellow), transparent); opacity:.8; }
+  .score-master.fail::before { background:linear-gradient(90deg, transparent, var(--red), transparent); opacity:.8; }
+
+  .score-display { display:flex; align-items:center; gap:14px; min-width:200px; }
+  .score-circle { position:relative; width:64px; height:64px; flex-shrink:0; }
+  .score-circle svg { transform:rotate(-90deg); }
+  .score-circle .track { fill:none; stroke:var(--surface-2); stroke-width:6; }
+  .score-circle .fill {
+    fill:none; stroke-width:6; stroke-linecap:round;
+    transition:stroke-dashoffset .8s cubic-bezier(.4,0,.2,1), stroke .3s;
+  }
+  .score-circle.pass .fill { stroke:var(--green); }
+  .score-circle.warn .fill { stroke:var(--yellow); }
+  .score-circle.fail .fill { stroke:var(--red); }
+  .score-circle .pct {
+    position:absolute; inset:0;
+    display:flex; align-items:center; justify-content:center;
+    font-family:var(--font); font-size:15px; font-weight:800;
+  }
+  .score-meta { display:flex; flex-direction:column; gap:2px; }
+  .score-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.6px; color:var(--text-dim); }
+  .score-value { font-family:var(--font); font-size:22px; font-weight:800; line-height:1; }
+  .score-value.pass { color:var(--green); }
+  .score-value.warn { color:var(--yellow); }
+  .score-value.fail { color:var(--red); }
+  .score-sub { font-size:11px; color:var(--text-muted); font-family:var(--font); }
+
+  .score-progress { display:flex; flex-direction:column; gap:8px; min-width:0; }
+  .progress-track {
+    position:relative; height:14px;
+    background:var(--bg); border:1px solid var(--border);
+    border-radius:999px; overflow:hidden;
+  }
+  .progress-fill {
+    position:absolute; top:0; left:0; bottom:0;
+    width:0%; border-radius:999px;
+    transition:width .8s cubic-bezier(.4,0,.2,1);
+  }
+  .progress-fill.pass { background:linear-gradient(90deg, #2ea043, #56d364); }
+  .progress-fill.warn { background:linear-gradient(90deg, #bb8009, #e3b341); }
+  .progress-fill.fail { background:linear-gradient(90deg, #da3633, #f85149); }
+
+  .progress-legend {
+    display:grid; grid-template-columns:repeat(4,1fr); gap:6px;
+    font-size:11px;
+  }
+  .legend-item {
+    display:flex; align-items:center; gap:6px;
+    padding:4px 8px; background:var(--bg);
+    border:1px solid var(--border); border-radius:var(--radius-sm);
+    font-family:var(--font); min-width:0;
+  }
+  .legend-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+  .legend-dot.pass { background:var(--green); }
+  .legend-dot.fail { background:var(--red); }
+  .legend-dot.pending { background:var(--text-dim); }
+  .legend-dot.running { background:var(--yellow); animation:legendPulse 1s infinite; }
+  @keyframes legendPulse { 0%,100% { opacity:1; } 50% { opacity:.4; } }
+  .legend-label { color:var(--text-muted); flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; }
+  .legend-count { font-weight:700; color:var(--text); }
+
+  .score-actions { display:flex; flex-direction:column; gap:6px; min-width:130px; }
+  .score-actions .btn { width:100%; }
+
+  /* ═══════════════════════════════════════════════════════════
+     MAIN
+     ═══════════════════════════════════════════════════════════ */
+  .main {
+    display:grid; grid-template-columns:var(--sidebar-w) 1fr;
+    gap:16px; padding:0 0 16px; min-height:0;
+  }
+  .sidebar { display:flex; flex-direction:column; gap:12px; overflow-y:auto; padding-right:2px; }
+  .content { display:flex; flex-direction:column; gap:12px; min-height:0; }
+
+  .card {
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:var(--radius); overflow:hidden;
+  }
+  .card-header {
+    display:flex; align-items:center; gap:8px;
+    padding:12px 14px; border-bottom:1px solid var(--border);
+    font-size:12px; font-weight:600;
+    text-transform:uppercase; letter-spacing:.5px;
+    color:var(--text-muted);
+  }
+  .card-header .icon { font-size:14px; }
+  .card-body { padding:14px; }
+
+  /* ─── Scrollable regions (Authentication / Config) ─── */
+  .card-scroll {
+    max-height: 300px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-right: 8px;
+    margin-right: -8px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-hover) rgba(255,255,255,0.03);
+  }
+  .card-auth   .card-scroll { max-height: min(340px, 44vh); }
+  .card-config .card-scroll { max-height: min(300px, 40vh); }
+  .card-scroll::-webkit-scrollbar { width: 8px; }
+  .card-scroll::-webkit-scrollbar-track { background: rgba(255,255,255,0.03); border-radius: 8px; }
+  .card-scroll::-webkit-scrollbar-thumb {
+    background: var(--border-hover); border-radius: 8px;
+    border: 2px solid transparent; background-clip: padding-box;
+  }
+  .card-scroll::-webkit-scrollbar-thumb:hover {
+    background: var(--text-dim); background-clip: padding-box;
+  }
+
+  .field { display:flex; flex-direction:column; gap:5px; margin-bottom:10px; }
+  .field label { font-size:12px; color:var(--text-muted); font-weight:500; }
+  input {
+    background:var(--bg); border:1px solid var(--border);
+    border-radius:var(--radius-sm); color:var(--text);
+    font-family:var(--font); font-size:13px;
+    padding:7px 10px; outline:none; width:100%;
+  }
+  input:focus { border-color:var(--accent); }
+
+  .btn {
+    display:inline-flex; align-items:center; justify-content:center; gap:6px;
+    padding:8px 14px;
+    border:1px solid transparent; border-radius:var(--radius-sm);
+    font-size:13px; font-weight:500; cursor:pointer;
+    font-family:var(--font-ui); white-space:nowrap;
+    transition:filter .12s;
+  }
+  .btn:disabled { opacity:.4; cursor:not-allowed; }
+  .btn:not(:disabled):hover { filter:brightness(1.15); }
+  .btn-primary { background:var(--accent); color:#fff; }
+  .btn-success { background:var(--green); color:#fff; }
+  .btn-danger { background:transparent; border-color:var(--red); color:var(--red); }
+  .btn-secondary { background:var(--surface-2); border-color:var(--border); color:var(--text); }
+  .btn-teal { background:transparent; border-color:var(--teal); color:var(--teal); }
+  .btn-purple { background:transparent; border-color:var(--purple); color:var(--purple); }
+  .btn-sm { padding:4px 10px; font-size:12px; }
+  .btn-row { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:8px; }
+  .btn-row-full { display:grid; grid-template-columns:1fr; gap:6px; margin-top:8px; }
+
+  /* ═══════════════════════════════════════════════════════════
+     TEST LIST WITH SCORE BARS
+     ═══════════════════════════════════════════════════════════ */
+  .test-group {
+    padding:0;
+    border-bottom:1px solid var(--border);
+  }
+  .test-group:last-child { border-bottom:none; }
+  .test-group-header {
+    display:flex; align-items:center; gap:8px;
+    padding:10px 14px 8px;
+    font-size:10px; font-weight:700; text-transform:uppercase;
+    letter-spacing:.6px; color:var(--text-dim);
+    background:var(--bg);
+    border-bottom:1px solid var(--border);
+  }
+  .test-group-header .badge-pill {
+    margin-left:auto;
+    padding:2px 8px; border-radius:999px;
+    font-size:10px; font-weight:800;
+    background:var(--surface-2); color:var(--text-muted);
+    font-family:var(--font);
+  }
+  .test-group-header .badge-pill.pass { background:var(--green-bg); color:var(--green); }
+  .test-group-header .badge-pill.fail { background:var(--red-bg); color:var(--red); }
+
+  .test-item {
+    display:grid;
+    grid-template-columns:32px 1fr auto;
+    gap:10px;
+    align-items:center;
+    padding:10px 14px;
+    border-bottom:1px solid #1c2128;
+    transition:background .1s;
+    cursor:pointer;
+  }
+  .test-item:last-child { border-bottom:none; }
+  .test-item:hover { background:var(--surface-2); }
+  .test-item.running { background:rgba(210,153,34,.08); }
+  .test-item.pass { background:rgba(63,185,80,.03); }
+  .test-item.fail { background:rgba(248,81,73,.05); }
+
+  /* Status icon */
+  .test-icon {
+    width:28px; height:28px;
+    border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-size:14px;
+    background:var(--surface-2);
+    border:1px solid var(--border);
+    flex-shrink:0;
+  }
+  .test-icon.pass { background:var(--green-bg); border-color:var(--green); color:var(--green); }
+  .test-icon.fail { background:var(--red-bg); border-color:var(--red); color:var(--red); }
+  .test-icon.running {
+    background:var(--yellow-bg); border-color:var(--yellow); color:var(--yellow);
+    animation:spin 1s linear infinite;
+  }
+  .test-icon.pending { color:var(--text-dim); }
+
+  @keyframes spin {
+    from { transform:rotate(0deg); }
+    to { transform:rotate(360deg); }
+  }
+
+  /* Main info + mini score bar */
+  .test-info {
+    display:flex; flex-direction:column; gap:4px;
+    min-width:0;
+  }
+  .test-name {
+    font-size:12.5px; font-weight:600;
+    color:var(--text); overflow:hidden; text-overflow:ellipsis;
+    white-space:nowrap;
+    display:flex; align-items:center; gap:6px;
+  }
+  .test-name .method {
+    font-family:var(--font); font-size:9px; font-weight:700;
+    padding:1px 5px; border-radius:3px;
+    letter-spacing:.4px;
+  }
+  .method.get { background:var(--accent-dim); color:var(--accent); }
+  .method.post { background:var(--green-bg); color:var(--green); }
+  .method.put { background:var(--yellow-bg); color:var(--yellow); }
+  .method.del { background:var(--red-bg); color:var(--red); }
+  .method.ws { background:var(--purple-bg); color:var(--purple); }
+  .test-name .path {
+    font-family:var(--font); font-size:10.5px;
+    color:var(--text-dim); font-weight:400;
+  }
+
+  /* ─── MINI SCORE BAR for each test ─── */
+  .mini-bar {
+    position:relative;
+    height:6px;
+    background:var(--bg);
+    border:1px solid var(--border);
+    border-radius:999px;
+    overflow:hidden;
+  }
+  .mini-bar-fill {
+    position:absolute; top:0; left:0; bottom:0;
+    width:0%;
+    background:var(--text-dim);
+    transition:width .5s cubic-bezier(.4,0,.2,1), background .3s;
+    border-radius:999px;
+  }
+  .mini-bar-fill.running {
+    background:linear-gradient(90deg, var(--yellow), #e3b341);
+    animation:miniShimmer 1.5s infinite;
+  }
+  .mini-bar-fill.pass {
+    background:linear-gradient(90deg, #2ea043, #56d364);
+    width:100%;
+  }
+  .mini-bar-fill.fail {
+    background:linear-gradient(90deg, #da3633, #f85149);
+    width:100%;
+  }
+  @keyframes miniShimmer {
+    0% { opacity:.6; }
+    50% { opacity:1; }
+    100% { opacity:.6; }
+  }
+
+  /* Right: score text + duration */
+  .test-result {
+    display:flex; flex-direction:column;
+    align-items:flex-end; gap:2px;
+    font-family:var(--font);
+    flex-shrink:0;
+  }
+  .test-result-main {
+    font-size:14px; font-weight:800;
+    color:var(--text-dim);
+  }
+  .test-result-main.pass { color:var(--green); }
+  .test-result-main.fail { color:var(--red); }
+  .test-result-main.running { color:var(--yellow); }
+  .test-duration {
+    font-size:10px; color:var(--text-dim);
+  }
+
+  /* Aggregate mini bar per group */
+  .group-bar {
+    position:relative;
+    height:3px;
+    background:var(--bg);
+    overflow:hidden;
+  }
+  .group-bar-fill {
+    position:absolute; top:0; left:0; bottom:0;
+    width:0%;
+    background:var(--text-dim);
+    transition:width .5s ease;
+  }
+  .group-bar-fill.pass { background:linear-gradient(90deg, #2ea043, #56d364); }
+  .group-bar-fill.warn { background:linear-gradient(90deg, #bb8009, #e3b341); }
+  .group-bar-fill.fail { background:linear-gradient(90deg, #da3633, #f85149); }
+
+  /* STATUS + STATS */
+  .status-row {
+    display:flex; align-items:center; gap:8px;
+    padding:10px 14px;
+    background:var(--bg); border-top:1px solid var(--border);
+  }
+  .dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+  .dot-green { background:var(--green); box-shadow:0 0 6px var(--green); }
+  .dot-red { background:var(--red); box-shadow:0 0 6px var(--red); }
+  .dot-yellow { background:var(--yellow); box-shadow:0 0 6px var(--yellow); }
+  .dot-gray { background:var(--text-dim); }
+  .status-text { font-size:12px; color:var(--text-muted); flex:1; }
+
+  .stats {
+    display:grid; grid-template-columns:repeat(4,1fr); gap:1px;
+    background:var(--border); border-top:1px solid var(--border);
+  }
+  .stat { background:var(--surface); padding:10px 8px; text-align:center; }
+  .stat-val { font-family:var(--font); font-size:18px; font-weight:700; }
+  .stat-val.green { color:var(--green); }
+  .stat-val.yellow { color:var(--yellow); }
+  .stat-val.red { color:var(--red); }
+  .stat-val.blue { color:var(--accent); }
+  .stat-val.teal { color:var(--teal); }
+  .stat-label { font-size:9px; color:var(--text-dim); text-transform:uppercase; margin-top:2px; }
+
+  .user-info {
+    margin-top:10px; padding:10px;
+    background:var(--bg); border-radius:var(--radius-sm);
+    font-size:11px; color:var(--text-muted);
+    display:none;
+  }
+  .user-info.show { display:block; }
+  .user-info strong { color:var(--text); }
+  .user-info .email { font-family:var(--font); color:var(--teal); margin-top:4px; word-break:break-all; }
+
+  /* LOG */
+  .log { flex:1; overflow-y:auto; padding:12px 14px; font-family:var(--font); font-size:12px; line-height:1.7; }
+  .log-empty { display:flex; align-items:center; justify-content:center; height:100%; color:var(--text-dim); font-family:var(--font-ui); }
+  .log-entry {
+    display:grid; grid-template-columns:90px 65px 1fr; gap:10px;
+    padding:5px 0; border-bottom:1px solid #1c2128;
+  }
+  .log-time { color:var(--text-dim); font-size:11px; }
+  .log-tag {
+    font-size:10px; font-weight:600; padding:1px 6px; border-radius:3px;
+    text-transform:uppercase; letter-spacing:.4px;
+    align-self:start; justify-self:start;
+  }
+  .tag-info { background:var(--accent-dim); color:var(--accent); }
+  .tag-recv { background:var(--green-bg); color:var(--green); }
+  .tag-warn { background:var(--yellow-bg); color:var(--yellow); }
+  .tag-error { background:var(--red-bg); color:var(--red); }
+  .tag-system { background:#1c1c2e; color:var(--purple); }
+  .tag-auth { background:var(--teal-bg); color:var(--teal); }
+  .tag-pass { background:var(--green-bg); color:var(--green); }
+  .tag-fail { background:var(--red-bg); color:var(--red); }
+  .tag-alarm { background:var(--orange-bg); color:var(--orange); }
+  .log-msg { color:var(--text); word-break:break-word; }
+  .log-msg pre {
+    background:var(--surface-2); border:1px solid var(--border);
+    border-radius:4px; padding:8px 10px; margin-top:5px;
+    white-space:pre-wrap; word-break:break-word;
+    font-size:11px; color:var(--text-muted);
+  }
+
+  /* ENV ROWS */
+  .env-row {
+    display:flex; align-items:center; gap:10px;
+    padding:8px 14px;
+    border-bottom:1px solid #1c2128;
+    font-size:12px;
+  }
+  .env-row:last-child { border-bottom:none; }
+  .env-row .label { color:var(--text-dim); min-width:100px; font-size:11px; }
+  .env-row code {
+    font-family:var(--font); font-size:11px;
+    color:var(--teal); background:var(--bg);
+    padding:2px 8px; border-radius:4px;
+    border:1px solid var(--border);
+    word-break:break-all;
+  }
+
+  /* FLOATING COUNTER */
+  .corner-counter {
+    position:fixed; top:14px; right:14px; z-index:900;
+    display:flex; align-items:center; gap:8px;
+    padding:8px 14px 8px 12px;
+    background:linear-gradient(135deg, rgba(248,81,73,.95), rgba(210,60,60,.95));
+    border:1px solid #f85149; border-radius:999px;
+    color:#fff; font-weight:600; cursor:pointer;
+    box-shadow:0 6px 20px rgba(248,81,73,.35);
+    transition:transform .18s, opacity .25s;
+    user-select:none;
+    opacity:0; transform:translateY(-12px) scale(.9);
+    pointer-events:none;
+  }
+  .corner-counter.visible { opacity:1; transform:translateY(0) scale(1); pointer-events:auto; }
+  .corner-counter.pulse { animation:ringPulse 1.6s ease-in-out infinite; }
+  .corner-counter.bump { animation:bump .6s ease; }
+  .corner-counter.info { background:linear-gradient(135deg, rgba(56,139,253,.95), rgba(40,110,220,.95)); border-color:var(--accent); }
+  .corner-counter.demo::after {
+    content:'DEMO'; position:absolute; top:-8px; right:-6px;
+    background:var(--purple); color:#000;
+    font-size:8px; font-weight:800;
+    padding:1px 5px; border-radius:6px;
+  }
+  .corner-counter .bell { font-size:18px; }
+  .corner-counter .count { font-family:var(--font); font-size:16px; font-weight:800; }
+  .corner-counter .label { font-size:10px; text-transform:uppercase; letter-spacing:.6px; opacity:.9; }
+  .corner-counter .count-new {
+    position:absolute; top:-4px; left:-4px;
+    background:var(--yellow); color:#000;
+    font-size:9px; font-weight:800;
+    padding:1px 5px; border-radius:8px;
+    font-family:var(--font);
+  }
+  @keyframes ringPulse {
+    0%, 100% { box-shadow:0 6px 20px rgba(248,81,73,.35), 0 0 0 0 rgba(248,81,73,.55); }
+    50% { box-shadow:0 6px 20px rgba(248,81,73,.35), 0 0 0 10px rgba(248,81,73,0); }
+  }
+  @keyframes bump {
+    0% { transform:scale(1); }
+    25% { transform:scale(1.22) rotate(-3deg); }
+    50% { transform:scale(1.08) rotate(2deg); }
+    100% { transform:scale(1) rotate(0); }
+  }
+
+  /* TOASTS */
+  .toast-area {
+    position:fixed; bottom:20px; right:20px;
+    display:flex; flex-direction:column; gap:8px;
+    z-index:999; pointer-events:none; max-width:calc(100vw - 40px);
+  }
+  .toast {
+    padding:10px 16px; border-radius:var(--radius);
+    font-size:13px; font-weight:500; max-width:320px;
+    animation:slideIn .2s ease, fadeOut .3s ease 2.7s forwards;
+  }
+  .toast-info { background:var(--accent-dim); color:var(--accent); border:1px solid var(--accent); }
+  .toast-recv { background:var(--green-bg); color:var(--green); border:1px solid var(--green); }
+  .toast-error { background:var(--red-bg); color:var(--red); border:1px solid var(--red); }
+  .toast-warn { background:var(--yellow-bg); color:var(--yellow); border:1px solid var(--yellow); }
+  .toast-alarm { background:var(--orange-bg); color:var(--orange); border:1px solid var(--orange); }
+  .toast-auth { background:var(--teal-bg); color:var(--teal); border:1px solid var(--teal); }
+  .toast-demo { background:var(--purple-bg); color:var(--purple); border:1px solid var(--purple); }
+  @keyframes slideIn { from { transform:translateX(20px); opacity:0; } to { transform:translateX(0); opacity:1; } }
+  @keyframes fadeOut { from { opacity:1; } to { opacity:0; } }
+
+  * { scrollbar-width:thin; scrollbar-color:var(--border-hover) rgba(255,255,255,0.03); }
+  ::-webkit-scrollbar { width:10px; height:10px; }
+  ::-webkit-scrollbar-track { background:rgba(255,255,255,0.03); }
+  ::-webkit-scrollbar-thumb { background:var(--border-hover); border:2px solid var(--bg); border-radius:10px; }
+
+  @media (max-width:1100px) {
+    :root { --sidebar-w:400px; }
+    .score-master { grid-template-columns:auto 1fr; }
+    .score-actions { grid-column:1/-1; flex-direction:row; }
+  }
+  @media (max-width:820px) {
+    body { overflow-y:auto; height:auto; }
+    .app { height:auto; grid-template-rows:auto auto auto; }
+    .main { grid-template-columns:1fr; }
+    .score-master { grid-template-columns:1fr; }
+    .progress-legend { grid-template-columns:repeat(2,1fr); }
+    /* on mobile the page itself scrolls — disable nested scroll */
+    .card-scroll { max-height:none; overflow:visible; padding-right:0; margin-right:0; }
+  }
+</style>
+</head>
+<body>
+
+<div id="cornerCounter" class="corner-counter" onclick="scrollToAlarms()" title="Active alarms">
+  <span class="bell">🚨</span>
+  <span class="count" id="cornerCount">0</span>
+  <span class="label">Alarms</span>
+</div>
+
+<div class="app">
+  <header>
+    <div class="logo">⚡</div>
+    <h1>iot Test Dashboard <span>— Login + Score Bars</span></h1>
+    <span id="authBadge" class="auth-badge warn">🔓 not logged in</span>
+    <span id="envBadge" class="env-badge">checking…</span>
+  </header>
+
+  <!-- MASTER SCORE BAR -->
+  <div class="score-master" id="scoreBar">
+    <div class="score-display">
+      <div class="score-circle" id="scoreCircle">
+        <svg width="64" height="64" viewBox="0 0 64 64">
+          <circle class="track" cx="32" cy="32" r="26"></circle>
+          <circle class="fill" cx="32" cy="32" r="26"
+                  id="scoreCircleFill"
+                  stroke-dasharray="163.36"
+                  stroke-dashoffset="163.36"></circle>
+        </svg>
+        <div class="pct" id="scorePct">—</div>
+      </div>
+      <div class="score-meta">
+        <div class="score-label">Test Score</div>
+        <div class="score-value" id="scoreValue">—</div>
+        <div class="score-sub" id="scoreSub">ready to test</div>
+      </div>
+    </div>
+
+    <div class="score-progress">
+      <div class="progress-track">
+        <div class="progress-fill" id="progressFill" style="width:0%"></div>
+      </div>
+      <div class="progress-legend">
+        <div class="legend-item">
+          <span class="legend-dot pass" id="dotPublic"></span>
+          <span class="legend-label">Public</span>
+          <span class="legend-count" id="countPublic">0/10</span>
+        </div>
+        <div class="legend-item">
+          <span class="legend-dot pass" id="dotProtected"></span>
+          <span class="legend-label">Protected</span>
+          <span class="legend-count" id="countProtected">0/4</span>
+        </div>
+        <div class="legend-item">
+          <span class="legend-dot pass" id="dotAuth"></span>
+          <span class="legend-label">Auth</span>
+          <span class="legend-count" id="countAuth">0/2</span>
+        </div>
+        <div class="legend-item">
+          <span class="legend-dot pass" id="dotWs"></span>
+          <span class="legend-label">WebSocket</span>
+          <span class="legend-count" id="countWs">0/1</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="score-actions">
+      <button class="btn btn-primary" onclick="testAll()" id="btnTestAll">⚡ Run All</button>
+      <button class="btn btn-secondary btn-sm" onclick="resetScore()">↺ Reset</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="sidebar">
+
+      <!-- AUTH with Score Bars -->
+      <div class="card card-auth">
+        <div class="card-header"><span class="icon">🔐</span> Authentication <span style="margin-left:auto;font-size:10px;color:var(--text-dim);" id="authScoreBadge">0/5</span></div>
+        <div class="card-body">
+
+          <!-- ── SCROLLABLE ── -->
+          <div class="card-scroll">
+            <div class="field"><label>Base URL</label><input id="baseUrl" value="http://localhost:8000" /></div>
+            <div class="field"><label>E-mail</label><input id="email" type="text" value="admin@example.com" /></div>
+            <div class="field"><label>Password</label><input id="password" type="password" value="MyP@ssword123" /></div>
+            <div class="field"><label>Full Name (signup)</label><input id="authFullName" value="Admin User" /></div>
+            <div class="field"><label>Username (signup)</label><input id="authUsername" value="admin" /></div>
+
+            <!-- Auth Score Bars -->
+            <div style="margin-top:8px;display:flex;flex-direction:column;gap:5px;">
+              <div style="display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text-muted);">
+                <span style="width:52px;">E-mail</span>
+                <div class="mini-bar" style="flex:1;"><div class="mini-bar-fill" id="bar-authEmail"></div></div>
+                <span class="test-result-main" id="result-authEmail" style="font-size:11px;min-width:28px;text-align:right;">—</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text-muted);">
+                <span style="width:52px;">Password</span>
+                <div class="mini-bar" style="flex:1;"><div class="mini-bar-fill" id="bar-authPassword"></div></div>
+                <span class="test-result-main" id="result-authPassword" style="font-size:11px;min-width:28px;text-align:right;">—</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text-muted);">
+                <span style="width:52px;">Full Name</span>
+                <div class="mini-bar" style="flex:1;"><div class="mini-bar-fill" id="bar-authFullName"></div></div>
+                <span class="test-result-main" id="result-authFullName" style="font-size:11px;min-width:28px;text-align:right;">—</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text-muted);">
+                <span style="width:52px;">Username</span>
+                <div class="mini-bar" style="flex:1;"><div class="mini-bar-fill" id="bar-authUsername"></div></div>
+                <span class="test-result-main" id="result-authUsername" style="font-size:11px;min-width:28px;text-align:right;">—</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text-muted);">
+                <span style="width:52px;">Base URL</span>
+                <div class="mini-bar" style="flex:1;"><div class="mini-bar-fill" id="bar-authBaseUrl"></div></div>
+                <span class="test-result-main" id="result-authBaseUrl" style="font-size:11px;min-width:28px;text-align:right;">—</span>
+              </div>
+            </div>
+          </div>
+          <!-- ── /SCROLLABLE ── -->
+
+          <div class="btn-row-full">
+            <button class="btn btn-success" id="btnLogin" onclick="login()">🔑 Login</button>
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-primary" id="btnSignup" onclick="signup()">📝 Sign-up</button>
+            <button class="btn btn-teal" id="btnAutoAuth" onclick="autoAuth()">⚡ Auto</button>
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-secondary" onclick="checkMe()">👤 /me</button>
+            <button class="btn btn-secondary" onclick="logout()" id="btnLogout" disabled>🚪 Logout</button>
+          </div>
+
+          <div class="user-info" id="userInfo">
+            <div><strong>Logged in as:</strong></div>
+            <div class="email" id="userEmail">—</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CONFIG with Score Bars -->
+      <div class="card card-config">
+        <div class="card-header"><span class="icon">⚙</span> Config <span style="margin-left:auto;font-size:10px;color:var(--text-dim);" id="configScoreBadge">0/6</span></div>
+        <div class="card-body">
+
+          <!-- ── SCROLLABLE ── -->
+          <div class="card-scroll">
+            <div class="field"><label>Tenant ID</label><input id="tenantId" value="11111111-1111-1111-1111-111111111111" /></div>
+            <div class="field"><label>Bucket</label><input id="bucket" value="AIRCOM1" /></div>
+            <div class="field"><label>Topic</label><input id="topic" value="AIRCOM1/DATA" /></div>
+            <div class="field"><label>Device ID</label><input id="deviceId" value="1" type="number" /></div>
+
+            <!-- Config Score Bars -->
+            <div style="margin-top:8px;display:flex;flex-direction:column;gap:5px;">
+              <div style="display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text-muted);">
+                <span style="width:52px;">Tenant</span>
+                <div class="mini-bar" style="flex:1;"><div class="mini-bar-fill" id="bar-configTenant"></div></div>
+                <span class="test-result-main" id="result-configTenant" style="font-size:11px;min-width:28px;text-align:right;">—</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text-muted);">
+                <span style="width:52px;">Bucket</span>
+                <div class="mini-bar" style="flex:1;"><div class="mini-bar-fill" id="bar-configBucket"></div></div>
+                <span class="test-result-main" id="result-configBucket" style="font-size:11px;min-width:28px;text-align:right;">—</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text-muted);">
+                <span style="width:52px;">Topic</span>
+                <div class="mini-bar" style="flex:1;"><div class="mini-bar-fill" id="bar-configTopic"></div></div>
+                <span class="test-result-main" id="result-configTopic" style="font-size:11px;min-width:28px;text-align:right;">—</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text-muted);">
+                <span style="width:52px;">Device ID</span>
+                <div class="mini-bar" style="flex:1;"><div class="mini-bar-fill" id="bar-configDevice"></div></div>
+                <span class="test-result-main" id="result-configDevice" style="font-size:11px;min-width:28px;text-align:right;">—</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text-muted);">
+                <span style="width:52px;">Base URL</span>
+                <div class="mini-bar" style="flex:1;"><div class="mini-bar-fill" id="bar-configBaseUrl"></div></div>
+                <span class="test-result-main" id="result-configBaseUrl" style="font-size:11px;min-width:28px;text-align:right;">—</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text-muted);">
+                <span style="width:52px;">Auth fields</span>
+                <div class="mini-bar" style="flex:1;"><div class="mini-bar-fill" id="bar-configAuthFields"></div></div>
+                <span class="test-result-main" id="result-configAuthFields" style="font-size:11px;min-width:28px;text-align:right;">—</span>
+              </div>
+            </div>
+          </div>
+          <!-- ── /SCROLLABLE ── -->
+
+          <button class="btn btn-secondary btn-sm" style="margin-top:10px;width:100%;" onclick="validateConfig()">🔍 Validate Config</button>
+        </div>
+        <div class="status-row">
+          <div class="dot dot-gray" id="statusDot"></div>
+          <span class="status-text" id="statusText">Not connected</span>
+        </div>
+        <div class="stats">
+          <div class="stat"><div class="stat-val teal" id="statAuth">0</div><div class="stat-label">Auth</div></div>
+          <div class="stat"><div class="stat-val blue" id="statDevices">0</div><div class="stat-label">Devices</div></div>
+          <div class="stat"><div class="stat-val red" id="statAlarms">0</div><div class="stat-label">Alarms</div></div>
+          <div class="stat"><div class="stat-val yellow" id="statErrors">0</div><div class="stat-label">Errors</div></div>
+        </div>
+      </div>
+
+      <!-- ALARMS -->
+      <div class="card" id="alarmCard" style="flex:1; display:flex; flex-direction:column; min-height:0;">
+        <div class="card-header">
+          <span class="icon">🚨</span> Live Alarms
+          <span style="margin-left:auto; font-size:10px; color:var(--text-dim);" id="alarmCount">0 events</span>
+        </div>
+        <div class="alarm-list" id="alarmList" style="padding:6px 0;max-height:300px;overflow-y:auto;">
+          <div style="padding:20px;text-align:center;color:var(--text-dim);font-size:12px;" class="alarm-empty">Connect WS to receive live alarms.</div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="content">
+
+      <!-- ═══════════════════════════════════════════════════════
+           TEST LIST WITH SCORE BARS
+           ═══════════════════════════════════════════════════════ -->
+      <div class="card" style="flex:1;display:flex;flex-direction:column;min-height:0;">
+        <div class="card-header">
+          <span class="icon">🧪</span> Test Suites — Score Bars
+          <span style="margin-left:auto; display:flex; gap:6px;">
+            <button class="btn btn-success btn-sm" onclick="connectWS()" id="btnConnect">🔌 WS</button>
+            <button class="btn btn-danger btn-sm" onclick="disconnectWS()" id="btnDisconnect" disabled>✕</button>
+          </span>
+        </div>
+
+        <div style="overflow-y:auto;flex:1;">
+
+          <!-- ══ PUBLIC GROUP ══ -->
+          <div class="test-group" data-group="public">
+            <div class="test-group-header">
+              🌐 Public Endpoints
+              <span class="badge-pill" id="groupBadgePublic">0/10</span>
+            </div>
+            <div class="group-bar">
+              <div class="group-bar-fill" id="groupFillPublic"></div>
+            </div>
+
+            <div class="test-item" data-test="status" onclick="testStatus()">
+              <div class="test-icon pending" id="icon-status">●</div>
+              <div class="test-info">
+                <div class="test-name">
+                  <span class="method get">GET</span>
+                  Status
+                  <span class="path">/iot/status</span>
+                </div>
+                <div class="mini-bar"><div class="mini-bar-fill" id="bar-status"></div></div>
+              </div>
+              <div class="test-result">
+                <div class="test-result-main" id="result-status">—</div>
+                <div class="test-duration" id="duration-status"></div>
+              </div>
+            </div>
+
+            <div class="test-item" data-test="wsstats" onclick="testWSStats()">
+              <div class="test-icon pending" id="icon-wsstats">●</div>
+              <div class="test-info">
+                <div class="test-name">
+                  <span class="method get">GET</span>
+                  WS Stats
+                  <span class="path">/iot/ws/stats</span>
+                </div>
+                <div class="mini-bar"><div class="mini-bar-fill" id="bar-wsstats"></div></div>
+              </div>
+              <div class="test-result">
+                <div class="test-result-main" id="result-wsstats">—</div>
+                <div class="test-duration" id="duration-wsstats"></div>
+              </div>
+            </div>
+
+            <div class="test-item" data-test="devices" onclick="testDeviceList()">
+              <div class="test-icon pending" id="icon-devices">●</div>
+              <div class="test-info">
+                <div class="test-name">
+                  <span class="method get">GET</span>
+                  Device List
+                  <span class="path">/iot/device</span>
+                </div>
+                <div class="mini-bar"><div class="mini-bar-fill" id="bar-devices"></div></div>
+              </div>
+              <div class="test-result">
+                <div class="test-result-main" id="result-devices">—</div>
+                <div class="test-duration" id="duration-devices"></div>
+              </div>
+            </div>
+
+            <div class="test-item" data-test="alarms" onclick="testAlarmStatus()">
+              <div class="test-icon pending" id="icon-alarms">●</div>
+              <div class="test-info">
+                <div class="test-name">
+                  <span class="method get">GET</span>
+                  Alarm Status
+                  <span class="path">/iot/alarmdevicestatus</span>
+                </div>
+                <div class="mini-bar"><div class="mini-bar-fill" id="bar-alarms"></div></div>
+              </div>
+              <div class="test-result">
+                <div class="test-result-main" id="result-alarms">—</div>
+                <div class="test-duration" id="duration-alarms"></div>
+              </div>
+            </div>
+
+            <div class="test-item" data-test="topic" onclick="testTopicData()">
+              <div class="test-icon pending" id="icon-topic">●</div>
+              <div class="test-info">
+                <div class="test-name">
+                  <span class="method get">GET</span>
+                  Topic Data
+                  <span class="path">/iot/topic</span>
+                </div>
+                <div class="mini-bar"><div class="mini-bar-fill" id="bar-topic"></div></div>
+              </div>
+              <div class="test-result">
+                <div class="test-result-main" id="result-topic">—</div>
+                <div class="test-duration" id="duration-topic"></div>
+              </div>
+            </div>
+
+            <div class="test-item" data-test="devicemqtt" onclick="testDeviceMQTT()">
+              <div class="test-icon pending" id="icon-devicemqtt">●</div>
+              <div class="test-info">
+                <div class="test-name">
+                  <span class="method get">GET</span>
+                  Device MQTT
+                  <span class="path">/iot/devicemqtt</span>
+                </div>
+                <div class="mini-bar"><div class="mini-bar-fill" id="bar-devicemqtt"></div></div>
+              </div>
+              <div class="test-result">
+                <div class="test-result-main" id="result-devicemqtt">—</div>
+                <div class="test-duration" id="duration-devicemqtt"></div>
+              </div>
+            </div>
+
+            <div class="test-item" data-test="monitor" onclick="testMonitorGroup()">
+              <div class="test-icon pending" id="icon-monitor">●</div>
+              <div class="test-info">
+                <div class="test-name">
+                  <span class="method get">GET</span>
+                  Monitor Group
+                  <span class="path">/iot/monitordevicegroup</span>
+                </div>
+                <div class="mini-bar"><div class="mini-bar-fill" id="bar-monitor"></div></div>
+              </div>
+              <div class="test-result">
+                <div class="test-result-main" id="result-monitor">—</div>
+                <div class="test-duration" id="duration-monitor"></div>
+              </div>
+            </div>
+
+            <div class="test-item" data-test="channels" onclick="testAlertChannels()">
+              <div class="test-icon pending" id="icon-channels">●</div>
+              <div class="test-info">
+                <div class="test-name">
+                  <span class="method get">GET</span>
+                  Alert Channels
+                  <span class="path">/iot/alerts/channels</span>
+                </div>
+                <div class="mini-bar"><div class="mini-bar-fill" id="bar-channels"></div></div>
+              </div>
+              <div class="test-result">
+                <div class="test-result-main" id="result-channels">—</div>
+                <div class="test-duration" id="duration-channels"></div>
+              </div>
+            </div>
+
+            <div class="test-item" data-test="scheduler" onclick="testSchedulerJobs()">
+              <div class="test-icon pending" id="icon-scheduler">●</div>
+              <div class="test-info">
+                <div class="test-name">
+                  <span class="method get">GET</span>
+                  Scheduler
+                  <span class="path">/iot/admin/scheduler/jobs</span>
+                </div>
+                <div class="mini-bar"><div class="mini-bar-fill" id="bar-scheduler"></div></div>
+              </div>
+              <div class="test-result">
+                <div class="test-result-main" id="result-scheduler">—</div>
+                <div class="test-duration" id="duration-scheduler"></div>
+              </div>
+            </div>
+
+            <div class="test-item" data-test="devicestats" onclick="testDeviceStats()">
+              <div class="test-icon pending" id="icon-devicestats">●</div>
+              <div class="test-info">
+                <div class="test-name">
+                  <span class="method get">GET</span>
+                  Device Stats
+                  <span class="path">/iot/devicestats</span>
+                </div>
+                <div class="mini-bar"><div class="mini-bar-fill" id="bar-devicestats"></div></div>
+              </div>
+              <div class="test-result">
+                <div class="test-result-main" id="result-devicestats">—</div>
+                <div class="test-duration" id="duration-devicestats"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ══ PROTECTED GROUP ══ -->
+          <div class="test-group" data-group="protected">
+            <div class="test-group-header">
+              🔒 Protected Endpoints
+              <span class="badge-pill" id="groupBadgeProtected">0/4</span>
+            </div>
+            <div class="group-bar">
+              <div class="group-bar-fill" id="groupFillProtected"></div>
+            </div>
+
+            <div class="test-item" data-test="control" onclick="testControl()">
+              <div class="test-icon pending" id="icon-control">●</div>
+              <div class="test-info">
+                <div class="test-name">
+                  <span class="method post">POST</span>
+                  Control Device
+                  <span class="path">/iot/control</span>
+                </div>
+                <div class="mini-bar"><div class="mini-bar-fill" id="bar-control"></div></div>
+              </div>
+              <div class="test-result">
+                <div class="test-result-main" id="result-control">—</div>
+                <div class="test-duration" id="duration-control"></div>
+              </div>
+            </div>
+
+            <div class="test-item" data-test="batch" onclick="testBatchProcess()">
+              <div class="test-icon pending" id="icon-batch">●</div>
+              <div class="test-info">
+                <div class="test-name">
+                  <span class="method post">POST</span>
+                  Batch Process
+                  <span class="path">/iot/batch/process</span>
+                </div>
+                <div class="mini-bar"><div class="mini-bar-fill" id="bar-batch"></div></div>
+              </div>
+              <div class="test-result">
+                <div class="test-result-main" id="result-batch">—</div>
+                <div class="test-duration" id="duration-batch"></div>
+              </div>
+            </div>
+
+            <div class="test-item" data-test="updatestatus" onclick="testUpdateStatus()">
+              <div class="test-icon pending" id="icon-updatestatus">●</div>
+              <div class="test-info">
+                <div class="test-name">
+                  <span class="method put">PUT</span>
+                  Update Status
+                  <span class="path">/iot/devicestatus</span>
+                </div>
+                <div class="mini-bar"><div class="mini-bar-fill" id="bar-updatestatus"></div></div>
+              </div>
+              <div class="test-result">
+                <div class="test-result-main" id="result-updatestatus">—</div>
+                <div class="test-duration" id="duration-updatestatus"></div>
+              </div>
+            </div>
+
+            <div class="test-item" data-test="alerttest" onclick="testAlertTest()">
+              <div class="test-icon pending" id="icon-alerttest">●</div>
+              <div class="test-info">
+                <div class="test-name">
+                  <span class="method post">POST</span>
+                  Alert Test
+                  <span class="path">/iot/alerts/test</span>
+                </div>
+                <div class="mini-bar"><div class="mini-bar-fill" id="bar-alerttest"></div></div>
+              </div>
+              <div class="test-result">
+                <div class="test-result-main" id="result-alerttest">—</div>
+                <div class="test-duration" id="duration-alerttest"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ══ AUTH GROUP ══ -->
+          <div class="test-group" data-group="auth">
+            <div class="test-group-header">
+              🔐 Authentication
+              <span class="badge-pill" id="groupBadgeAuth">0/2</span>
+            </div>
+            <div class="group-bar">
+              <div class="group-bar-fill" id="groupFillAuth"></div>
+            </div>
+
+            <div class="test-item" data-test="authlogin" onclick="testAuthLogin()">
+              <div class="test-icon pending" id="icon-authlogin">●</div>
+              <div class="test-info">
+                <div class="test-name">
+                  <span class="method post">POST</span>
+                  Login
+                  <span class="path">/api/v1/authentication/login</span>
+                </div>
+                <div class="mini-bar"><div class="mini-bar-fill" id="bar-authlogin"></div></div>
+              </div>
+              <div class="test-result">
+                <div class="test-result-main" id="result-authlogin">—</div>
+                <div class="test-duration" id="duration-authlogin"></div>
+              </div>
+            </div>
+
+            <div class="test-item" data-test="authme" onclick="testAuthMe()">
+              <div class="test-icon pending" id="icon-authme">●</div>
+              <div class="test-info">
+                <div class="test-name">
+                  <span class="method get">GET</span>
+                  Current User
+                  <span class="path">/api/v1/user/me</span>
+                </div>
+                <div class="mini-bar"><div class="mini-bar-fill" id="bar-authme"></div></div>
+              </div>
+              <div class="test-result">
+                <div class="test-result-main" id="result-authme">—</div>
+                <div class="test-duration" id="duration-authme"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ══ WEBSOCKET GROUP ══ -->
+          <div class="test-group" data-group="ws">
+            <div class="test-group-header">
+              🔌 WebSocket
+              <span class="badge-pill" id="groupBadgeWs">0/1</span>
+            </div>
+            <div class="group-bar">
+              <div class="group-bar-fill" id="groupFillWs"></div>
+            </div>
+
+            <div class="test-item" data-test="wsconn" onclick="testWSConnection()">
+              <div class="test-icon pending" id="icon-wsconn">●</div>
+              <div class="test-info">
+                <div class="test-name">
+                  <span class="method ws">WS</span>
+                  WS Connect
+                  <span class="path">/iot/ws/alerts</span>
+                </div>
+                <div class="mini-bar"><div class="mini-bar-fill" id="bar-wsconn"></div></div>
+              </div>
+              <div class="test-result">
+                <div class="test-result-main" id="result-wsconn">—</div>
+                <div class="test-duration" id="duration-wsconn"></div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- LOG -->
+      <div class="card" style="flex:1;display:flex;flex-direction:column;min-height:0;">
+        <div class="card-header">
+          <span class="icon">📡</span> Event Log
+          <div style="margin-left:auto;display:flex;gap:6px;">
+            <button class="btn btn-secondary btn-sm" onclick="clearLog()">Clear</button>
+            <button class="btn btn-secondary btn-sm" onclick="copyLog()">📋</button>
+          </div>
+        </div>
+        <div class="log" id="log" style="flex:1;overflow-y:auto;"><div class="log-empty" id="logEmpty">Waiting…</div></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="toast-area" id="toastArea"></div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════ */
+/* STATE */
+/* ═══════════════════════════════════════════════════════════════ */
+let ws = null;
+let alarmCount = 0;
+let apiOK = 0;
+let authOK = 0;
+let errorCount = 0;
+let prevCorner = 0;
+
+let isLoggedIn = false;
+let currentUser = null;
+let accessToken = null;
+
+/* Per-test state */
+const TEST_STATE = {};
+
+/* SCORE per category */
+const SCORE = {
+  categories: {
+    public:    { total: 10, passed: 0, failed: 0 },
+    protected: { total: 4,  passed: 0, failed: 0 },
+    auth:      { total: 2,  passed: 0, failed: 0 },
+    ws:        { total: 1,  passed: 0, failed: 0 },
+  },
+};
+
+/* Config score state (6 items: tenant, bucket, topic, deviceId, baseUrl, authFields) */
+const CONFIG_STATE = {
+  tenant:  { passed: false, label: 'Tenant ID' },
+  bucket:  { passed: false, label: 'Bucket' },
+  topic:   { passed: false, label: 'Topic' },
+  device:  { passed: false, label: 'Device ID' },
+  baseUrl: { passed: false, label: 'Base URL' },
+  authFields: { passed: false, label: 'Auth fields' },
+};
+
+/* Auth score state (5 items: email, password, fullName, username, baseUrl) */
+const AUTH_STATE = {
+  email:    { passed: false, label: 'E-mail' },
+  password: { passed: false, label: 'Password' },
+  fullName: { passed: false, label: 'Full Name' },
+  username: { passed: false, label: 'Username' },
+  baseUrl:  { passed: false, label: 'Base URL' },
+};
+
+/* ═══════════════════════════════════════════════════════════════ */
+/* HELPERS */
+/* ═══════════════════════════════════════════════════════════════ */
+const $ = id => document.getElementById(id);
+const base = () => $('baseUrl').value.replace(/\/+$/, '');
+const httpBase = () => base();
+
+function buildHeaders(extra = {}) {
+  const h = { 'X-Tenant-Id': $('tenantId').value };
+  if (accessToken) h['Authorization'] = `Bearer ${accessToken}`;
+  return { ...h, ...extra };
+}
+
+function wsUrlStr() {
+  const b = base();
+  const proto = b.startsWith('https') ? 'wss' : 'ws';
+  const host = b.replace(/^https?:\/\//, '');
+  return `${proto}://${host}/iot/ws/alerts`;
+}
+
+function ts() {
+  const d = new Date();
+  return d.toTimeString().slice(0,8) + '.' + String(d.getMilliseconds()).padStart(3,'0');
+}
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+const escHtml = esc;
+
+function extractError(data, status) {
+  return data?.details?.data?.errors || data?.detail || data?.message || `HTTP ${status}`;
+}
+
+function log(type, msg, detail) {
+  const empty = $('logEmpty');
+  if (empty) empty.remove();
+  const entry = document.createElement('div');
+  entry.className = 'log-entry';
+  const tagClass = {
+    info:'tag-info', recv:'tag-recv', warn:'tag-warn',
+    error:'tag-error', system:'tag-system', auth:'tag-auth',
+    pass:'tag-pass', fail:'tag-fail', alarm:'tag-alarm',
+  }[type] || 'tag-info';
+  const detailHtml = detail !== undefined
+    ? `<pre>${esc(typeof detail === 'string' ? detail : JSON.stringify(detail, null, 2))}</pre>`
+    : '';
+  entry.innerHTML = `
+    <span class="log-time">${ts()}</span>
+    <span class="log-tag ${tagClass}">${type}</span>
+    <span class="log-msg">${msg}${detailHtml}</span>`;
+  const logEl = $('log');
+  logEl.appendChild(entry);
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+function clearLog() { $('log').innerHTML = '<div class="log-empty" id="logEmpty">Waiting…</div>'; }
+function copyLog() {
+  navigator.clipboard.writeText($('log').innerText).then(
+    () => toast('info','📋 Copied'), () => toast('error','Copy failed'));
+}
+
+function toast(type, msg) {
+  const el = document.createElement('div');
+  el.className = `toast toast-${type}`;
+  el.textContent = msg;
+  $('toastArea').appendChild(el);
+  setTimeout(() => el.remove(), 3100);
+}
+
+function setStatus(dot, text) {
+  $('statusDot').className = 'dot dot-' + dot;
+  $('statusText').innerHTML = text;
+}
+
+function updateStats({devices, alarms, errors, auth} = {}) {
+  if (devices !== undefined) $('statDevices').textContent = devices;
+  if (auth !== undefined) { authOK = auth; $('statAuth').textContent = auth; }
+  if (alarms !== undefined) { $('statAlarms').textContent = alarms; updateCorner(alarms); }
+  if (errors !== undefined) { errorCount = errors; $('statErrors').textContent = errors; }
+}
+
+function updateAuthBadge() {
+  const el = $('authBadge');
+  if (isLoggedIn && currentUser) {
+    el.className = 'auth-badge ok';
+    el.textContent = `🔒 ${currentUser.email || currentUser.username || 'user'}`;
+  } else {
+    el.className = 'auth-badge warn';
+    el.textContent = '🔓 not logged in';
+  }
+}
+
+function updateCorner(count) {
+  const el = $('cornerCounter');
+  const c = $('cornerCount');
+  const prev = prevCorner;
+  c.textContent = count;
+  if (count > 0) {
+    el.classList.add('visible');
+    if (count >= 10) el.classList.remove('info');
+    else el.classList.add('info');
+    if (count > prev) {
+      el.classList.remove('bump');
+      void el.offsetWidth;
+      el.classList.add('bump');
+      const b = document.createElement('span');
+      b.className = 'count-new';
+      b.textContent = '+' + (count - prev);
+      el.appendChild(b);
+      setTimeout(() => b.remove(), 1800);
+    }
+    el.classList.add('pulse');
+  } else {
+    el.classList.remove('visible','pulse','info');
+  }
+  prevCorner = count;
+}
+
+function scrollToAlarms() {
+  const c = $('alarmCard');
+  c.scrollIntoView({behavior:'smooth', block:'start'});
+  c.style.transition = 'box-shadow .4s';
+  c.style.boxShadow = '0 0 0 2px var(--accent)';
+  setTimeout(() => { c.style.boxShadow = ''; }, 1200);
+}
+
+/* ═══════════════════════════════════════════════════════════════ */
+/* PER-TEST UI UPDATE */
+/* ═══════════════════════════════════════════════════════════════ */
+function setTestState(key, state, data = {}) {
+  TEST_STATE[key] = { state, ...data };
+
+  const icon = $('icon-' + key);
+  const bar = $('bar-' + key);
+  const result = $('result-' + key);
+  const duration = $('duration-' + key);
+  const item = document.querySelector(`.test-item[data-test="${key}"]`);
+
+  if (icon) {
+    icon.className = 'test-icon ' + state;
+    icon.textContent = state === 'pass' ? '✓' :
+                       state === 'fail' ? '✗' :
+                       state === 'running' ? '⟳' : '●';
+  }
+  if (bar) bar.className = 'mini-bar-fill ' + state;
+  if (result) {
+    result.className = 'test-result-main ' + state;
+    result.textContent = state === 'pass' ? '100%' :
+                         state === 'fail' ? '0%' :
+                         state === 'running' ? '…' : '—';
+  }
+  if (duration && data.ms !== undefined) {
+    duration.textContent = data.ms + 'ms';
+  }
+  if (item) {
+    item.classList.remove('running', 'pass', 'fail');
+    if (state !== 'pending') item.classList.add(state);
+  }
+}
+
+/* ─── AUTH SCORE BAR RENDERING ─── */
+function renderAuthScore() {
+  const keys = ['email','password','fullName','username','baseUrl'];
+  let passed = 0;
+  for (const k of keys) {
+    if (AUTH_STATE[k].passed) passed++;
+    const bar = $('bar-auth' + k.charAt(0).toUpperCase() + k.slice(1));
+    const result = $('result-auth' + k.charAt(0).toUpperCase() + k.slice(1));
+    if (bar) {
+      bar.className = 'mini-bar-fill ' + (AUTH_STATE[k].passed ? 'pass' : 'fail');
+    }
+    if (result) {
+      result.textContent = AUTH_STATE[k].passed ? '100%' : '0%';
+      result.className = 'test-result-main ' + (AUTH_STATE[k].passed ? 'pass' : 'fail');
+    }
+  }
+  const badge = $('authScoreBadge');
+  if (badge) {
+    badge.textContent = `${passed}/5`;
+    badge.style.color = passed === 5 ? 'var(--green)' : 'var(--text-dim)';
+  }
+}
+
+function validateAuthFields() {
+  const email = $('email').value.trim();
+  const password = $('password').value;
+  const fullName = $('authFullName').value.trim();
+  const username = $('authUsername').value.trim();
+  const baseUrl = $('baseUrl').value.trim();
+
+  AUTH_STATE.email.passed = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  AUTH_STATE.password.passed = password.length >= 6;
+  AUTH_STATE.fullName.passed = fullName.length > 0;
+  AUTH_STATE.username.passed = username.length > 0;
+  AUTH_STATE.baseUrl.passed = /^https?:\/\/[^\/]+/i.test(baseUrl);
+
+  renderAuthScore();
+  const passedCount = Object.values(AUTH_STATE).filter(c => c.passed).length;
+  if (passedCount === 5) toast('recv', 'Auth fields: 5/5 valid');
+  else toast('warn', `Auth fields: ${passedCount}/5 valid`);
+}
+
+/* ─── CONFIG SCORE BAR RENDERING ─── */
+function renderConfigScore() {
+  const keys = ['tenant','bucket','topic','device','baseUrl','authFields'];
+  let passed = 0;
+  for (const k of keys) {
+    if (CONFIG_STATE[k].passed) passed++;
+    const bar = $('bar-config' + k.charAt(0).toUpperCase() + k.slice(1));
+    const result = $('result-config' + k.charAt(0).toUpperCase() + k.slice(1));
+    if (bar) {
+      bar.className = 'mini-bar-fill ' + (CONFIG_STATE[k].passed ? 'pass' : 'fail');
+    }
+    if (result) {
+      result.textContent = CONFIG_STATE[k].passed ? '100%' : '0%';
+      result.className = 'test-result-main ' + (CONFIG_STATE[k].passed ? 'pass' : 'fail');
+    }
+  }
+  const badge = $('configScoreBadge');
+  if (badge) {
+    badge.textContent = `${passed}/6`;
+    badge.style.color = passed === 6 ? 'var(--green)' : 'var(--text-dim)';
+  }
+}
+
+function validateConfig() {
+  log('info', '🔍 Validating config…');
+  const tenant = $('tenantId').value.trim();
+  CONFIG_STATE.tenant.passed = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(tenant);
+  CONFIG_STATE.bucket.passed = $('bucket').value.trim().length > 0;
+  CONFIG_STATE.topic.passed = $('topic').value.trim().includes('/');
+  const devId = parseInt($('deviceId').value, 10);
+  CONFIG_STATE.device.passed = !isNaN(devId) && devId > 0;
+  const url = $('baseUrl').value.trim();
+  CONFIG_STATE.baseUrl.passed = /^https?:\/\/[^\/]+/i.test(url);
+  const email = $('email').value.trim();
+  const pwd = $('password').value;
+  const uname = $('authUsername').value.trim();
+  const fname = $('authFullName').value.trim();
+  CONFIG_STATE.authFields.passed = email.length > 0 && pwd.length > 0 && (uname.length > 0 || fname.length > 0);
+
+  const labels = {tenant:'Tenant ID',bucket:'Bucket',topic:'Topic',device:'Device ID',baseUrl:'Base URL',authFields:'Auth fields'};
+  for (const [k,v] of Object.entries(CONFIG_STATE)) {
+    log(v.passed ? 'pass' : 'fail', `${v.passed ? '✓' : '✗'} ${labels[k]}`);
+  }
+
+  renderConfigScore();
+  const passedCount = Object.values(CONFIG_STATE).filter(c => c.passed).length;
+  toast(passedCount === 6 ? 'recv' : 'warn', `Config: ${passedCount}/6 valid`);
+}
+
+/* ═══════════════════════════════════════════════════════════════ */
+/* RENDER MASTER SCORE */
+/* ═══════════════════════════════════════════════════════════════ */
+function renderScore() {
+  const passed = Object.values(SCORE.categories).reduce((s, c) => s + c.passed, 0);
+  const failed = Object.values(SCORE.categories).reduce((s, c) => s + c.failed, 0);
+  const expected = Object.values(SCORE.categories).reduce((s, c) => s + c.total, 0);
+  const pct = expected > 0 ? Math.round((passed / expected) * 100) : 0;
+  const status = failed > 0 ? (pct >= 80 ? 'warn' : 'fail') : (passed > 0 ? 'pass' : '');
+
+  $('scoreBar').className = 'score-master' + (status ? ' ' + status : '');
+  $('scoreCircle').className = 'score-circle' + (status ? ' ' + status : '');
+  const circ = 163.36;
+  $('scoreCircleFill').style.strokeDashoffset = circ - (pct/100)*circ;
+  $('scorePct').textContent = pct + '%';
+  $('scoreValue').className = 'score-value' + (status ? ' ' + status : '');
+  $('scoreValue').textContent = `${passed}/${expected}`;
+  $('scoreSub').textContent = failed > 0 ? `${failed} failed · ${passed} passed`
+    : passed > 0 ? 'all tests passed ✓' : 'ready to test';
+
+  const fill = $('progressFill');
+  fill.className = 'progress-fill' + (status ? ' ' + status : '');
+  fill.style.width = pct + '%';
+
+  const catCap = { public: 'Public', protected: 'Protected', auth: 'Auth', ws: 'Ws' };
+  for (const [key, c] of Object.entries(SCORE.categories)) {
+    const cap = catCap[key];
+    const count = $('count' + cap);
+    const dot = $('dot' + cap);
+    const badge = $('groupBadge' + cap);
+    const gfill = $('groupFill' + cap);
+
+    const done = c.passed + c.failed;
+    const catPct = c.total > 0 ? Math.round((c.passed / c.total) * 100) : 0;
+
+    if (count) count.textContent = `${c.passed}/${c.total}`;
+    if (badge) {
+      badge.textContent = `${c.passed}/${c.total}`;
+      badge.className = 'badge-pill' +
+        (c.failed > 0 ? ' fail' : c.passed === c.total && c.total > 0 ? ' pass' : '');
+    }
+    if (dot) {
+      if (done === 0) dot.className = 'legend-dot pending';
+      else if (c.failed > 0) dot.className = 'legend-dot fail';
+      else if (done < c.total) dot.className = 'legend-dot running';
+      else dot.className = 'legend-dot pass';
+    }
+    if (gfill) {
+      gfill.style.width = catPct + '%';
+      gfill.className = 'group-bar-fill' +
+        (c.failed > 0 ? ' fail' : c.passed === c.total && c.total > 0 ? ' pass' : '');
+    }
+  }
+}
+
+function resetScore() {
+  for (const c of Object.values(SCORE.categories)) { c.passed = 0; c.failed = 0; }
+  const allKeys = ['status','wsstats','devices','alarms','topic','devicemqtt','monitor','channels',
+                   'scheduler','devicestats','control','batch','updatestatus','alerttest',
+                   'authlogin','authme','wsconn'];
+  for (const k of allKeys) setTestState(k, 'pending');
+  for (const k of Object.keys(CONFIG_STATE)) CONFIG_STATE[k].passed = false;
+  for (const k of Object.keys(AUTH_STATE)) AUTH_STATE[k].passed = false;
+  renderConfigScore();
+  renderAuthScore();
+  renderScore();
+  log('system', '↺ Score reset');
+  toast('info', '↺ Score reset');
+}
+
+/* ═══════════════════════════════════════════════════════════════ */
+/* PREFLIGHT */
+/* ═══════════════════════════════════════════════════════════════ */
+async function preflight() {
+  try {
+    const res = await fetch(base() + '/iot/status', {
+      headers: buildHeaders(), cache: 'no-store',
+    });
+    if (res.ok) {
+      $('envBadge').className = 'env-badge ok';
+      $('envBadge').textContent = '✓ server';
+      return { ok: true, status: res.status };
+    }
+    $('envBadge').className = 'env-badge err';
+    $('envBadge').textContent = `❌ ${res.status}`;
+    return { ok: false, status: res.status };
+  } catch (err) {
+    $('envBadge').className = 'env-badge err';
+    $('envBadge').textContent = '❌ unreachable';
+    return { ok: false, status: 0, error: err.message };
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════ */
+/* LOGIN (integrated with score bars) */
+/* ═══════════════════════════════════════════════════════════════ */
+async function login() {
+  const email = $('email').value.trim();
+  const pass = $('password').value;
+  if (!email || !pass) { toast('error', 'E-mail and password required'); return; }
+
+  // Update auth score bars before login
+  validateAuthFields();
+
+  $('btnLogin').disabled = true;
+  $('btnAutoAuth').disabled = true;
+  $('btnSignup').disabled = true;
+  setStatus('yellow', '<strong>Logging in…</strong>');
+
+  const pf = await preflight();
+  if (!pf.ok) {
+    setStatus('red', '<strong>Server unreachable</strong>');
+    $('btnLogin').disabled = false;
+    $('btnAutoAuth').disabled = false;
+    $('btnSignup').disabled = false;
+    return;
+  }
+
+  const url = `${httpBase()}/api/v1/authentication/login/`;
+  log('info', `POST ${url}`);
+
+  try {
+    const body = new URLSearchParams({
+      username: email, password: pass, grant_type: 'password',
+    });
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      credentials: 'include',
+      body,
+    });
+    log('info', `Response: ${res.status} ${res.statusText}`);
+    const data = await res.json().catch(() => ({}));
+    log('info', 'Response body', data);
+
+    if (!res.ok) {
+      const msg = extractError(data, res.status);
+      log('error', `Login failed — ${escHtml(msg)}`);
+      toast('error', `Login failed: ${msg}`);
+      setStatus('red', `<strong>Login failed</strong> (${res.status})`);
+      updateStats({ errors: errorCount + 1 });
+      $('btnLogin').disabled = false;
+      $('btnAutoAuth').disabled = false;
+      $('btnSignup').disabled = false;
+      return;
+    }
+
+    log('system', '✅ Login successful');
+    toast('info', '✓ Logged in');
+    setStatus('yellow', '<strong>Connecting WS…</strong>');
+
+    sessionStorage.setItem('logged_in', '1');
+    sessionStorage.setItem('login_at', String(Date.now()));
+
+    // Mark auth score as passed
+    AUTH_STATE.email.passed = true;
+    AUTH_STATE.password.passed = true;
+    AUTH_STATE.baseUrl.passed = true;
+    renderAuthScore();
+
+    isLoggedIn = true;
+    currentUser = { email: email };
+    updateAuthBadge();
+    updateStats({ auth: authOK + 1 });
+
+    // Update test score for authlogin
+    setTestState('authlogin', 'pass', { ms: 0 });
+    SCORE.categories.auth.passed++;
+    renderScore();
+
+    await checkMe();
+    await fetchNotifications();
+    startNotificationPolling();
+    connectWS();
+
+    setStatus('green', '<strong>Connected</strong>');
+    $('btnLogin').disabled = true;
+    $('btnAutoAuth').disabled = true;
+    $('btnSignup').disabled = true;
+    $('btnLogout').disabled = false;
+
+  } catch (err) {
+    console.error('LOGIN FETCH ERROR:', err);
+    log('error', `❌ NETWORK ERROR: ${escHtml(err.message)}`, {
+      name: err.name, message: err.message,
+      cause: err.cause?.message || null,
+      requestUrl: url, pageUrl: window.location.href,
+    });
+    toast('error', `❌ ${err.message}`);
+    setStatus('red', '<strong>Network error</strong>');
+    updateStats({ errors: errorCount + 1 });
+    $('btnLogin').disabled = false;
+    $('btnAutoAuth').disabled = false;
+    $('btnSignup').disabled = false;
+  }
+}
+
+async function checkMe() {
+  setTestState('authme', 'running');
+  const t0 = performance.now();
+  try {
+    const res = await fetch(`${base()}/api/v1/user/me/`, {
+      credentials: 'include', headers: buildHeaders(),
+    });
+    const ms = Math.round(performance.now() - t0);
+    const data = await res.json().catch(() => ({}));
+    if (res.ok) {
+      const user = data?.details?.data ?? data?.data ?? data;
+      currentUser = user;
+      log('auth', `✅ Session valid — ${user.email || user.username}`);
+      $('userEmail').textContent = user.email || user.username || '—';
+      $('userInfo').classList.add('show');
+      isLoggedIn = true;
+      updateAuthBadge();
+      setTestState('authme', 'pass', { ms });
+      return true;
+    }
+    setTestState('authme', 'fail', { ms });
+    isLoggedIn = false;
+    currentUser = null;
+    updateAuthBadge();
+    return false;
+  } catch (err) {
+    const ms = Math.round(performance.now() - t0);
+    log('error', `/me failed: ${err.message}`);
+    setTestState('authme', 'fail', { ms });
+    return false;
+  }
+}
+
+async function signup() {
+  const email = $('email').value.trim();
+  const password = $('password').value;
+  const username = $('authUsername').value.trim() || email.split('@')[0] || 'user';
+  const fullName = $('authFullName').value.trim() || username;
+
+  const url = `${base()}/api/v1/authentication/sign-up/`;
+  log('auth', `POST ${url}`);
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({
+        full_name: fullName, username, email, password,
+        confirm_password: password, agree_terms: true,
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok || res.status === 201) {
+      log('auth', '✅ Sign-up OK — auto login');
+      toast('auth', '✓ Sign-up OK');
+      setTimeout(() => login(), 500);
+    } else if (res.status === 409 || res.status === 400) {
+      log('warn', 'User exists — try Login');
+      toast('warn', 'User exists — try Login');
+    } else {
+      log('error', `Sign-up failed: ${res.status}`, data);
+    }
+  } catch (err) { log('error', `Sign-up: ${err.message}`); }
+}
+
+async function logout() {
+  try {
+    await fetch(`${base()}/api/v1/authentication/logout/`, {
+      method: 'DELETE', credentials: 'include',
+    });
+  } catch (_) {}
+  isLoggedIn = false;
+  currentUser = null;
+  accessToken = null;
+  sessionStorage.clear();
+  updateAuthBadge();
+  $('userInfo').classList.remove('show');
+  $('btnLogin').disabled = false;
+  $('btnAutoAuth').disabled = false;
+  $('btnSignup').disabled = false;
+  $('btnLogout').disabled = true;
+  if (ws) { ws.close(1000, 'Logout'); ws = null; }
+  log('auth', '👋 Logged out');
+  toast('auth', '✓ Logged out');
+}
+
+async function autoAuth() {
+  log('auth', '═══ AUTO AUTH ═══');
+  await preflight();
+  await signup();
+}
+
+/* ═══════════════════════════════════════════════════════════════ */
+/* NOTIFICATIONS */
+/* ═══════════════════════════════════════════════════════════════ */
+let notifPollTimer = null;
+let lastNotifCount = 0;
+
+async function fetchNotifications() {
+  try {
+    const res = await fetch(`${base()}/api/v1/notifications/`, {
+      credentials: 'include', headers: buildHeaders(),
+    });
+    if (!res.ok) return;
+    const data = await res.json().catch(() => ({}));
+    const items = data?.details?.data ?? data?.data ?? data ?? [];
+    const list = $('notifList');
+    if (!list) return;
+    if (!Array.isArray(items) || items.length === 0) {
+      list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-dim);font-size:12px;">No notifications.</div>';
+      return;
+    }
+    list.innerHTML = items.slice(0, 20).map(n => `
+      <div style="padding:10px 14px;border-bottom:1px solid var(--border);">
+        <div style="font-size:12px;font-weight:600;">${esc(n.title || n.subject || 'Notification')}</div>
+        <div style="font-size:11px;color:var(--text-dim);margin-top:2px;">${esc(n.message || n.body || '')}</div>
+      </div>`).join('');
+    lastNotifCount = items.length;
+  } catch (_) {}
+}
+
+function startNotificationPolling() {
+  if (notifPollTimer) clearInterval(notifPollTimer);
+  notifPollTimer = setInterval(fetchNotifications, 10000);
+}
+
+/* ═══════════════════════════════════════════════════════════════ */
+/* API */
+/* ═══════════════════════════════════════════════════════════════ */
+async function api(method, path, body, extra = {}) {
+  const url = base() + path;
+  const opts = { method, headers: buildHeaders(extra), credentials: 'include' };
+  if (body) {
+    opts.headers['Content-Type'] = 'application/json';
+    opts.body = JSON.stringify(body);
+  }
+  const t0 = performance.now();
+  try {
+    const res = await fetch(url, opts);
+    const ms = Math.round(performance.now() - t0);
+    const data = await res.json().catch(() => ({}));
+    return { ok: res.ok, status: res.status, data, ms };
+  } catch (err) {
+    return { ok: false, status: 0, data: { error: err.message }, ms: 0 };
+  }
+}
+
+async function runTest(cat, key, name, fn) {
+  log('info', `🧪 ${name}…`);
+  setTestState(key, 'running');
+  const r = await fn();
+  if (r.ok) {
+    log('pass', `✅ ${name} (${r.ms}ms)`);
+    SCORE.categories[cat].passed++;
+    setTestState(key, 'pass', { ms: r.ms });
+    apiOK++;
+  } else {
+    log('fail', `❌ ${name} — HTTP ${r.status}`, r.data);
+    SCORE.categories[cat].failed++;
+    setTestState(key, 'fail', { ms: r.ms });
+    errorCount++;
+    updateStats({ errors: errorCount });
+  }
+  renderScore();
+  return r;
+}
+
+/* Public tests */
+async function testStatus() { return runTest('public','status','Status', () => api('GET','/iot/status')); }
+async function testWSStats() { return runTest('public','wsstats','WS Stats', () => api('GET','/iot/ws/stats')); }
+async function testDeviceList() {
+  const r = await runTest('public','devices','Devices', () => api('GET','/iot/device?page=1&pageSize=10'));
+  if (r.ok) { const d = r.data?.details?.data ?? r.data; updateStats({devices: d?.total ?? 0}); }
+}
+async function testAlarmStatus() { return runTest('public','alarms','Alarm Status', () => api('GET',`/iot/alarmdevicestatus?bucket=${$('bucket').value}`)); }
+async function testTopicData() { return runTest('public','topic','Topic', () => api('GET',`/iot/topic?topic=${encodeURIComponent($('topic').value)}`)); }
+async function testDeviceMQTT() { return runTest('public','devicemqtt','DeviceMQTT', () => api('GET',`/iot/devicemqtt?bucket=${$('bucket').value}&pageSize=10`)); }
+async function testMonitorGroup() { return runTest('public','monitor','Monitor Group', () => api('GET',`/iot/monitordevicegroup?bucket=${$('bucket').value}`)); }
+async function testAlertChannels() { return runTest('public','channels','Alert Channels', () => api('GET','/iot/alerts/channels')); }
+async function testSchedulerJobs() { return runTest('public','scheduler','Scheduler', () => api('GET','/iot/admin/scheduler/jobs')); }
+async function testDeviceStats() { return runTest('public','devicestats','Device Stats', () => api('GET',`/iot/devicestats?deviceId=${$('deviceId').value}`)); }
+
+/* Protected */
+async function testControl() {
+  const key = 'ctl-' + Date.now();
+  return runTest('protected','control','Control',
+    () => api('POST','/iot/control',
+      { topic:'AIRCOM1/CONTROL', message:'ON' },
+      { 'X-Idempotency-Key': key }));
+}
+async function testBatchProcess() {
+  return runTest('protected','batch','Batch Process',
+    () => api('POST','/iot/batch/process',
+      { items: [{ device_id: $('deviceId').value, raw_data: '25.5,60.0' }] }));
+}
+async function testUpdateStatus() {
+  return runTest('protected','updatestatus','Update Status',
+    () => api('PUT',`/iot/devicestatus?deviceId=${$('deviceId').value}`,
+      { battery:90, signal:-55 }));
+}
+async function testAlertTest() {
+  return runTest('protected','alerttest','Alert Test',
+    () => api('POST','/iot/alerts/test?channel=email'));
+}
+
+/* Auth */
+async function testAuthLogin() {
+  if (isLoggedIn) {
+    log('pass', '✅ Auth Login (already logged in)');
+    SCORE.categories.auth.passed++;
+    setTestState('authlogin','pass',{ms:0});
+    renderScore();
+    return { ok: true, ms: 0 };
+  }
+  return runTest('auth','authlogin','Auth Login', () => api('GET','/iot/status'));
+}
+async function testAuthMe() { return runTest('auth','authme','Auth /me', () => api('GET','/api/v1/user/me/')); }
+
+/* WS */
+async function testWSConnection() {
+  log('info', '🧪 WebSocket Connect…');
+  setTestState('wsconn', 'running');
+  return new Promise((resolve) => {
+    const url = wsUrlStr();
+    const t0 = performance.now();
+    let resolved = false;
+    const test = new WebSocket(url);
+    const done = (passed) => {
+      if (resolved) return;
+      resolved = true;
+      const ms = Math.round(performance.now() - t0);
+      if (passed) {
+        log('pass', `✅ WebSocket Connect (${ms}ms)`);
+        SCORE.categories.ws.passed++;
+        setTestState('wsconn','pass',{ms});
+      } else {
+        log('fail', `❌ WebSocket Connect (${ms}ms)`);
+        SCORE.categories.ws.failed++;
+        setTestState('wsconn','fail',{ms});
+      }
+      renderScore();
+      try { test.close(); } catch (_) {}
+      resolve();
+    };
+    test.onopen = () => {
+      test.send(JSON.stringify({ type:'join_room', room:'alerts' }));
+      setTimeout(() => done(true), 300);
+    };
+    test.onerror = () => done(false);
+    setTimeout(() => done(false), 3000);
+  });
+}
+
+async function testAll() {
+  log('system', '══════ RUNNING ALL TESTS ══════');
+  $('btnTestAll').disabled = true;
+  resetScore();
+
+  log('system', '── PUBLIC (10) ──');
+  await testStatus();
+  await testWSStats();
+  await testDeviceList();
+  await testAlarmStatus();
+  await testTopicData();
+  await testDeviceMQTT();
+  await testMonitorGroup();
+  await testAlertChannels();
+  await testSchedulerJobs();
+  await testDeviceStats();
+
+  log('system', '── AUTH (2) ──');
+  if (isLoggedIn) { await testAuthLogin(); await testAuthMe(); }
+  else {
+    log('warn', '⚠ Skipping auth — not logged in');
+    SCORE.categories.auth.failed += 2;
+    setTestState('authlogin','fail',{ms:0});
+    setTestState('authme','fail',{ms:0});
+    renderScore();
+  }
+
+  log('system', '── PROTECTED (4) ──');
+  if (isLoggedIn) {
+    await testControl();
+    await testBatchProcess();
+    await testUpdateStatus();
+    await testAlertTest();
+  } else {
+    log('warn', '⚠ Skipping protected — login required');
+    for (const k of ['control','batch','updatestatus','alerttest']) {
+      SCORE.categories.protected.failed++;
+      setTestState(k,'fail',{ms:0});
+    }
+    renderScore();
+  }
+
+  log('system', '── WEBSOCKET (1) ──');
+  await testWSConnection();
+
+  $('btnTestAll').disabled = false;
+  const expected = Object.values(SCORE.categories).reduce((s, c) => s + c.total, 0);
+  const passed = Object.values(SCORE.categories).reduce((s, c) => s + c.passed, 0);
+  const failed = Object.values(SCORE.categories).reduce((s, c) => s + c.failed, 0);
+  log('system', `══════ DONE — ${passed}/${expected} passed, ${failed} failed ══════`);
+  toast(passed === expected ? 'recv' : 'warn', `Score: ${passed}/${expected}`);
+}
+
+/* WEBSOCKET LIVE */
+function connectWS() {
+  if (ws && ws.readyState === WebSocket.OPEN) return;
+  const url = wsUrlStr();
+  log('system', `Connecting WS → ${url}`);
+  try { ws = new WebSocket(url); }
+  catch (err) { log('error', `WS: ${err.message}`); return; }
+
+  ws.onopen = () => {
+    log('system', '✅ WS CONNECTED');
+    setStatus('green', '<strong>WS Connected</strong>');
+    $('btnConnect').disabled = true;
+    $('btnDisconnect').disabled = false;
+    ws.send(JSON.stringify({ type:'join_room', room:'alerts', token: accessToken || null }));
+  };
+  ws.onmessage = (evt) => {
+    let msg; try { msg = JSON.parse(evt.data); } catch { return; }
+    if (msg.event === 'alarm') addAlarm(msg.data);
+    else log('recv', `📨 ${msg.event}`, msg);
+  };
+  ws.onerror = () => log('error', '⚠ WS error');
+  ws.onclose = (evt) => {
+    log('warn', `🔌 WS closed (${evt.code})`);
+    setStatus('red', `WS Disconnected`);
+    $('btnConnect').disabled = false;
+    $('btnDisconnect').disabled = true;
+    ws = null;
+  };
+}
+
+function disconnectWS() {
+  if (ws) { log('system', 'Closing WS…'); ws.close(1000, 'User'); }
+}
+
+function addAlarm(data) {
+  alarmCount++;
+  const list = $('alarmList');
+  const empty = list.querySelector('.alarm-empty');
+  if (empty) empty.remove();
+  const item = document.createElement('div');
+  const sev = data.alarm_status === 2 ? 'critical' : 'warning';
+  item.className = `alarm-item ${sev}`;
+  item.style.cssText = 'display:flex;align-items:flex-start;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border);';
+  if (sev === 'critical') item.style.background = 'rgba(248,81,73,.05)';
+  else item.style.background = 'rgba(210,153,34,.05)';
+  item.innerHTML = `
+    <div style="width:7px;height:7px;border-radius:50%;margin-top:5px;flex-shrink:0;background:${sev === 'critical' ? 'var(--red)' : 'var(--yellow)'}"></div>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:13px;font-weight:600;">${esc(data.title ?? 'Alarm')}</div>
+      <div style="font-size:11px;color:var(--text-dim);margin-top:2px;">Device: ${esc(data.device_name ?? data.device_id)} · ${new Date().toLocaleTimeString()}</div>
+    </div>`;
+  list.insertBefore(item, list.firstChild);
+  if (list.children.length > 30) list.removeChild(list.lastChild);
+  $('alarmCount').textContent = `${alarmCount} events`;
+  updateStats({alarms: alarmCount});
+  toast('alarm', `🚨 ${data.title ?? 'Alarm'}`);
+}
+
+/* INIT */
+(async function init() {
+  log('system', '🚀 iot Test Dashboard ready — Login + Score Bars');
+  log('info', '💡 Click test item → รัน test นั้น');
+  log('info', '💡 ⚡ Run All → test ทั้งหมด');
+  log('info', '💡 Auth / Config มี score bar แยกส่วน');
+
+  updateAuthBadge();
+  updateStats({auth:0, devices:0, alarms:0, errors:0});
+  resetScore();
+  validateAuthFields();
+  validateConfig();
+  updateCorner(0);
+
+  const ok = await preflight();
+  if (ok) {
+    log('system', '✅ Server ready');
+    if (sessionStorage.getItem('logged_in') === '1') {
+      log('auth', '↻ Restoring session…');
+      accessToken = sessionStorage.getItem('access_token');
+      isLoggedIn = true;
+      updateAuthBadge();
+      await checkMe();
+      if (isLoggedIn) {
+        $('btnLogin').disabled = true;
+        $('btnAutoAuth').disabled = true;
+        $('btnSignup').disabled = true;
+        $('btnLogout').disabled = false;
+      }
+    }
+  }
+})();
+
+window.addEventListener('beforeunload', () => {
+  if (ws) ws.close(1000, 'Unload');
+  if (notifPollTimer) clearInterval(notifPollTimer);
+});
+</script>
+</body>
+</html>

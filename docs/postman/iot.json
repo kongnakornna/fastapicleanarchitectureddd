@@ -1,0 +1,152 @@
+{
+  "info": {
+    "name": "iot API",
+    "_postman_id": "d23cfb1e-f922-4b57-ac4e-3ec4f61184da",
+    "description": "iot Module — Real-time Sensor & Alarm Monitoring Platform",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:8000" },
+    { "key": "device_id", "value": "" },
+    { "key": "topic", "value": "iot/coldroom1/DATA" },
+    { "key": "bucket", "value": "iot_sensors" }
+  ],
+  "item": [
+    {
+      "name": "Connection",
+      "item": [
+        {
+          "name": "Connection Status",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/iot/status",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "iot", "status"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Topic Data",
+      "item": [
+        {
+          "name": "Get Topic Data",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/api/v1/iot/topic-data?topic={{topic}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "iot", "topic-data"],
+              "query": [{ "key": "topic", "value": "{{topic}}" }]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Device Control",
+      "item": [
+        {
+          "name": "Control Device",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/iot/control",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "iot", "control"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"topic\": \"iot/coldroom1/CTRL\",\n  \"message\": \"ON\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Device Management",
+      "item": [
+        {
+          "name": "List Devices",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/iot/devices?page=1&page_size=20",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "iot", "devices"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "page_size", "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Monitor Device Group",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/iot/monitor-device-group",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "iot", "monitor-device-group"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bucket\": \"iot_sensors\",\n  \"hardware_id\": 1,\n  \"lang\": \"th\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Alarm",
+      "item": [
+        {
+          "name": "Alarm Device Status",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/iot/alarm-device-status",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "iot", "alarm-device-status"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bucket\": \"iot_sensors\",\n  \"measurement\": \"temperature\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Data",
+      "item": [
+        {
+          "name": "Export Data (JSON)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/iot/export",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "iot", "export"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"device_id\": \"1\",\n  \"format\": \"json\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

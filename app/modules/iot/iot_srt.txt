@@ -1,0 +1,54 @@
+C:\github\fastapi-clean-architecture-ddd-erp-iot\fastapi-backend\
+│
+└── app\modules\iot\
+    │
+    ├── application\
+    │   └── use_case.py                              🔧 แก้ (Part 8, 10)
+    │
+    ├── infrastructure\
+    │   ├── ws_broadcaster.py                        ⭐ NEW (Part 8)
+    │   │
+    │   ├── idempotency.py                           ⭐ NEW (Part 12)
+    │   ├── tenant_context.py                        ⭐ NEW (Part 12)
+    │   │
+    │   ├── alerting\                                ⭐ NEW (Part 10)
+    │   │   ├── __init__.py
+    │   │   ├── base.py
+    │   │   ├── dispatcher.py
+    │   │   ├── email_handler.py
+    │   │   ├── line_handler.py
+    │   │   ├── telegram_handler.py
+    │   │   └── webhook_handler.py
+    │   │
+    │   └── scheduler\                               ⭐ NEW (Part 11)
+    │       ├── __init__.py
+    │       └── tasks.py
+    │
+    └── presentation\
+        ├── routers.py                                🔧 แก้ (Part 8, 9, 10, 11, 12)
+        └── schemas.py                                🔧 แก้ (Part 9)
+
+
+
+
+cd C:\github\fastapi-clean-architecture-ddd-erp-iot\fastapi-backend
+
+# สร้าง folder ที่ต้องใช้
+New-Item -ItemType Directory -Force -Path app\modules\iot\infrastructure\alerting
+New-Item -ItemType Directory -Force -Path app\modules\iot\infrastructure\scheduler
+New-Item -ItemType Directory -Force -Path app\middleware
+New-Item -ItemType Directory -Force -Path tests\property
+New-Item -ItemType Directory -Force -Path tests\manual
+New-Item -ItemType Directory -Force -Path docs\postman
+
+# ตรวจสอบ
+Get-ChildItem app\modules\iot\infrastructure\ -Directory
+# → alerting
+# → models
+# → repositories
+# → scheduler
+
+Get-ChildItem app\ -Directory
+# → core
+# → middleware  ← NEW
+# → modules

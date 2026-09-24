@@ -1,0 +1,265 @@
+{
+  "info": {
+    "name": "ERPIoT - PDPA",
+    "_postman_id": "3d705897-dbfa-482f-98f8-25d258539c18",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000"
+    },
+    {
+      "key": "user_id",
+      "value": "00000000-0000-0000-0000-000000000002"
+    },
+    {
+      "key": "consent_id",
+      "value": ""
+    },
+    {
+      "key": "dsar_id",
+      "value": ""
+    },
+    {
+      "key": "cookie_id",
+      "value": ""
+    },
+    {
+      "key": "admin_email",
+      "value": "admin@example.com"
+    },
+    {
+      "key": "admin_password",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "🔐 Login (รันก่อน)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/x-www-form-urlencoded"
+          }
+        ],
+        "body": {
+          "mode": "urlencoded",
+          "urlencoded": [
+            {
+              "key": "username",
+              "value": "{{admin_email}}"
+            },
+            {
+              "key": "password",
+              "value": "{{admin_password}}"
+            }
+          ]
+        },
+        "url": "{{base_url}}/api/v1/authentication/login/"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Login OK', () => pm.response.to.have.status(200));",
+              "console.log('✅ Logged in');"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Consent",
+      "item": [
+        {
+          "name": "Record Consent",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "consent-{{$guid}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": \"{{user_id}}\",\n  \"purpose_code\": \"DATA_COLLECTION\",\n  \"ip_address\": \"127.0.0.1\",\n  \"user_agent\": \"PostmanRuntime/7.36.0\"\n}"
+            },
+            "url": "{{base_url}}/api/v1/pdpa/consent/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('201', () => pm.response.to.have.status(201));",
+                  "try {",
+                  "  const d = pm.response.json().details.data;",
+                  "  pm.collectionVariables.set('consent_id', d.id);",
+                  "  console.log('✅ consent_id =', d.id);",
+                  "} catch(e) {}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Revoke Consent",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"reason\": \"user_withdrawal\"}"
+            },
+            "url": "{{base_url}}/api/v1/pdpa/consent/{{consent_id}}/revoke"
+          }
+        }
+      ]
+    },
+    {
+      "name": "DSAR",
+      "item": [
+        {
+          "name": "Submit DSAR",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "dsar-{{$guid}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": \"{{user_id}}\",\n  \"type\": \"ACCESS\"\n}"
+            },
+            "url": "{{base_url}}/api/v1/pdpa/dsar/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('201', () => pm.response.to.have.status(201));",
+                  "try {",
+                  "  const d = pm.response.json().details.data;",
+                  "  pm.collectionVariables.set('dsar_id', d.id);",
+                  "  console.log('✅ dsar_id =', d.id);",
+                  "} catch(e) {}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Export DSAR Data",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/pdpa/dsar/{{dsar_id}}/export?user_id={{user_id}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Privacy Policy",
+      "item": [
+        {
+          "name": "Get Current Policy",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/pdpa/privacy-policy/current"
+          }
+        },
+        {
+          "name": "Publish Policy",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"version\": 2,\n  \"content_th\": \"นโยบายฉบับที่ 2\",\n  \"content_en\": \"Policy v2\"\n}"
+            },
+            "url": "{{base_url}}/api/v1/pdpa/privacy-policy/"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Cookie Consent",
+      "item": [
+        {
+          "name": "Record Cookie",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"session_id\": \"sess-test-12345678\",\n  \"analytics\": false,\n  \"marketing\": false,\n  \"functional\": false\n}"
+            },
+            "url": "{{base_url}}/api/v1/pdpa/cookie-consent/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('201', () => pm.response.to.have.status(201));",
+                  "try {",
+                  "  const d = pm.response.json().details.data;",
+                  "  pm.collectionVariables.set('cookie_id', d.id);",
+                  "  console.log('✅ cookie_id =', d.id);",
+                  "} catch(e) {}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update Cookie",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"analytics\": true}"
+            },
+            "url": "{{base_url}}/api/v1/pdpa/cookie-consent/{{cookie_id}}"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,235 @@
+{
+  "info": {
+    "name": "llamaindex API",
+    "_postman_id": "259e6331-6453-4f4e-9ae0-4b66f9f0bc13",
+    "description": "LlamaIndex Wrapper",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000"
+    },
+    {
+      "key": "tenant_id",
+      "value": "00000000-0000-0000-0000-000000000001"
+    },
+    {
+      "key": "user_id",
+      "value": "00000000-0000-0000-0000-000000000002"
+    },
+    {
+      "key": "index_id",
+      "value": "REPLACE_WITH_INDEX_UUID"
+    },
+    {
+      "key": "engine_id",
+      "value": "REPLACE_WITH_ENGINE_UUID"
+    }
+  ],
+  "item": [
+    {
+      "name": "List Indexes",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-Tenant-Id",
+            "value": "{{tenant_id}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/li/indexes",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "li",
+            "indexes"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Create Index",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Tenant-Id",
+            "value": "{{tenant_id}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/li/indexes",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "li",
+            "indexes"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"name\":\"docs_vector\",\"index_type\":\"vector_store\",\"embed_model\":\"text-embedding-3-small\",\"config\":{\"collection_id\":\"00000000-0000-0000-0000-000000000000\"}}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Ingest Document",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Tenant-Id",
+            "value": "{{tenant_id}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/li/indexes/{{index_id}}/ingest",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "li",
+            "indexes",
+            "{{index_id}}",
+            "ingest"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"content\":\"LlamaIndex is a data framework for LLM apps.\",\"source_uri\":\"doc://intro\",\"chunk_size\":512}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Create Query Engine",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Tenant-Id",
+            "value": "{{tenant_id}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/li/indexes/{{index_id}}/query-engines",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "li",
+            "indexes",
+            "{{index_id}}",
+            "query-engines"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"name\":\"compact_5\",\"retriever_type\":\"vector\",\"top_k\":5,\"response_mode\":\"compact\",\"similarity_top_k\":5}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Query Index",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Tenant-Id",
+            "value": "{{tenant_id}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/li/indexes/{{index_id}}/query",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "li",
+            "indexes",
+            "{{index_id}}",
+            "query"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"query\":\"What is LlamaIndex?\",\"top_k\":5,\"response_mode\":\"compact\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Get Run",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-Tenant-Id",
+            "value": "{{tenant_id}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/li/runs/REPLACE",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "li",
+            "runs",
+            "REPLACE"
+          ]
+        }
+      }
+    }
+  ]
+}

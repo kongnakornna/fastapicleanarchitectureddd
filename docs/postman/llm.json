@@ -1,0 +1,138 @@
+{
+  "info": {
+    "name": "llm API",
+    "_postman_id": "b5c87005-dce5-40b3-88a9-0a5625754a69",
+    "description": "LLM Module — Unified LLM Gateway (OpenAI / Anthropic / Local)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:8000" },
+    { "key": "model", "value": "gpt-4o-mini" },
+    { "key": "conversation_id", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Chat",
+      "item": [
+        {
+          "name": "Chat Completion (sync)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Idempotency-Key", "value": "{{$guid}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/llm/chat",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "llm", "chat"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"model\": \"gpt-4o-mini\",\n  \"message\": \"สวัสดี\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "Chat Completion (SSE)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "text/event-stream" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/llm/chat/stream",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "llm", "chat", "stream"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"model\": \"gpt-4o-mini\",\n  \"message\": \"นับ 1 ถึง 5\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Conversations",
+      "item": [
+        {
+          "name": "List Conversations",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/llm/conversations?limit=50",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "llm", "conversations"],
+              "query": [{ "key": "limit", "value": "50" }]
+            }
+          }
+        },
+        {
+          "name": "Create Conversation",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/llm/conversations",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "llm", "conversations"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"model\": \"gpt-4o-mini\",\n  \"title\": \"My Chat\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Providers & Models",
+      "item": [
+        {
+          "name": "List Providers",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/llm/providers",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "llm", "providers"]
+            }
+          }
+        },
+        {
+          "name": "List Models",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/llm/models",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "llm", "models"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Usage",
+      "item": [
+        {
+          "name": "Usage (tenant + user)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/llm/usage?days=30",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "llm", "usage"],
+              "query": [{ "key": "days", "value": "30" }]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

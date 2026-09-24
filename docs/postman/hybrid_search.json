@@ -1,0 +1,189 @@
+{
+  "info": {
+    "name": "hybrid_search API",
+    "_postman_id": "5155e33d-fefe-4aa7-8ca6-24ee6b627df2",
+    "description": "Hybrid Search",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000"
+    },
+    {
+      "key": "tenant_id",
+      "value": "00000000-0000-0000-0000-000000000001"
+    },
+    {
+      "key": "user_id",
+      "value": "00000000-0000-0000-0000-000000000002"
+    },
+    {
+      "key": "config_id",
+      "value": "REPLACE_WITH_CONFIG_UUID"
+    }
+  ],
+  "item": [
+    {
+      "name": "List Configs",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-Tenant-Id",
+            "value": "{{tenant_id}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/hs/configs",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "hs",
+            "configs"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Create Config (RRF)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Tenant-Id",
+            "value": "{{tenant_id}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/hs/configs",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "hs",
+            "configs"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"name\":\"balanced\",\"fusion_type\":\"rrf\",\"rrf_k\":60,\"bm25_weight\":0.5,\"vector_weight\":0.5,\"top_k\":10,\"reranker_type\":\"none\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Search (with corpus)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Tenant-Id",
+            "value": "{{tenant_id}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/hs/search",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "hs",
+            "search"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"query\":\"what is BM25\",\"config_id\":\"{{config_id}}\",\"top_k\":5,\"corpus\":[{\"source_id\":\"d1\",\"text\":\"BM25 is a ranking function\"},{\"source_id\":\"d2\",\"text\":\"Vector search uses embeddings\"}]}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Get Query Ranking",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-Tenant-Id",
+            "value": "{{tenant_id}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/hs/queries/REPLACE/ranking",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "hs",
+            "queries",
+            "REPLACE",
+            "ranking"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Compute Metrics",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Tenant-Id",
+            "value": "{{tenant_id}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/hs/metrics",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "hs",
+            "metrics"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"retrieved_ids\":[\"d1\",\"d3\",\"d2\"],\"relevant_ids\":[\"d1\",\"d2\"],\"k\":3}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    }
+  ]
+}

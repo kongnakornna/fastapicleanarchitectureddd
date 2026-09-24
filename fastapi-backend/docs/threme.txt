@@ -1,4 +1,0 @@
-ทำทั้นที่ จำกัดแค่  C:\github\fastapi-clean-architecture-ddd-erp-iot\fastapi-backend\app\modules\idempotency  เท่านั้น
-1. อ่าน C:\github\fastapi-clean-architecture-ddd-erp-iot\fastapi-backend\prompts\layer-0-core\idempotency.md
-2. สร้าง file / update data
-3. อ่าน C:\github\fastapi-clean-architecture-ddd-erp-iot\fastapi-backend\app\modules\idempotency สร้าง file / update data ที่ว่าง

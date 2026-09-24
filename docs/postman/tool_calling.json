@@ -1,0 +1,85 @@
+{
+  "info": {
+    "name": "tool_calling API",
+    "_postman_id": "06307c7e-4a05-4cef-ab3a-70dc1e6107c7",
+    "description": "Tool Calling Module — registry + invoke + permissions",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:8000" },
+    { "key": "tool_id", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Tools",
+      "item": [
+        {
+          "name": "List Tools",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/tools?limit=100",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "tools"],
+              "query": [{ "key": "limit", "value": "100" }]
+            }
+          }
+        },
+        {
+          "name": "Register Tool",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/tools",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "tools"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"get_weather\",\n  \"description\": \"Get weather by city\",\n  \"parameters_json\": {\n    \"type\": \"object\",\n    \"properties\": {\"city\": {\"type\": \"string\"}},\n    \"required\": [\"city\"]\n  },\n  \"kind\": \"http\",\n  \"risk_level\": \"low\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "Invoke Tool",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Idempotency-Key", "value": "{{$guid}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/tools/{{tool_id}}/invoke",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "tools", "{{tool_id}}", "invoke"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"arguments\": {\"city\": \"Bangkok\"},\n  \"role\": \"user\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Invocations",
+      "item": [
+        {
+          "name": "List Invocations",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/tools/invocations/list?limit=50",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "tools", "invocations", "list"],
+              "query": [{ "key": "limit", "value": "50" }]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
