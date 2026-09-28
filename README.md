@@ -2854,7 +2854,7 @@ func TestSensorThroughput(t *testing.T) {
 
 ### 16.3 Load Test Tools
 
-| Tool | 用途 | คำสั่ง |
+| Tool | use | คำสั่ง |
 |---|---|---|
 | **k6** | HTTP load test | `k6 run script.js` |
 | **JMeter** | MQTT plugin | GUI + CLI |
