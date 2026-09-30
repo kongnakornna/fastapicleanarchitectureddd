@@ -42,6 +42,64 @@ from app.modules.user.domain.enums import Gender
 
 
 # ============================================================================
+# JWT CLAIM HELPERS
+# ============================================================================
+def _parse_subject(claims: dict) -> int | UUID:
+    """
+    TH: parse JWT `sub` → int (BIGINT) หรือ UUID — รองรับทั้งสองแบบ
+    EN: parse JWT `sub` → int (BIGINT) or UUID — supports both
+    """
+    raw = claims.get("sub")
+    if raw is None:
+        raise ValueError("JWT claim 'sub' is required")
+    if isinstance(raw, (int, UUID)):
+        return raw
+    s = str(raw).strip()
+    try:
+        return int(s)
+    except (ValueError, TypeError):
+        pass
+    try:
+        return UUID(s)
+    except (ValueError, TypeError) as exc:
+        raise ValueError(f"invalid JWT sub: {raw!r}") from exc
+
+
+def _parse_role(scope: str | None) -> Role:
+    """
+    TH: parse scope → Role รองรับ:
+        - "user" / "USER" / "admin" / "Admin"
+        - space-separated (OAuth2): "user read write" → ใช้ token แรกที่ map ได้
+        - fallback: USER
+    EN: parse scope → Role; supports single, mixed-case, space-separated
+    """
+    if not scope:
+        return Role.USER
+
+    s = scope.strip()
+    # 1) ลองทั้ง string ก่อน
+    for candidate in (s, s.lower(), s.upper()):
+        try:
+            return Role(candidate)
+        except (ValueError, TypeError):
+            pass
+
+    # 2) OAuth2 space-separated → ลอง token แรก
+    for token in s.replace(",", " ").split():
+        for candidate in (token, token.lower(), token.upper()):
+            try:
+                return Role(candidate)
+            except (ValueError, TypeError):
+                continue
+
+    from loguru import logger
+
+    logger.warning(
+        f"Unknown role scope '{scope}', defaulting to USER."
+    )
+    return Role.USER
+
+# ============================================================================
 # ENTITY / DTOS
 # ============================================================================
 def login_entity_mapper(
@@ -182,18 +240,20 @@ def entity_two_step_code_mapper(
 
 def access_token_entity_mapper(claims: dict) -> Authentication:
     """Transform JWT claims → Authentication entity (for access token)."""
+    role = _parse_role(claims.get("scope"))
+
     access = AccessToken(
         claims=Claims.from_dict(claims),
-        permission=Role(claims["scope"]),
+        permission=role,
         created_at=datetime.fromtimestamp(claims["iat"], tz=BRASILIA_TZ),
         expires_at=datetime.fromtimestamp(claims["exp"], tz=BRASILIA_TZ),
     )
 
     return Authentication(
         user=User(
-            id=int(claims["sub"]),
-            role=Role(claims["scope"]),
-            email=claims["grant_id"],
+            id=_parse_subject(claims),
+            role=role,
+            email=claims.get("grant_id"),
         ),
         refresh_token=RefreshToken(access_token=access),
     )
@@ -201,7 +261,9 @@ def access_token_entity_mapper(claims: dict) -> Authentication:
 
 def refresh_token_entity_mapper(claims: dict) -> Authentication:
     """Transform JWT claims → Authentication entity (for refresh token)."""
-    access = AccessToken(permission=Role(claims["scope"]))
+    role = _parse_role(claims.get("scope"))
+
+    access = AccessToken(permission=role)
 
     refresh = RefreshToken(
         access_token=access,
@@ -212,9 +274,9 @@ def refresh_token_entity_mapper(claims: dict) -> Authentication:
 
     return Authentication(
         user=User(
-            id=int(claims["sub"]),
-            role=Role(claims["scope"]),
-            email=claims["grant_id"],
+            id=_parse_subject(claims),
+            role=role,
+            email=claims.get("grant_id"),
         ),
         refresh_token=refresh,
     )

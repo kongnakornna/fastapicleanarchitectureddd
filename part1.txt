@@ -1,0 +1,1609 @@
+#!/usr/bin/env python3
+"""
+create_module_bigo.py — Big-O Monitoring Module Generator v1.2.1
+
+สร้าง bigo module สำหรับ:
+  • Big-O complexity monitoring (per function/endpoint)
+  • Big-O policy enforcement (warn/critical ratio per complexity)
+  • Memory management (LRU+TTL manager, snapshots, leak detection)
+  • Kafka queue management (priority, retry, DLQ, lag, backpressure)
+  • Prometheus-style metrics registry
+  • Pipeline orchestrator (monitor → memory → kafka)
+  • Redis cache (cache-aside, TTL, namespace, stampede lock)
+  • WebSocket IO (rooms, broadcast, heartbeat)
+  • Management service (admin ops)
+
+Schema: public · Prefix: bigo_ · Tables: bigo_* (10 tables)
+
+Usage:
+    python create_module_bigo.py all bigo 6 bigo
+    python create_module_bigo.py verify bigo
+"""
+from __future__ import annotations
+
+import argparse
+import json as _json_mod
+import re
+import sys
+import uuid
+from datetime import UTC, datetime
+from pathlib import Path
+from textwrap import dedent
+
+VERSION = "1.2.1"
+
+LAYER_NAMES = {
+    "0": "0-Core", "1": "1-Foundation", "2": "2-Money",
+    "3": "3-Goods", "4": "4-Ops", "5": "5-Intel",
+    "6": "6-Monitor", "7": "7-Template",
+}
+
+ACTIONS = {
+    "create", "activate", "sql", "alembic",
+    "swagger", "postman", "update", "update-env",
+    "test", "all", "verify", "help",
+}
+
+SCHEMA = "public"
+PREFIX = "bigo"
+TABLE_NAMES = (
+    "bigo_metrics",
+    "bigo_profiles",
+    "bigo_memory_snapshots",
+    "bigo_memory_leaks",
+    "bigo_kafka_topics",
+    "bigo_kafka_queues",
+    "bigo_kafka_consumers",
+    "bigo_pipeline_reports",
+    "bigo_cache_stats",
+    "bigo_ws_sessions",
+)
+
+
+class C:
+    CYAN = "\033[96m"; GREEN = "\033[92m"; YELLOW = "\033[93m"
+    RED = "\033[91m"; GRAY = "\033[90m"; RESET = "\033[0m"
+
+
+def info(msg: str) -> None: print(f"{C.CYAN}{msg}{C.RESET}")
+def ok(msg: str) -> None: print(f"  {C.GREEN}[OK]{C.RESET} {msg}")
+def warn(msg: str) -> None: print(f"  {C.YELLOW}[!!]{C.RESET} {msg}")
+def err(msg: str) -> None: print(f"  {C.RED}[XX]{C.RESET} {msg}")
+def skip(msg: str) -> None: print(f"  {C.GRAY}[--]{C.RESET} {msg}")
+
+
+class FileWriter:
+    def __init__(self, root: Path, force: bool = False, backup: bool = True):
+        self.root = root
+        self.force = force
+        self.backup = backup
+        self.written: list[Path] = []
+        self.skipped: list[Path] = []
+        self.backups: list[Path] = []
+
+    def write(self, rel_path: str, content: str) -> None:
+        path = self.root / rel_path
+        path.parent.mkdir(parents=True, exist_ok=True)
+
+        if path.exists() and not self.force:
+            skip(f"skip (exists): {rel_path}")
+            self.skipped.append(path)
+            return
+
+        if path.exists() and self.backup:
+            bak = path.with_suffix(path.suffix + ".bak")
+            bak.write_bytes(path.read_bytes())
+            self.backups.append(bak)
+            ok(f"backup: {rel_path}.bak")
+
+        if rel_path.endswith(".py"):
+            try:
+                compile(content, rel_path, "exec")
+            except SyntaxError as exc:
+                err(f"SYNTAX ERROR in {rel_path}: {exc}")
+                err(f"  line {exc.lineno}: {exc.text}")
+                raise RuntimeError(f"Refuse to write invalid Python: {rel_path}") from exc
+
+        path.write_text(content, encoding="utf-8", newline="\n")
+        ok(rel_path)
+        self.written.append(path)
+
+
+class BigOModuleGenerator:
+    def __init__(
+        self, project_root: Path,
+        module: str = "bigo", layer: str = "6", prefix: str = "bigo",
+        force: bool = False,
+    ):
+        self.root = project_root
+        self.module = module.lower()
+        self.layer = layer
+        self.prefix = prefix.lower()
+        self.layer_name = LAYER_NAMES.get(layer, "6-Monitor")
+        self.writer = FileWriter(project_root, force=force)
+        self.mod_root = f"app/modules/{self.module}"
+        self.sql_dir = "db/migrations"
+        self.alembic_dir = "migrations/versions"
+        self.env_py = "migrations/env.py"
+        self.app_py = "app/app.py"
+        self.tests_dir = "tests"
+        self.docs_dir = "docs"
+
+    def create_module(self) -> None:
+        info(f"[CREATE] module: {self.module} (Layer {self.layer_name})")
+        self._create_domain()
+        self._create_application()
+        self._create_infrastructure()
+        self._create_cache_layer()
+        self._create_websocket_layer()
+        self._create_management_layer()
+        self._create_presentation()
+        self._create_pipeline()
+        self._create_ws_presentation()
+        self._create_management_presentation()
+        self._create_root_init()
+
+    # ─── DOMAIN ─────────────────────────────────────────────────
+    def _create_domain(self) -> None:
+        base = f"{self.mod_root}/domain"
+
+        self.writer.write(f"{base}/__init__.py", dedent('''\
+            """bigo domain layer"""
+            from .entities import (
+                KafkaConsumer, KafkaQueue, KafkaTopic, MemoryLeak,
+                MemorySnapshot, Metric, Profile,
+            )
+            from .enums import (
+                AlertSeverity, ComplexityClass, KafkaHealth,
+                LeakType, MemoryPressure, MetricKind, Priority,
+            )
+            from .events import (
+                AlertTriggered, BackpressureActivated, ComplexityDegraded,
+                KafkaLagExceeded, MemoryLeakDetected, MemoryThresholdExceeded,
+                ProfileCaptured,
+            )
+            from .exceptions import (
+                AlertNotFoundError, BigOError, ConsumerNotFoundError,
+                KafkaConnectionError, LagThresholdExceededError,
+                LeakNotFoundError, MemoryLimitExceededError,
+                ProfileNotFoundError, QueueNotFoundError,
+                SnapshotNotFoundError, TopicNotFoundError,
+            )
+            from .pipeline_config import PipelineConfig
+            from .value_objects import (
+                Complexity, ComplexityPolicy, KafkaLag, MemoryDelta,
+                PartitionInfo, ProcessReport,
+            )
+
+            __all__ = [
+                "KafkaConsumer", "KafkaQueue", "KafkaTopic",
+                "MemoryLeak", "MemorySnapshot", "Metric", "Profile",
+                "AlertSeverity", "ComplexityClass", "KafkaHealth",
+                "LeakType", "MemoryPressure", "MetricKind", "Priority",
+                "AlertTriggered", "BackpressureActivated",
+                "ComplexityDegraded", "KafkaLagExceeded",
+                "MemoryLeakDetected", "MemoryThresholdExceeded",
+                "ProfileCaptured",
+                "AlertNotFoundError", "BigOError",
+                "ConsumerNotFoundError", "KafkaConnectionError",
+                "LagThresholdExceededError", "LeakNotFoundError",
+                "MemoryLimitExceededError", "ProfileNotFoundError",
+                "QueueNotFoundError", "SnapshotNotFoundError",
+                "TopicNotFoundError",
+                "Complexity", "ComplexityPolicy", "KafkaLag",
+                "MemoryDelta", "PartitionInfo", "ProcessReport",
+                "PipelineConfig",
+            ]
+        '''))
+
+        self.writer.write(f"{base}/enums.py", dedent('''\
+            """bigo enums"""
+            from __future__ import annotations
+            from enum import StrEnum
+
+
+            class ComplexityClass(StrEnum):
+                CONSTANT = "O(1)"
+                LOGARITHMIC = "O(log n)"
+                LINEAR = "O(n)"
+                LINEARITHMIC = "O(n log n)"
+                QUADRATIC = "O(n^2)"
+                CUBIC = "O(n^3)"
+                EXPONENTIAL = "O(2^n)"
+                FACTORIAL = "O(n!)"
+                UNKNOWN = "UNKNOWN"
+
+
+            class MetricKind(StrEnum):
+                LATENCY = "latency"
+                THROUGHPUT = "throughput"
+                MEMORY_RSS = "memory_rss"
+                MEMORY_HEAP = "memory_heap"
+                CPU_PERCENT = "cpu_percent"
+                GC_PAUSE = "gc_pause"
+                QUEUE_DEPTH = "queue_depth"
+                KAFKA_LAG = "kafka_lag"
+                ERROR_RATE = "error_rate"
+
+
+            class MemoryPressure(StrEnum):
+                NORMAL = "NORMAL"
+                ELEVATED = "ELEVATED"
+                HIGH = "HIGH"
+                CRITICAL = "CRITICAL"
+                OOM = "OOM"
+
+
+            class LeakType(StrEnum):
+                REFERENCE_CYCLE = "REFERENCE_CYCLE"
+                UNBOUNDED_CACHE = "UNBOUNDED_CACHE"
+                LISTENER_LEAK = "LISTENER_LEAK"
+                THREAD_LOCAL = "THREAD_LOCAL"
+                NATIVE_BUFFER = "NATIVE_BUFFER"
+                UNKNOWN = "UNKNOWN"
+
+
+            class KafkaHealth(StrEnum):
+                HEALTHY = "HEALTHY"
+                WARNING = "WARNING"
+                DEGRADED = "DEGRADED"
+                CRITICAL = "CRITICAL"
+                OFFLINE = "OFFLINE"
+
+
+            class AlertSeverity(StrEnum):
+                INFO = "INFO"
+                WARNING = "WARNING"
+                ERROR = "ERROR"
+                CRITICAL = "CRITICAL"
+
+
+            class Priority(StrEnum):
+                HIGH = "high"
+                NORMAL = "normal"
+                LOW = "low"
+                DLQ = "dlq"
+        '''))
+
+        self.writer.write(f"{base}/exceptions.py", dedent('''\
+            """bigo domain exceptions"""
+            from __future__ import annotations
+
+
+            class BigOError(Exception):
+                code: str = "DOMAIN_ERROR"
+
+                def __init__(self, message: str = "", *, code: str | None = None) -> None:
+                    super().__init__(message or self.__class__.__name__)
+                    if code:
+                        self.code = code
+
+
+            class MetricNotFoundError(BigOError):
+                code = "METRIC_NOT_FOUND"
+
+
+            class ProfileNotFoundError(BigOError):
+                code = "PROFILE_NOT_FOUND"
+
+
+            class SnapshotNotFoundError(BigOError):
+                code = "SNAPSHOT_NOT_FOUND"
+
+
+            class LeakNotFoundError(BigOError):
+                code = "LEAK_NOT_FOUND"
+
+
+            class TopicNotFoundError(BigOError):
+                code = "TOPIC_NOT_FOUND"
+
+
+            class QueueNotFoundError(BigOError):
+                code = "QUEUE_NOT_FOUND"
+
+
+            class ConsumerNotFoundError(BigOError):
+                code = "CONSUMER_NOT_FOUND"
+
+
+            class AlertNotFoundError(BigOError):
+                code = "ALERT_NOT_FOUND"
+
+
+            class MemoryLimitExceededError(BigOError):
+                code = "MEMORY_LIMIT_EXCEEDED"
+
+
+            class LagThresholdExceededError(BigOError):
+                code = "LAG_THRESHOLD_EXCEEDED"
+
+
+            class KafkaConnectionError(BigOError):
+                code = "KAFKA_CONNECTION_ERROR"
+        '''))
+
+        self.writer.write(f"{base}/events.py", dedent('''\
+            """bigo domain events"""
+            from __future__ import annotations
+            import uuid
+            from dataclasses import dataclass, field
+            from datetime import UTC, datetime
+            from typing import Any
+
+
+            def _now() -> datetime:
+                return datetime.now(UTC)
+
+
+            @dataclass(frozen=True, slots=True)
+            class ProfileCaptured:
+                profile_id: uuid.UUID
+                tenant_id: uuid.UUID
+                function_name: str
+                complexity: str
+                sample_size: int
+                occurred_at: datetime = field(default_factory=_now)
+
+
+            @dataclass(frozen=True, slots=True)
+            class ComplexityDegraded:
+                profile_id: uuid.UUID
+                tenant_id: uuid.UUID
+                function_name: str
+                previous_complexity: str
+                current_complexity: str
+                occurred_at: datetime = field(default_factory=_now)
+
+
+            @dataclass(frozen=True, slots=True)
+            class MemoryThresholdExceeded:
+                tenant_id: uuid.UUID
+                process_id: int
+                rss_mb: int
+                threshold_mb: int
+                pressure: str
+                occurred_at: datetime = field(default_factory=_now)
+
+
+            @dataclass(frozen=True, slots=True)
+            class MemoryLeakDetected:
+                leak_id: uuid.UUID
+                tenant_id: uuid.UUID
+                object_type: str
+                growth_rate_mb_per_hour: float
+                leak_type: str
+                occurred_at: datetime = field(default_factory=_now)
+
+
+            @dataclass(frozen=True, slots=True)
+            class KafkaLagExceeded:
+                consumer_id: uuid.UUID
+                tenant_id: uuid.UUID
+                topic: str
+                group_id: str
+                lag: int
+                threshold: int
+                occurred_at: datetime = field(default_factory=_now)
+
+
+            @dataclass(frozen=True, slots=True)
+            class BackpressureActivated:
+                topic: str
+                tenant_id: uuid.UUID
+                queue_depth: int
+                action: str
+                occurred_at: datetime = field(default_factory=_now)
+
+
+            @dataclass(frozen=True, slots=True)
+            class AlertTriggered:
+                alert_id: uuid.UUID
+                tenant_id: uuid.UUID
+                severity: str
+                kind: str
+                message: str
+                payload: dict[str, Any]
+                occurred_at: datetime = field(default_factory=_now)
+
+
+            @dataclass(frozen=True, slots=True)
+            class PipelineReportPersisted:
+                report_id: uuid.UUID
+                tenant_id: uuid.UUID
+                trace_id: str
+                n: int
+                complexity: str
+                status: str
+                priority: str
+                occurred_at: datetime = field(default_factory=_now)
+        '''))
+
+        self.writer.write(f"{base}/pipeline_config.py", dedent('''\
+            """PipelineConfig"""
+            from __future__ import annotations
+            from dataclasses import dataclass, field
+
+            from app.modules.bigo.domain.enums import Priority
+
+
+            @dataclass(slots=True)
+            class PipelineConfig:
+                max_n_linear: int = 10_000
+                max_n_quadratic: int = 1_000
+                max_n_cubic: int = 200
+                max_n_linearithmic: int = 50_000
+                warn_ratio: float = 0.8
+
+                memory_max_bytes: int = 50 * 1024 * 1024
+                memory_high_ratio: float = 0.8
+                memory_critical_ratio: float = 0.95
+                memory_default_ttl_s: int = 3600
+                memory_evict_batch: int = 32
+
+                kafka_bootstrap: str = "localhost:9092"
+                kafka_topic: str = "monitoring.logs"
+                kafka_dlq_topic: str = "monitoring.logs.dlq"
+                kafka_partition_map: dict[str, int] = field(
+                    default_factory=lambda: {
+                        Priority.HIGH.value: 0,
+                        Priority.NORMAL.value: 1,
+                        Priority.LOW.value: 2,
+                        Priority.DLQ.value: 9,
+                    },
+                )
+                kafka_max_retries: int = 3
+                kafka_backoff: tuple[float, ...] = (1.0, 2.0, 4.0)
+                kafka_flush_timeout_s: float = 5.0
+
+                cache_namespace: str = "bigo"
+                cache_default_ttl_s: int = 300
+                cache_lock_timeout_s: float = 5.0
+
+                ws_heartbeat_interval_s: int = 30
+                ws_max_per_tenant: int = 1000
+                ws_send_timeout_s: float = 5.0
+
+                compress_low_priority: bool = True
+                sample_sizes: tuple[int, ...] = (10, 50, 100, 500, 1000, 5000, 10_000)
+        '''))
+
+        self.writer.write(f"{base}/value_objects/__init__.py", dedent('''\
+            """bigo value objects"""
+            from .complexity import Complexity
+            from .complexity_policy import ComplexityPolicy
+            from .kafka_lag import KafkaLag
+            from .memory_delta import MemoryDelta
+            from .partition_info import PartitionInfo
+            from .process_report import ProcessReport
+
+            __all__ = [
+                "Complexity", "ComplexityPolicy", "KafkaLag",
+                "MemoryDelta", "PartitionInfo", "ProcessReport",
+            ]
+        '''))
+
+        self.writer.write(f"{base}/value_objects/complexity.py", dedent('''\
+            """Complexity VO"""
+            from __future__ import annotations
+            from dataclasses import dataclass
+            from typing import Any
+
+            from app.modules.bigo.domain.enums import ComplexityClass
+
+
+            @dataclass(frozen=True, slots=True)
+            class Complexity:
+                cls: ComplexityClass
+                sample_size: int
+                r_squared: float = 0.0
+                coefficients: tuple[tuple[str, float], ...] = ()
+                notes: str = ""
+
+                def __post_init__(self) -> None:
+                    if self.sample_size < 0:
+                        raise ValueError("sample_size must be >= 0")
+                    if not 0.0 <= self.r_squared <= 1.0:
+                        raise ValueError("r_squared must be 0-1")
+
+                @property
+                def notation(self) -> str:
+                    return self.cls.value
+
+                def to_dict(self) -> dict[str, Any]:
+                    return {
+                        "complexity": self.notation,
+                        "sample_size": self.sample_size,
+                        "r_squared": self.r_squared,
+                        "coefficients": dict(self.coefficients),
+                        "notes": self.notes,
+                    }
+
+
+            COMPLEXITY_ORDER: dict[str, int] = {
+                "O(1)": 0, "O(log n)": 1, "O(n)": 2,
+                "O(n log n)": 3, "O(n^2)": 4, "O(n^3)": 5,
+                "O(2^n)": 6, "O(n!)": 7, "UNKNOWN": -1,
+            }
+
+
+            def compare(a: str, b: str) -> int:
+                return COMPLEXITY_ORDER.get(a, -1) - COMPLEXITY_ORDER.get(b, -1)
+        '''))
+
+        self.writer.write(f"{base}/value_objects/complexity_policy.py", dedent('''\
+            """ComplexityPolicy VO"""
+            from __future__ import annotations
+            from dataclasses import dataclass
+
+            from app.modules.bigo.domain.enums import ComplexityClass, Priority
+
+
+            @dataclass(frozen=True, slots=True)
+            class ComplexityPolicy:
+                cls: ComplexityClass
+                max_n: int
+                warn_ratio: float = 0.8
+                critical_ratio: float = 1.0
+                partition: Priority = Priority.NORMAL
+
+                def __post_init__(self) -> None:
+                    if self.max_n <= 0:
+                        raise ValueError("max_n must be > 0")
+                    if not 0.0 < self.warn_ratio <= 1.0:
+                        raise ValueError("warn_ratio must be in (0, 1]")
+                    if self.critical_ratio < self.warn_ratio:
+                        raise ValueError("critical_ratio must be >= warn_ratio")
+
+                @property
+                def warn_at(self) -> int:
+                    return int(self.max_n * self.warn_ratio)
+
+                @property
+                def critical_at(self) -> int:
+                    return int(self.max_n * self.critical_ratio)
+
+                def classify(self, n: int) -> str:
+                    if n > self.critical_at:
+                        return "CRITICAL"
+                    if n > self.warn_at:
+                        return "WARNING"
+                    return "PASS"
+        '''))
+
+        self.writer.write(f"{base}/value_objects/process_report.py", dedent('''\
+            """ProcessReport VO"""
+            from __future__ import annotations
+            import uuid
+            from dataclasses import dataclass, field
+            from typing import Any
+
+            from app.modules.bigo.domain.enums import MemoryPressure, Priority
+
+
+            @dataclass(frozen=True, slots=True)
+            class ProcessReport:
+                n: int
+                complexity: str
+                status: str
+                priority: Priority
+                rss_mb: float
+                pressure: MemoryPressure
+                duration_ms: int
+                kafka_partition: int
+                kafka_sent: bool
+                trace_id: str = field(default_factory=lambda: str(uuid.uuid4()))
+
+                def to_dict(self) -> dict[str, Any]:
+                    return {
+                        "trace_id": self.trace_id,
+                        "n": self.n,
+                        "complexity": self.complexity,
+                        "status": self.status,
+                        "priority": self.priority.value,
+                        "rss_mb": round(self.rss_mb, 2),
+                        "pressure": self.pressure.value,
+                        "duration_ms": self.duration_ms,
+                        "kafka_partition": self.kafka_partition,
+                        "kafka_sent": self.kafka_sent,
+                    }
+        '''))
+
+        self.writer.write(f"{base}/value_objects/memory_delta.py", dedent('''\
+            """MemoryDelta VO"""
+            from __future__ import annotations
+            from dataclasses import dataclass
+
+
+            @dataclass(frozen=True, slots=True)
+            class MemoryDelta:
+                before_mb: float
+                after_mb: float
+                peak_mb: float = 0.0
+
+                def __post_init__(self) -> None:
+                    if self.before_mb < 0 or self.after_mb < 0:
+                        raise ValueError("memory must be non-negative")
+
+                @property
+                def delta_mb(self) -> float:
+                    return self.after_mb - self.before_mb
+
+                @property
+                def growth_rate(self) -> float:
+                    if self.before_mb == 0:
+                        return float("inf") if self.after_mb > 0 else 0.0
+                    return self.after_mb / self.before_mb
+        '''))
+
+        self.writer.write(f"{base}/value_objects/kafka_lag.py", dedent('''\
+            """KafkaLag VO"""
+            from __future__ import annotations
+            from dataclasses import dataclass
+
+
+            @dataclass(frozen=True, slots=True)
+            class KafkaLag:
+                topic: str
+                partition: int
+                current_offset: int
+                log_end_offset: int
+                lag: int = 0
+
+                def __post_init__(self) -> None:
+                    if self.partition < 0:
+                        raise ValueError("partition must be >= 0")
+                    if self.current_offset < 0 or self.log_end_offset < 0:
+                        raise ValueError("offsets must be non-negative")
+                    if self.lag < 0:
+                        raise ValueError("lag must be non-negative")
+
+                @classmethod
+                def compute(
+                    cls, topic: str, partition: int,
+                    current_offset: int, log_end_offset: int,
+                ) -> "KafkaLag":
+                    return cls(
+                        topic=topic, partition=partition,
+                        current_offset=current_offset,
+                        log_end_offset=log_end_offset,
+                        lag=max(0, log_end_offset - current_offset),
+                    )
+        '''))
+
+        self.writer.write(f"{base}/value_objects/partition_info.py", dedent('''\
+            """PartitionInfo VO"""
+            from __future__ import annotations
+            from dataclasses import dataclass
+
+
+            @dataclass(frozen=True, slots=True)
+            class PartitionInfo:
+                partition: int
+                leader: int
+                replicas: tuple[int, ...]
+                isr: tuple[int, ...]
+
+                def __post_init__(self) -> None:
+                    if self.partition < 0:
+                        raise ValueError("partition must be >= 0")
+
+                @property
+                def is_healthy(self) -> bool:
+                    return len(self.isr) == len(self.replicas)
+        '''))
+
+        self.writer.write(f"{base}/helpers/__init__.py", dedent('''\
+            """bigo helpers"""
+            from .complexity_analyzer import (
+                analyze_complexity, fit_complexity, measure_scaling,
+            )
+            from .memory_analyzer import (
+                detect_leaks, diff_snapshots, get_memory_info, take_snapshot,
+            )
+
+            __all__ = [
+                "analyze_complexity", "fit_complexity", "measure_scaling",
+                "detect_leaks", "diff_snapshots", "take_snapshot",
+                "get_memory_info",
+            ]
+        '''))
+
+        self.writer.write(f"{base}/helpers/complexity_analyzer.py", dedent('''\
+            """Big-O complexity analyzer"""
+            from __future__ import annotations
+            import math
+            import time
+            from typing import Any, Callable
+
+            from app.modules.bigo.domain.enums import ComplexityClass
+            from app.modules.bigo.domain.value_objects import Complexity
+
+
+            _CANDIDATES: list[tuple[ComplexityClass, Callable[[int], float]]] = [
+                (ComplexityClass.CONSTANT, lambda n: 1.0),
+                (ComplexityClass.LOGARITHMIC, lambda n: math.log2(max(n, 2))),
+                (ComplexityClass.LINEAR, lambda n: float(n)),
+                (ComplexityClass.LINEARITHMIC, lambda n: n * math.log2(max(n, 2))),
+                (ComplexityClass.QUADRATIC, lambda n: float(n) ** 2),
+                (ComplexityClass.CUBIC, lambda n: float(n) ** 3),
+                (ComplexityClass.EXPONENTIAL, lambda n: 2.0 ** min(n, 63)),
+            ]
+
+
+            def measure_scaling(
+                fn: Callable[[int], Any],
+                sizes: list[int] | None = None,
+                repeats: int = 3,
+            ) -> list[tuple[int, float]]:
+                sizes = sizes or [10, 50, 100, 500, 1000, 5000, 10000]
+                results: list[tuple[int, float]] = []
+                for n in sizes:
+                    best = float("inf")
+                    for _ in range(repeats):
+                        t0 = time.perf_counter()
+                        try:
+                            fn(n)
+                        except Exception:
+                            best = float("inf")
+                            break
+                        elapsed = time.perf_counter() - t0
+                        best = min(best, elapsed)
+                    if best != float("inf") and best > 0:
+                        results.append((n, best))
+                return results
+
+
+            def fit_complexity(samples: list[tuple[int, float]]) -> Complexity:
+                if len(samples) < 3:
+                    return Complexity(
+                        cls=ComplexityClass.UNKNOWN,
+                        sample_size=len(samples),
+                        notes="need >= 3 samples",
+                    )
+
+                best_class = ComplexityClass.UNKNOWN
+                best_error = float("inf")
+                coeffs: list[tuple[str, float]] = []
+                xs = [t for _, t in samples]
+
+                for cls, fn in _CANDIDATES:
+                    ys = [fn(n) for n, _ in samples]
+                    if any(math.isinf(y) or math.isnan(y) for y in ys):
+                        continue
+                    denom = sum(y * y for y in ys)
+                    if denom == 0:
+                        continue
+                    k = sum(x * y for x, y in zip(xs, ys)) / denom
+                    residuals = [x - k * y for x, y in zip(xs, ys)]
+                    sse = sum(r * r for r in residuals)
+                    coeffs.append((cls.value, k))
+                    if sse < best_error:
+                        best_error = sse
+                        best_class = cls
+
+                mean_t = sum(t for _, t in samples) / len(samples)
+                ss_total = sum((t - mean_t) ** 2 for _, t in samples)
+                r2 = max(0.0, 1.0 - best_error / ss_total) if ss_total > 0 else 0.0
+
+                return Complexity(
+                    cls=best_class,
+                    sample_size=len(samples),
+                    r_squared=r2,
+                    coefficients=tuple(coeffs),
+                )
+
+
+            def analyze_complexity(
+                fn: Callable[[int], Any],
+                sizes: list[int] | None = None,
+                repeats: int = 3,
+            ) -> Complexity:
+                samples = measure_scaling(fn, sizes=sizes, repeats=repeats)
+                return fit_complexity(samples)
+        '''))
+
+        self.writer.write(f"{base}/helpers/memory_analyzer.py", dedent('''\
+            """Memory analyzer"""
+            from __future__ import annotations
+            import gc
+            import tracemalloc
+            from typing import Any
+
+
+            def take_snapshot() -> list[tuple[str, int, int]]:
+                if not tracemalloc.is_tracing():
+                    tracemalloc.start()
+                gc.collect()
+                snap = tracemalloc.take_snapshot()
+                stats = snap.statistics("lineno")
+                return [(str(s.traceback), s.size, s.count) for s in stats[:50]]
+
+
+            def diff_snapshots(
+                before: list[tuple[str, int, int]],
+                after: list[tuple[str, int, int]],
+            ) -> list[dict[str, Any]]:
+                b_map = {k: (size, count) for k, size, count in before}
+                a_map = {k: (size, count) for k, size, count in after}
+                keys = set(b_map) | set(a_map)
+                diffs: list[dict[str, Any]] = []
+                for k in keys:
+                    b_size, b_count = b_map.get(k, (0, 0))
+                    a_size, a_count = a_map.get(k, (0, 0))
+                    delta = a_size - b_size
+                    if delta == 0:
+                        continue
+                    diffs.append({
+                        "location": k,
+                        "before_bytes": b_size,
+                        "after_bytes": a_size,
+                        "delta_bytes": delta,
+                        "delta_count": a_count - b_count,
+                    })
+                diffs.sort(key=lambda d: d["delta_bytes"], reverse=True)
+                return diffs[:50]
+
+
+            def detect_leaks(
+                snapshots: list[list[tuple[str, int, int]]],
+                threshold_mb_per_hour: float = 10.0,
+            ) -> list[dict[str, Any]]:
+                if len(snapshots) < 3:
+                    return []
+
+                counters: dict[str, list[int]] = {}
+                for snap in snapshots:
+                    for loc, size, _ in snap:
+                        counters.setdefault(loc, []).append(size)
+
+                leaks: list[dict[str, Any]] = []
+                for loc, sizes in counters.items():
+                    if len(sizes) < 3:
+                        continue
+                    n = len(sizes)
+                    xs = list(range(n))
+                    mean_x = sum(xs) / n
+                    mean_y = sum(sizes) / n
+                    num = sum((x - mean_x) * (y - mean_y) for x, y in zip(xs, sizes))
+                    den = sum((x - mean_x) ** 2 for x in xs)
+                    slope = num / den if den else 0.0
+                    growth_mb = slope / (1024 * 1024)
+                    if growth_mb > threshold_mb_per_hour:
+                        leaks.append({
+                            "location": loc,
+                            "growth_mb_per_hour": growth_mb,
+                            "current_bytes": sizes[-1],
+                            "samples": n,
+                        })
+                leaks.sort(key=lambda d: d["growth_mb_per_hour"], reverse=True)
+                return leaks[:20]
+
+
+            def get_memory_info() -> dict[str, Any]:
+                try:
+                    import psutil
+                    proc = psutil.Process()
+                    mem = proc.memory_info()
+                    return {
+                        "rss_mb": mem.rss / (1024 * 1024),
+                        "vms_mb": mem.vms / (1024 * 1024),
+                        "percent": proc.memory_percent(),
+                        "cpu_percent": proc.cpu_percent(interval=0.1),
+                    }
+                except ImportError:
+                    return {"rss_mb": 0.0, "vms_mb": 0.0, "percent": 0.0, "cpu_percent": 0.0}
+        '''))
+
+        # entities
+        self.writer.write(f"{base}/entities/__init__.py", dedent('''\
+            """bigo entities"""
+            from .kafka_consumer import KafkaConsumer
+            from .kafka_queue import KafkaQueue
+            from .kafka_topic import KafkaTopic
+            from .memory_leak import MemoryLeak
+            from .memory_snapshot import MemorySnapshot
+            from .metric import Metric
+            from .profile import Profile
+
+            __all__ = [
+                "KafkaConsumer", "KafkaQueue", "KafkaTopic",
+                "MemoryLeak", "MemorySnapshot", "Metric", "Profile",
+            ]
+        '''))
+
+        for name, cls, fields in [
+            ("metric", "Metric", [
+                ("id", "uuid.UUID"), ("tenant_id", "uuid.UUID"),
+                ("kind", "str"), ("name", "str"), ("value", "float"),
+                ("unit", "str"), ("labels_json", "str"),
+                ("captured_at", "datetime"),
+            ]),
+            ("profile", "Profile", [
+                ("id", "uuid.UUID"), ("tenant_id", "uuid.UUID"),
+                ("function_name", "str"), ("module", "str"),
+                ("complexity", "str"), ("sample_size", "int"),
+                ("avg_ms", "float"), ("p95_ms", "float"),
+                ("memory_peak_mb", "float"), ("notes", "str"),
+                ("captured_at", "datetime"),
+            ]),
+            ("memory_snapshot", "MemorySnapshot", [
+                ("id", "uuid.UUID"), ("tenant_id", "uuid.UUID"),
+                ("process_id", "int"), ("rss_mb", "float"),
+                ("vms_mb", "float"), ("percent", "float"),
+                ("pressure", "str"), ("top_allocations_json", "str"),
+                ("captured_at", "datetime"),
+            ]),
+            ("memory_leak", "MemoryLeak", [
+                ("id", "uuid.UUID"), ("tenant_id", "uuid.UUID"),
+                ("location", "str"), ("leak_type", "str"),
+                ("growth_mb_per_hour", "float"), ("current_bytes", "int"),
+                ("samples", "int"), ("status", "str"),
+                ("detected_at", "datetime"),
+            ]),
+            ("kafka_topic", "KafkaTopic", [
+                ("id", "uuid.UUID"), ("tenant_id", "uuid.UUID"),
+                ("name", "str"), ("partitions", "int"),
+                ("replication_factor", "int"), ("retention_ms", "int"),
+                ("max_message_bytes", "int"), ("is_active", "bool"),
+                ("created_at", "datetime"),
+            ]),
+            ("kafka_queue", "KafkaQueue", [
+                ("id", "uuid.UUID"), ("tenant_id", "uuid.UUID"),
+                ("topic", "str"), ("partition", "int"),
+                ("current_offset", "int"), ("log_end_offset", "int"),
+                ("lag", "int"), ("health", "str"),
+                ("captured_at", "datetime"),
+            ]),
+            ("kafka_consumer", "KafkaConsumer", [
+                ("id", "uuid.UUID"), ("tenant_id", "uuid.UUID"),
+                ("group_id", "str"), ("topic", "str"),
+                ("member_count", "int"), ("total_lag", "int"),
+                ("health", "str"), ("last_commit_at", "datetime"),
+                ("captured_at", "datetime"),
+            ]),
+        ]:
+            self.writer.write(f"{base}/entities/{name}.py", self._entity_content(cls, fields))
+
+    def _entity_content(self, cls: str, fields: list) -> str:
+        """Generate entity file.
+        
+        ใช้ string concatenation แทน dedent(f'''...''') เพราะ dedent
+        ไม่ทำงานถูกต้องเมื่อมี field_lines ที่ inject เข้าไปใน f-string
+        """
+        field_lines: list[str] = []
+        for fname, ftype in fields:
+            if fname == "id":
+                field_lines.append(
+                    f'    {fname}: {ftype} = field(default_factory=uuid.uuid4)'
+                )
+            elif fname in ("captured_at", "created_at", "detected_at"):
+                field_lines.append(
+                    f'    {fname}: {ftype} = field('
+                    f'default_factory=lambda: datetime.now(UTC))'
+                )
+            elif fname == "last_commit_at":
+                field_lines.append(f'    {fname}: {ftype} | None = None')
+            elif fname in ("notes", "labels_json", "top_allocations_json"):
+                field_lines.append(f'    {fname}: {ftype} = ""')
+            elif fname == "is_active":
+                field_lines.append(f'    {fname}: {ftype} = True')
+            elif ftype == "str":
+                field_lines.append(f'    {fname}: {ftype} = ""')
+            elif ftype == "int":
+                field_lines.append(f'    {fname}: {ftype} = 0')
+            elif ftype == "float":
+                field_lines.append(f'    {fname}: {ftype} = 0.0')
+            else:
+                field_lines.append(f'    {fname}: {ftype}')
+
+        fields_block = "\n".join(field_lines)
+
+        return (
+            f'"""{cls} entity"""\n'
+            "from __future__ import annotations\n"
+            "import uuid\n"
+            "from dataclasses import dataclass, field\n"
+            "from datetime import UTC, datetime\n"
+            "\n"
+            "\n"
+            "@dataclass(slots=True)\n"
+            f"class {cls}:\n"
+            f'    """TH: {cls} | EN: {cls} entity"""\n'
+            f"{fields_block}\n"
+        )
+
+    # ─── APPLICATION ────────────────────────────────────────────
+    def _create_application(self) -> None:
+        base = f"{self.mod_root}/application"
+
+        self.writer.write(f"{base}/__init__.py", '"""bigo application layer"""')
+        self.writer.write(f"{base}/exceptions.py", self._app_exceptions())
+        self.writer.write(f"{base}/interfaces.py", self._interfaces_content())
+        self.writer.write(f"{base}/mappers.py", self._mappers_content())
+        self.writer.write(f"{base}/use_case.py", self._use_case_content())
+
+    def _app_exceptions(self) -> str:
+        return dedent('''\
+            """bigo application exceptions"""
+            from __future__ import annotations
+
+
+            class ApplicationError(Exception):
+                code: str = "APP_ERROR"
+                http_status: int = 400
+
+
+            class ProfileNotFoundAppError(ApplicationError):
+                code = "PROFILE_NOT_FOUND"; http_status = 404
+
+
+            class SnapshotNotFoundAppError(ApplicationError):
+                code = "SNAPSHOT_NOT_FOUND"; http_status = 404
+
+
+            class LeakNotFoundAppError(ApplicationError):
+                code = "LEAK_NOT_FOUND"; http_status = 404
+
+
+            class TopicNotFoundAppError(ApplicationError):
+                code = "TOPIC_NOT_FOUND"; http_status = 404
+
+
+            class QueueNotFoundAppError(ApplicationError):
+                code = "QUEUE_NOT_FOUND"; http_status = 404
+
+
+            class ConsumerNotFoundAppError(ApplicationError):
+                code = "CONSUMER_NOT_FOUND"; http_status = 404
+
+
+            class MemoryLimitAppError(ApplicationError):
+                code = "MEMORY_LIMIT_EXCEEDED"; http_status = 507
+
+
+            class LagThresholdAppError(ApplicationError):
+                code = "LAG_THRESHOLD_EXCEEDED"; http_status = 429
+
+
+            class KafkaConnectionAppError(ApplicationError):
+                code = "KAFKA_CONNECTION_ERROR"; http_status = 502
+        ''')
+
+    def _interfaces_content(self) -> str:
+        return dedent('''\
+            """bigo application ports"""
+            from __future__ import annotations
+            import uuid
+            from abc import ABC, abstractmethod
+            from datetime import datetime
+            from typing import Any, Protocol
+
+            from app.modules.bigo.domain.value_objects import Complexity
+
+
+            class RequestContext(Protocol):
+                @property
+                def tenant_id(self) -> uuid.UUID: ...
+                @property
+                def user_id(self) -> uuid.UUID | None: ...
+
+
+            class MetricRepository(ABC):
+                @abstractmethod
+                async def create(self, ctx: Any, metric: Any) -> Any: ...
+                @abstractmethod
+                async def find_by_kind(self, ctx: Any, kind: str, since: datetime, limit: int) -> list[Any]: ...
+                @abstractmethod
+                async def aggregate(self, ctx: Any, name: str, since: datetime) -> dict[str, Any]: ...
+
+
+            class ProfileRepository(ABC):
+                @abstractmethod
+                async def create(self, ctx: Any, profile: Any) -> Any: ...
+                @abstractmethod
+                async def find_by_id(self, ctx: Any, id: uuid.UUID) -> Any | None: ...
+                @abstractmethod
+                async def find_by_function(self, ctx: Any, function_name: str, limit: int) -> list[Any]: ...
+                @abstractmethod
+                async def find_recent(self, ctx: Any, since: datetime, limit: int) -> list[Any]: ...
+
+
+            class MemoryRepository(ABC):
+                @abstractmethod
+                async def save_snapshot(self, ctx: Any, snap: Any) -> Any: ...
+                @abstractmethod
+                async def save_leak(self, ctx: Any, leak: Any) -> Any: ...
+                @abstractmethod
+                async def find_snapshots(self, ctx: Any, since: datetime, limit: int) -> list[Any]: ...
+                @abstractmethod
+                async def find_leaks(self, ctx: Any, status: str = "OPEN", limit: int = 50) -> list[Any]: ...
+                @abstractmethod
+                async def update_leak_status(self, ctx: Any, leak_id: uuid.UUID, status: str) -> bool: ...
+
+
+            class KafkaTopicRepository(ABC):
+                @abstractmethod
+                async def save(self, ctx: Any, topic: Any) -> Any: ...
+                @abstractmethod
+                async def find_by_name(self, ctx: Any, name: str) -> Any | None: ...
+                @abstractmethod
+                async def find_all_active(self, ctx: Any) -> list[Any]: ...
+                @abstractmethod
+                async def update(self, ctx: Any, topic: Any) -> Any: ...
+
+
+            class KafkaQueueRepository(ABC):
+                @abstractmethod
+                async def save(self, ctx: Any, q: Any) -> Any: ...
+                @abstractmethod
+                async def find_by_topic(self, ctx: Any, topic: str, limit: int) -> list[Any]: ...
+                @abstractmethod
+                async def latest_by_topic(self, ctx: Any, topic: str) -> list[Any]: ...
+                @abstractmethod
+                async def total_lag(self, ctx: Any, topic: str) -> int: ...
+
+
+            class KafkaConsumerRepository(ABC):
+                @abstractmethod
+                async def save(self, ctx: Any, c: Any) -> Any: ...
+                @abstractmethod
+                async def find_by_group(self, ctx: Any, group_id: str) -> Any | None: ...
+                @abstractmethod
+                async def find_all(self, ctx: Any, limit: int) -> list[Any]: ...
+                @abstractmethod
+                async def update_lag(self, ctx: Any, consumer_id: uuid.UUID, total_lag: int, health: str) -> None: ...
+
+
+            class PipelineReportRepository(ABC):
+                @abstractmethod
+                async def save(self, ctx: Any, report: Any) -> Any: ...
+                @abstractmethod
+                async def find_recent(self, ctx: Any, since: datetime, limit: int) -> list[Any]: ...
+                @abstractmethod
+                async def find_by_trace(self, ctx: Any, trace_id: str) -> Any | None: ...
+
+
+            class ComplexityAnalyzer(Protocol):
+                def analyze(self, fn: Any, sizes: list[int] | None = None) -> Complexity: ...
+
+
+            class MemoryProfiler(Protocol):
+                def snapshot(self) -> list[tuple[str, int, int]]: ...
+                def diff(self, before: list[tuple[str, int, int]], after: list[tuple[str, int, int]]) -> list[dict[str, Any]]: ...
+                def info(self) -> dict[str, Any]: ...
+
+
+            class KafkaAdmin(Protocol):
+                async def list_topics(self) -> list[str]: ...
+                async def describe_topic(self, name: str) -> dict[str, Any]: ...
+                async def consumer_lag(self, group_id: str, topic: str) -> dict[str, Any]: ...
+                async def create_topic(self, name: str, partitions: int, replication: int) -> None: ...
+                async def delete_topic(self, name: str) -> None: ...
+
+
+            class BackpressureController(Protocol):
+                async def activate(self, topic: str, reason: str) -> None: ...
+                async def deactivate(self, topic: str) -> None: ...
+                async def is_active(self, topic: str) -> bool: ...
+
+
+            class CachePort(ABC):
+                @abstractmethod
+                async def get(self, key: str) -> Any | None: ...
+                @abstractmethod
+                async def set(self, key: str, value: Any, ttl: int = 60) -> bool: ...
+                @abstractmethod
+                async def invalidate(self, key: str) -> bool: ...
+
+
+            class EventBus(ABC):
+                @abstractmethod
+                async def publish(self, event: object) -> None: ...
+        ''')
+
+    def _mappers_content(self) -> str:
+        return dedent('''\
+            """bigo mappers"""
+            from __future__ import annotations
+            from typing import Any
+
+
+            def profile_to_dict(row: Any) -> dict[str, Any]:
+                return {"id": str(row.id), "function_name": row.function_name,
+                        "module": row.module, "complexity": row.complexity,
+                        "sample_size": row.sample_size, "avg_ms": row.avg_ms,
+                        "p95_ms": row.p95_ms, "memory_peak_mb": row.memory_peak_mb,
+                        "notes": row.notes,
+                        "captured_at": row.captured_at.isoformat() if row.captured_at else ""}
+
+
+            def snapshot_to_dict(row: Any) -> dict[str, Any]:
+                return {"id": str(row.id), "process_id": row.process_id,
+                        "rss_mb": row.rss_mb, "vms_mb": row.vms_mb,
+                        "percent": row.percent, "pressure": row.pressure,
+                        "captured_at": row.captured_at.isoformat() if row.captured_at else ""}
+
+
+            def leak_to_dict(row: Any) -> dict[str, Any]:
+                return {"id": str(row.id), "location": row.location,
+                        "leak_type": row.leak_type,
+                        "growth_mb_per_hour": row.growth_mb_per_hour,
+                        "current_bytes": row.current_bytes, "samples": row.samples,
+                        "status": row.status,
+                        "detected_at": row.detected_at.isoformat() if row.detected_at else ""}
+
+
+            def topic_to_dict(row: Any) -> dict[str, Any]:
+                return {"id": str(row.id), "name": row.name, "partitions": row.partitions,
+                        "replication_factor": row.replication_factor,
+                        "retention_ms": row.retention_ms,
+                        "max_message_bytes": row.max_message_bytes,
+                        "is_active": row.is_active}
+
+
+            def queue_to_dict(row: Any) -> dict[str, Any]:
+                return {"id": str(row.id), "topic": row.topic, "partition": row.partition,
+                        "current_offset": row.current_offset,
+                        "log_end_offset": row.log_end_offset, "lag": row.lag,
+                        "health": row.health,
+                        "captured_at": row.captured_at.isoformat() if row.captured_at else ""}
+
+
+            def consumer_to_dict(row: Any) -> dict[str, Any]:
+                return {"id": str(row.id), "group_id": row.group_id, "topic": row.topic,
+                        "member_count": row.member_count, "total_lag": row.total_lag,
+                        "health": row.health,
+                        "last_commit_at": row.last_commit_at.isoformat() if row.last_commit_at else None}
+
+
+            def pipeline_report_to_dict(row: Any) -> dict[str, Any]:
+                return {"id": str(row.id), "trace_id": row.trace_id, "n": row.n,
+                        "complexity": row.complexity, "status": row.status,
+                        "priority": row.priority, "rss_mb": row.rss_mb,
+                        "pressure": row.pressure, "duration_ms": row.duration_ms,
+                        "kafka_partition": row.kafka_partition,
+                        "kafka_sent": row.kafka_sent}
+        ''')
+
+    def _use_case_content(self) -> str:
+        return dedent('''\
+            """bigo use cases — Monitoring orchestration"""
+            from __future__ import annotations
+
+            import uuid
+            from datetime import UTC, datetime, timedelta
+            from typing import Any
+
+            import structlog
+
+            from app.modules.bigo.application.interfaces import (
+                BackpressureController, CachePort, ComplexityAnalyzer, EventBus,
+                KafkaAdmin, KafkaConsumerRepository, KafkaQueueRepository,
+                KafkaTopicRepository, MemoryProfiler, MemoryRepository,
+                MetricRepository, PipelineReportRepository,
+                ProfileRepository, RequestContext,
+            )
+            from app.modules.bigo.domain.enums import KafkaHealth, MemoryPressure
+            from app.modules.bigo.domain.events import (
+                AlertTriggered, ProfileCaptured,
+            )
+            from app.modules.bigo.domain.exceptions import KafkaConnectionError
+            from app.modules.bigo.infrastructure.models import (
+                KafkaConsumerModel, KafkaQueueModel, MemoryLeakModel,
+                MemorySnapshotModel, MetricModel, ProfileModel,
+            )
+
+            log = structlog.get_logger()
+
+
+            class BigOUseCase:
+                """TH: use cases สำหรับ Big-O monitoring"""
+
+                def __init__(
+                    self,
+                    metric_repo: MetricRepository,
+                    profile_repo: ProfileRepository,
+                    memory_repo: MemoryRepository,
+                    topic_repo: KafkaTopicRepository,
+                    queue_repo: KafkaQueueRepository,
+                    consumer_repo: KafkaConsumerRepository,
+                    complexity: ComplexityAnalyzer,
+                    memory: MemoryProfiler,
+                    kafka: KafkaAdmin,
+                    backpressure: BackpressureController,
+                    cache: CachePort,
+                    event_bus: EventBus,
+                    pipeline_report_repo: PipelineReportRepository | None = None,
+                ) -> None:
+                    self._metric_repo = metric_repo
+                    self._profile_repo = profile_repo
+                    self._memory_repo = memory_repo
+                    self._topic_repo = topic_repo
+                    self._queue_repo = queue_repo
+                    self._consumer_repo = consumer_repo
+                    self._complexity = complexity
+                    self._memory = memory
+                    self._kafka = kafka
+                    self._bp = backpressure
+                    self._cache = cache
+                    self._bus = event_bus
+                    self._pipeline_reports = pipeline_report_repo
+
+                async def analyze_function(
+                    self, ctx: RequestContext, *,
+                    fn: Any, name: str = "", module: str = "",
+                    sizes: list[int] | None = None,
+                ) -> dict[str, Any]:
+                    log.info("bigo.analyze.start", name=name)
+                    try:
+                        result = self._complexity.analyze(fn, sizes=sizes)
+                        row = ProfileModel(
+                            tenant_id=ctx.tenant_id,
+                            function_name=name or getattr(fn, "__name__", "unknown"),
+                            module=module or getattr(fn, "__module__", ""),
+                            complexity=result.notation,
+                            sample_size=result.sample_size,
+                            avg_ms=0.0, p95_ms=0.0, memory_peak_mb=0.0,
+                            notes=result.notes,
+                        )
+                        saved = await self._profile_repo.create(ctx, row)
+                        await self._bus.publish(ProfileCaptured(
+                            profile_id=saved.id, tenant_id=ctx.tenant_id,
+                            function_name=saved.function_name,
+                            complexity=saved.complexity,
+                            sample_size=saved.sample_size,
+                        ))
+                        return {
+                            "profile_id": str(saved.id),
+                            "function_name": saved.function_name,
+                            "complexity": saved.complexity,
+                            "sample_size": saved.sample_size,
+                            "r_squared": result.r_squared,
+                            "coefficients": dict(result.coefficients),
+                        }
+                    except Exception:
+                        log.exception("bigo.analyze.failed")
+                        raise
+
+                async def list_profiles(
+                    self, ctx: RequestContext, *,
+                    function_name: str = "", since_days: int = 7, limit: int = 100,
+                ) -> list[dict[str, Any]]:
+                    if function_name:
+                        rows = await self._profile_repo.find_by_function(ctx, function_name, limit)
+                    else:
+                        since = datetime.now(UTC) - timedelta(days=since_days)
+                        rows = await self._profile_repo.find_recent(ctx, since, limit)
+                    return [
+                        {"id": str(r.id), "function_name": r.function_name,
+                         "module": r.module, "complexity": r.complexity,
+                         "sample_size": r.sample_size, "avg_ms": r.avg_ms,
+                         "p95_ms": r.p95_ms,
+                         "captured_at": r.captured_at.isoformat() if r.captured_at else ""}
+                        for r in rows
+                    ]
+
+                async def take_memory_snapshot(self, ctx: RequestContext) -> dict[str, Any]:
+                    try:
+                        info = self._memory.info()
+                        rss_mb = float(info.get("rss_mb", 0.0))
+                        vms_mb = float(info.get("vms_mb", 0.0))
+                        percent = float(info.get("percent", 0.0))
+                        pressure = self._classify_pressure(rss_mb, percent)
+                        allocations = self._memory.snapshot()
+                        row = MemorySnapshotModel(
+                            tenant_id=ctx.tenant_id, process_id=0,
+                            rss_mb=rss_mb, vms_mb=vms_mb, percent=percent,
+                            pressure=pressure.value,
+                            top_allocations_json=str(allocations[:20]),
+                        )
+                        saved = await self._memory_repo.save_snapshot(ctx, row)
+                        return {
+                            "snapshot_id": str(saved.id),
+                            "rss_mb": rss_mb, "vms_mb": vms_mb,
+                            "percent": percent, "pressure": pressure.value,
+                            "top_allocations": allocations[:10],
+                        }
+                    except Exception:
+                        log.exception("bigo.snapshot.failed")
+                        raise
+
+                async def detect_memory_leaks(
+                    self, ctx: RequestContext, *,
+                    threshold_mb_per_hour: float = 10.0,
+                ) -> list[dict[str, Any]]:
+                    from app.modules.bigo.domain.helpers.memory_analyzer import detect_leaks
+                    since = datetime.now(UTC) - timedelta(hours=24)
+                    snaps = await self._memory_repo.find_snapshots(ctx, since, 50)
+                    snapshots_data = [
+                        [(s.top_allocations_json, int(s.rss_mb * 1024 * 1024), 0)]
+                        for s in snaps
+                    ]
+                    leaks = detect_leaks(snapshots_data, threshold_mb_per_hour)
+                    saved_leaks: list[dict[str, Any]] = []
+                    for lk in leaks:
+                        row = MemoryLeakModel(
+                            tenant_id=ctx.tenant_id,
+                            location=lk["location"][:500],
+                            leak_type="UNKNOWN",
+                            growth_mb_per_hour=lk["growth_mb_per_hour"],
+                            current_bytes=lk["current_bytes"],
+                            samples=lk["samples"], status="OPEN",
+                        )
+                        saved = await self._memory_repo.save_leak(ctx, row)
+                        saved_leaks.append({
+                            "id": str(saved.id),
+                            "location": saved.location,
+                            "growth_mb_per_hour": saved.growth_mb_per_hour,
+                            "status": saved.status,
+                        })
+                    return saved_leaks
+
+                async def list_leaks(
+                    self, ctx: RequestContext, *, status: str = "OPEN", limit: int = 50,
+                ) -> list[dict[str, Any]]:
+                    rows = await self._memory_repo.find_leaks(ctx, status, limit)
+                    return [
+                        {"id": str(r.id), "location": r.location,
+                         "leak_type": r.leak_type,
+                         "growth_mb_per_hour": r.growth_mb_per_hour,
+                         "current_bytes": r.current_bytes, "status": r.status}
+                        for r in rows
+                    ]
+
+                async def resolve_leak(
+                    self, ctx: RequestContext, leak_id: uuid.UUID,
+                ) -> dict[str, Any]:
+                    ok_flag = await self._memory_repo.update_leak_status(ctx, leak_id, "RESOLVED")
+                    return {"id": str(leak_id), "status": "RESOLVED", "updated": ok_flag}
+
+                async def register_topic(
+                    self, ctx: RequestContext, *,
+                    name: str, partitions: int = 3, replication: int = 1,
+                    retention_ms: int = 604800000, max_message_bytes: int = 1048576,
+                ) -> dict[str, Any]:
+                    existing = await self._topic_repo.find_by_name(ctx, name)
+                    if existing:
+                        return {"id": str(existing.id), "name": existing.name,
+                                "partitions": existing.partitions, "already_exists": True}
+                    row = KafkaTopicModel(
+                        tenant_id=ctx.tenant_id, name=name, partitions=partitions,
+                        replication_factor=replication, retention_ms=retention_ms,
+                        max_message_bytes=max_message_bytes, is_active=True,
+                    )
+                    saved = await self._topic_repo.save(ctx, row)
+                    try:
+                        await self._kafka.create_topic(name, partitions, replication)
+                    except Exception as exc:
+                        log.warning("bigo.kafka.create_failed", err=str(exc))
+                    return {"id": str(saved.id), "name": saved.name,
+                            "partitions": saved.partitions,
+                            "replication_factor": saved.replication_factor,
+                            "already_exists": False}
+
+                async def list_topics(self, ctx: RequestContext) -> list[dict[str, Any]]:
+                    rows = await self._topic_repo.find_all_active(ctx)
+                    return [
+                        {"id": str(r.id), "name": r.name, "partitions": r.partitions,
+                         "replication_factor": r.replication_factor, "is_active": r.is_active}
+                        for r in rows
+                    ]
+
+                async def monitor_lag(
+                    self, ctx: RequestContext, *,
+                    group_id: str, topic: str, threshold: int = 10000,
+                ) -> dict[str, Any]:
+                    try:
+                        info = await self._kafka.consumer_lag(group_id, topic)
+                    except Exception as exc:
+                        raise KafkaConnectionError(str(exc)) from exc
+                    total_lag = int(info.get("total_lag", 0))
+                    health = self._classify_kafka_health(total_lag, threshold)
+                    for p in info.get("partitions", []):
+                        q_row = KafkaQueueModel(
+                            tenant_id=ctx.tenant_id, topic=topic,
+                            partition=int(p.get("partition", 0)),
+                            current_offset=int(p.get("current_offset", 0)),
+                            log_end_offset=int(p.get("log_end_offset", 0)),
+                            lag=int(p.get("lag", 0)), health=health.value,
+                        )
+                        await self._queue_repo.save(ctx, q_row)
+                    c_row = KafkaConsumerModel(
+                        tenant_id=ctx.tenant_id, group_id=group_id, topic=topic,
+                        member_count=int(info.get("member_count", 0)),
+                        total_lag=total_lag, health=health.value,
+                        last_commit_at=datetime.now(UTC),
+                    )
+                    saved = await self._consumer_repo.save(ctx, c_row)
+                    return {"consumer_id": str(saved.id), "topic": topic,
+                            "group_id": group_id, "total_lag": total_lag,
+                            "health": health.value,
+                            "partitions": info.get("partitions", [])}
+
+                async def activate_backpressure(
+                    self, ctx: RequestContext, *,
+                    topic: str, reason: str = "lag_exceeded",
+                ) -> dict[str, Any]:
+                    try:
+                        await self._bp.activate(topic, reason)
+                    except Exception as exc:
+                        log.warning("bigo.bp.activate_failed", err=str(exc))
+                    return {"topic": topic, "active": True, "reason": reason}
+
+                async def deactivate_backpressure(
+                    self, ctx: RequestContext, topic: str,
+                ) -> dict[str, Any]:
+                    try:
+                        await self._bp.deactivate(topic)
+                    except Exception as exc:
+                        log.warning("bigo.bp.deactivate_failed", err=str(exc))
+                    return {"topic": topic, "active": False}
+
+                async def record_metric(
+                    self, ctx: RequestContext, *,
+                    kind: str, name: str, value: float,
+                    unit: str = "", labels: dict[str, Any] | None = None,
+                ) -> dict[str, Any]:
+                    row = MetricModel(
+                        tenant_id=ctx.tenant_id, kind=kind, name=name,
+                        value=value, unit=unit, labels_json=str(labels or {}),
+                    )
+                    saved = await self._metric_repo.create(ctx, row)
+                    return {"id": str(saved.id), "kind": saved.kind,
+                            "name": saved.name, "value": saved.value,
+                            "unit": saved.unit}
+
+                async def get_metrics(
+                    self, ctx: RequestContext, *,
+                    kind: str = "", days: int = 1, limit: int = 500,
+                ) -> list[dict[str, Any]]:
+                    since = datetime.now(UTC) - timedelta(days=days)
+                    rows = await self._metric_repo.find_by_kind(ctx, kind, since, limit)
+                    return [
+                        {"id": str(r.id), "kind": r.kind, "name": r.name,
+                         "value": r.value, "unit": r.unit,
+                         "captured_at": r.captured_at.isoformat() if r.captured_at else ""}
+                        for r in rows
+                    ]
+
+                async def trigger_alert(
+                    self, ctx: RequestContext, *,
+                    severity: str, kind: str, message: str,
+                    payload: dict[str, Any] | None = None,
+                ) -> dict[str, Any]:
+                    alert_id = uuid.uuid4()
+                    await self._bus.publish(AlertTriggered(
+                        alert_id=alert_id, tenant_id=ctx.tenant_id,
+                        severity=severity, kind=kind, message=message,
+                        payload=payload or {},
+                    ))
+                    return {"alert_id": str(alert_id), "severity": severity,
+                            "kind": kind, "message": message}
+
+                def _classify_pressure(self, rss_mb: float, percent: float) -> MemoryPressure:
+                    if rss_mb >= 4096 or percent >= 95:
+                        return MemoryPressure.OOM
+                    if rss_mb >= 2048 or percent >= 85:
+                        return MemoryPressure.CRITICAL
+                    if rss_mb >= 1024 or percent >= 70:
+                        return MemoryPressure.HIGH
+                    if rss_mb >= 512 or percent >= 50:
+                        return MemoryPressure.ELEVATED
+                    return MemoryPressure.NORMAL
+
+                def _classify_kafka_health(self, lag: int, threshold: int) -> KafkaHealth:
+                    if lag <= 0:
+                        return KafkaHealth.HEALTHY
+                    if lag < threshold * 0.5:
+                        return KafkaHealth.HEALTHY
+                    if lag < threshold:
+                        return KafkaHealth.WARNING
+                    if lag < threshold * 2:
+                        return KafkaHealth.DEGRADED
+                    return KafkaHealth.CRITICAL
+        ''')
+
+# ═══════════════════════════════════════════════════════════════
+# END PART 1/4 — ต่อไปเป็น PART 2/4
+# ═══════════════════════════════════════════════════════════════

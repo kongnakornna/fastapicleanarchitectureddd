@@ -15,6 +15,7 @@ from app.core.security import (
 from app.core.settings import settings
 from app.modules.authentication.application.exceptions import (
     AuthenticationException,
+    RefreshTokenException,
 )
 from app.modules.authentication.application.mappers import (
     entity_forgot_password_mapper,
@@ -224,18 +225,48 @@ async def refresh(
 ) -> RefreshResponse:
     """Refresh tokens endpoint."""
     try:
+        # TH: diagnostic log — เห็นค่า binding ครบก่อนเรียก use case
+        # EN: diagnostic log — visibility into binding before use case
+        has_refresh = authentication.refresh_token is not None
+        has_access = (
+            authentication.refresh_token is not None
+            and authentication.refresh_token.access_token is not None
+        )
+        logger.debug(
+            f"Refresh endpoint start — user_id={authentication.user.id} "
+            f"device={authentication.device!r} "
+            f"user_agent={authentication.user_agent!r} "
+            f"has_refresh={has_refresh} has_access={has_access}"
+        )
+
+        if not has_refresh or not has_access:
+            logger.error(
+                f"Refresh aborted at router: incomplete token pair "
+                f"(has_refresh={has_refresh}, has_access={has_access})."
+            )
+            raise RefreshTokenException(
+                cause="incomplete token pair at router entry"
+            )
+
         request_domain = refresh_entity_mapper(authentication)
         response_domain = await use_case.refresh(request_domain)
         output = entity_refresh_mapper(response_domain)
 
         set_cookies(response, response_domain)
+
+        logger.debug(
+            f"Refresh endpoint success — user_id={response_domain.user.id}"
+        )
         return output
     except StandardException:
         raise
     except DomainError as e:
         raise DomainException(e)
     except Exception as e:
-        logger.opt(exception=e).error("An error occurred in the refresh endpoint.")
+        logger.opt(exception=e).error(
+            f"An error occurred in the refresh endpoint: "
+            f"{type(e).__name__}: {e}"
+        )
         raise AuthenticationException()
 
 # ============================================================================

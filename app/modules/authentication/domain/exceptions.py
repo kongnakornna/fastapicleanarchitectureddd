@@ -4,7 +4,7 @@ from http import HTTPStatus
 
 from app.modules.shared.application.exceptions import StandardException
 from app.modules.shared.domain.enums import ResponseMessages
-
+import os
 
 # ============================================================================
 # GENERIC EXCEPTIONS
@@ -51,13 +51,24 @@ class HashingException(StandardException):
 class RefreshTokenException(StandardException):
     """Exception for refresh token errors."""
 
-    def __init__(self) -> None:
+    def __init__(self, cause: str | None = None) -> None:
+        data: dict = {
+            "errors": (
+                "An error occurred while processing the refresh token. "
+                "Please login again or contact support."
+            ),
+        }
+
+        # TH: แสดง cause เฉพาะ non-production เพื่อ debug
+        # EN: expose cause only outside production for debugging
+        env = os.getenv("APP_ENV", os.getenv("ENV", "development")).lower()
+        if cause and env not in ("production", "prod"):
+            data["cause"] = cause
+
         super().__init__(
             status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
             message=ResponseMessages.INTERNAL_ERROR.value,
-            data={
-                "errors": "An error occurred while processing the refresh token. Please login again or contact support."
-            },
+            data=data,
         )
 
 
@@ -123,16 +134,27 @@ class AuthenticationTokenNotYetValidException(StandardException):
 class AuthenticationTokenMalformedError(StandardException):
     """Exception when token format is malformed."""
 
-    def __init__(self) -> None:
+    def __init__(self, cause: str | None = None) -> None:
+        import os
+
+        data: dict = {
+            "errors": (
+                "Malformed authentication token. Please login again or contact support."
+            ),
+            "errors_th": (
+                "โทเค็นการยืนยันตัวตนมีรูปแบบไม่ถูกต้อง "
+                "กรุณาเข้าสู่ระบบใหม่หรือติดต่อฝ่ายสนับสนุน"
+            ),
+        }
+        env = os.getenv("APP_ENV", os.getenv("ENV", "development")).lower()
+        if cause and env not in ("production", "prod"):
+            data["cause"] = cause
+
         super().__init__(
             status_code=HTTPStatus.UNAUTHORIZED,
             message=ResponseMessages.UNAUTHORIZED_ERROR.value,
-            data={
-                "errors": "Malformed authentication token. Please login again or contact support.",
-                "errors_th": "โทเค็นการยืนยันตัวตนมีรูปแบบไม่ถูกต้อง กรุณาเข้าสู่ระบบใหม่หรือติดต่อฝ่ายสนับสนุน",
-            },
+            data=data,
         )
-
 
 class AuthenticationTokenInvalidException(StandardException):
     """Exception when token is invalid."""
@@ -144,6 +166,7 @@ class AuthenticationTokenInvalidException(StandardException):
             data={
                 "errors": "Invalid authentication token. The provided token is not valid or has been revoked. Please login again or contact support.",
                 "errors_th": "โทเค็นการยืนยันตัวตนไม่ถูกต้อง โทเค็นที่ให้มาไม่ถูกต้องหรือถูกเพิกถอนแล้ว กรุณาเข้าสู่ระบบใหม่หรือติดต่อฝ่ายสนับสนุน",
+                "cade": "2",
             },
         )
 
@@ -221,16 +244,27 @@ class RefreshTokenNotYetValidException(StandardException):
 class RefreshTokenMalformedError(StandardException):
     """Exception when refresh token format is malformed."""
 
-    def __init__(self) -> None:
+    def __init__(self, cause: str | None = None) -> None:
+        import os
+
+        data: dict = {
+            "errors": (
+                "Malformed refresh token. Please login again or contact support."
+            ),
+            "errors_th": (
+                "รีเฟรชโทเค็นมีรูปแบบไม่ถูกต้อง "
+                "กรุณาเข้าสู่ระบบใหม่หรือติดต่อฝ่ายสนับสนุน"
+            ),
+        }
+        env = os.getenv("APP_ENV", os.getenv("ENV", "development")).lower()
+        if cause and env not in ("production", "prod"):
+            data["cause"] = cause
+
         super().__init__(
             status_code=HTTPStatus.UNAUTHORIZED,
             message=ResponseMessages.UNAUTHORIZED_ERROR.value,
-            data={
-                "errors": "Malformed refresh token. Please login again or contact support.",
-                "errors_th": "รีเฟรชโทเค็นมีรูปแบบไม่ถูกต้อง กรุณาเข้าสู่ระบบใหม่หรือติดต่อฝ่ายสนับสนุน",
-            },
+            data=data,
         )
-
 
 class RefreshTokenInvalidEndpoint(StandardException):
     """Exception when refresh endpoint is invalid."""

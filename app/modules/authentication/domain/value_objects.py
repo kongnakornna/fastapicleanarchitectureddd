@@ -95,15 +95,16 @@ class BaseClaims:
 
     @staticmethod
     def _base_kwargs_from_dict(data: dict) -> dict:
-        """Build kwargs from dict."""
+        """Build kwargs from dict (tolerant of missing optional claims)."""
         return {
-            "iss": data["iss"],
-            "sub": str(data["sub"]),
-            "aud": data["aud"],
-            "iat": data["iat"],
-            "nbf": data["nbf"],
-            "exp": data["exp"],
-            "jti": UUID(data["jti"]) if isinstance(data["jti"], str) else data["jti"],
+            "iss": data.get("iss"),
+            "sub": str(data["sub"]) if data.get("sub") is not None else None,
+            "aud": data.get("aud"),
+            "iat": data.get("iat"),
+            "nbf": data.get("nbf"),
+            "exp": data.get("exp"),
+            "jti": UUID(data["jti"]) if isinstance(data.get("jti"), str)
+                   else data.get("jti"),
         }
 
 
@@ -148,8 +149,8 @@ class Claims(BaseClaims):
     def from_dict(cls, data: dict) -> Claims:
         return cls(
             **cls._base_kwargs_from_dict(data),
-            grant_id=data["grant_id"],
-            scope=data["scope"],
+            grant_id=data.get("grant_id"),
+            scope=data.get("scope"),
         )
 
     def __str__(self) -> str:
@@ -225,9 +226,9 @@ class RefreshClaims(BaseClaims):
     def from_dict(cls, data: dict) -> RefreshClaims:
         return cls(
             **cls._base_kwargs_from_dict(data),
-            client_id=data["client_id"],
-            grant_id=data["grant_id"],
-            scope=data["scope"],
+            client_id=data.get("client_id"),
+            grant_id=data.get("grant_id"),
+            scope=data.get("scope"),
         )
 
     def __str__(self) -> str:

@@ -53,9 +53,7 @@ from app.modules.authentication.application.mappers import (
     access_token_entity_mapper,
     refresh_token_entity_mapper,
 )
-from app.modules.authentication.domain.entities import (
-    Authentication,
-)
+from app.modules.authentication.domain.entities import Authentication
 from app.modules.key.application.exceptions import (
     ApiKeyExpiredException,
     ApiKeyInvalidException,
@@ -101,10 +99,73 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
         raise HashingException()
 
 
+# ============================================================================
+# JWT FORMAT HELPERS
+# ============================================================================
+def _detect_jwt_format(token: str) -> str:
+    """TH: 3 segments=JWS, 5 segments=JWE | EN: detect JWT format by segment count"""
+    if not token:
+        return "EMPTY"
+    parts = token.split(".")
+    if len(parts) == 5:
+        return "JWE"
+    if len(parts) == 3:
+        return "JWS"
+    return "UNKNOWN"
+
+
+def _b64url_decode(s: str) -> bytes:
+    import base64
+
+    pad = "=" * (-len(s) % 4)
+    return base64.urlsafe_b64decode(s + pad)
+
+
+def _peek_jwt_header_payload(token: str) -> tuple[dict, dict]:
+    """TH: อ่าน header/payload ก่อน verify | EN: peek JWT header/payload"""
+    try:
+        parts = token.split(".")
+        if len(parts) not in (3, 5):
+            return {}, {}
+        header = json.loads(_b64url_decode(parts[0]))
+        payload = json.loads(_b64url_decode(parts[1])) if len(parts) == 3 else {}
+        return header, payload
+    except Exception:
+        return {}, {}
+
+
+def _all_cookie_values(request: Request, name: str) -> list[str]:
+    """
+    TH: อ่าน cookie ทุกตัวที่ชื่อ `name` จาก raw Cookie header
+        (Starlette's request.cookies เก็บได้แค่ค่าสุดท้ายต่อชื่อ)
+    EN: read ALL cookie values for `name` from raw Cookie header
+        (Starlette's request.cookies keeps only one value per name)
+    """
+    raw = request.headers.get("cookie", "")
+    values: list[str] = []
+    for chunk in raw.split(";"):
+        chunk = chunk.strip()
+        if not chunk or "=" not in chunk:
+            continue
+        k, _, v = chunk.partition("=")
+        if k.strip() == name:
+            values.append(v.strip().strip('"'))
+    return values
+
+
+# ============================================================================
 # JWT TOKEN (JWS + JWE)
+# ============================================================================
 def generate_tokens(authentication: Authentication) -> Authentication:
     try:
-        # access token
+        if (
+            authentication.refresh_token is None
+            or authentication.refresh_token.access_token is None
+        ):
+            logger.error("generate_tokens called with incomplete token pair.")
+            raise AuthenticationException()
+
+        # ── access token ─────────────────────────────────────────────
         authentication.refresh_token.access_token.set_claims(
             iss=settings.JWT_ISSUER,
             sub=authentication.user.id,
@@ -113,31 +174,23 @@ def generate_tokens(authentication: Authentication) -> Authentication:
             grant_id=str(authentication.user.email),
             scope=str(authentication.user.role.value),
         )
-
         inner = jwt.JWT(
-            header={
-                "alg": "EdDSA",
-                "typ": "access+jwt",
-            },
+            header={"alg": "EdDSA", "typ": "access+jwt"},
             claims=authentication.refresh_token.access_token.claims.to_dict(),
         )
-
         inner.make_signed_token(settings.JWT_SIGNING_PRIVATE_KEY)
-        signed_jwt = inner.serialize()
-
         outer = jwt.JWT(
-            header={
-                "alg": "ECDH-ES+A256KW",
-                "enc": "A256GCM",
-                "cty": "JWT",
-            },
-            claims=signed_jwt,
+            header={"alg": "ECDH-ES+A256KW", "enc": "A256GCM", "cty": "JWT"},
+            claims=inner.serialize(),
         )
-
         outer.make_encrypted_token(settings.JWT_ENCRYPTION_PUBLIC_KEY)
         authentication.refresh_token.access_token.token = outer.serialize()
 
-        # refresh token
+        if _detect_jwt_format(authentication.refresh_token.access_token.token) != "JWE":
+            logger.error("Access token encryption FAILED — not a JWE.")
+            raise AuthenticationException()
+
+        # ── refresh token ────────────────────────────────────────────
         authentication.refresh_token.set_claims(
             iss=settings.JWT_ISSUER,
             sub=authentication.user.id,
@@ -147,30 +200,23 @@ def generate_tokens(authentication: Authentication) -> Authentication:
             grant_id=str(authentication.user.email),
             scope=str(authentication.user.role.value),
         )
-
         inner = jwt.JWT(
-            header={
-                "alg": "EdDSA",
-                "typ": "refresh+jwt",
-            },
+            header={"alg": "EdDSA", "typ": "refresh+jwt"},
             claims=authentication.refresh_token.refresh_claims.to_dict(),
         )
-
         inner.make_signed_token(settings.JWT_SIGNING_PRIVATE_KEY)
-        signed_jwt = inner.serialize()
-
         outer = jwt.JWT(
-            header={
-                "alg": "ECDH-ES+A256KW",
-                "enc": "A256GCM",
-                "cty": "JWT",
-            },
-            claims=signed_jwt,
+            header={"alg": "ECDH-ES+A256KW", "enc": "A256GCM", "cty": "JWT"},
+            claims=inner.serialize(),
         )
-
         outer.make_encrypted_token(settings.JWT_ENCRYPTION_PUBLIC_KEY)
         authentication.refresh_token.token = outer.serialize()
 
+        if _detect_jwt_format(authentication.refresh_token.token) != "JWE":
+            logger.error("Refresh token encryption FAILED — not a JWE.")
+            raise AuthenticationException()
+
+        logger.debug("Tokens generated and encrypted as JWE (5 segments).")
         return authentication
     except StandardException:
         raise
@@ -179,187 +225,148 @@ def generate_tokens(authentication: Authentication) -> Authentication:
         raise AuthenticationException()
 
 
-def decode_nested_access_token(token: str) -> Authentication:
-    try:
+def _decode_nested_jwt(
+    token: str,
+    *,
+    signing_key,
+    encryption_key,
+    mapper,
+    token_kind: str,
+) -> Authentication:
+    """
+    TH: decode nested JWT — รองรับทั้ง JWE (5 segments) และ bare JWS (3 segments)
+        พร้อม pre-check `iss`/`alg` ก่อน verify
+    EN: decode nested JWT — supports JWE + bare JWS; pre-checks iss/alg
+    """
+    fmt = _detect_jwt_format(token)
+
+    if fmt == "JWE":
         outer = jwt.JWT(
             jwt=token,
-            key=settings.JWT_ENCRYPTION_PRIVATE_KEY,
+            key=encryption_key,
             expected_type="JWE",
             algs=["ECDH-ES+A256KW", "A256GCM"],
         )
         inner_raw = outer.claims
+    elif fmt == "JWS":
+        header, payload = _peek_jwt_header_payload(token)
+        alg = str(header.get("alg", ""))
+        iss = str(payload.get("iss", ""))
 
-        inner = jwt.JWT(
-            jwt=inner_raw,
-            key=settings.JWT_SIGNING_PUBLIC_KEY,
-            expected_type="JWS",
-            algs=["EdDSA"],
-            check_claims={
-                "iss": settings.JWT_ISSUER,
-                "sub": None,
-                "aud": settings.JWT_AUDIENCE,
-                "jti": None,
-                "grant_id": None,
-                "scope": None,
-                "iat": None,
-                "exp": None,
-                "nbf": None,
-            },
-        )
+        if alg and alg != "EdDSA":
+            logger.warning(
+                f"{token_kind} rejected: header.alg='{alg}' (expected 'EdDSA'). "
+                f"Token appears to be from another system."
+            )
+            raise RefreshTokenMalformedError(cause=f"invalid alg: {alg}") \
+                if "refresh" in token_kind.lower() \
+                else AuthenticationTokenMalformedError(cause=f"invalid alg: {alg}")
 
-        authentication: Authentication = access_token_entity_mapper(
-            json.loads(inner.claims)
-        )
+        if iss and iss != settings.JWT_ISSUER:
+            logger.warning(
+                f"{token_kind} rejected: iss='{iss}' "
+                f"(expected '{settings.JWT_ISSUER}')."
+            )
+            raise RefreshTokenMalformedError(cause=f"invalid iss: {iss}") \
+                if "refresh" in token_kind.lower() \
+                else AuthenticationTokenMalformedError(cause=f"invalid iss: {iss}")
 
-        logger.debug(
-            f"Access token decoded successfully for user: {authentication.user.email} with role: {authentication.user.role.value}"
+        logger.warning(f"{token_kind} is a bare JWS (legacy).")
+        inner_raw = token
+    else:
+        raise RefreshTokenMalformedError(cause="unknown format") \
+            if "refresh" in token_kind.lower() \
+            else AuthenticationTokenMalformedError(cause="unknown format")
+
+    inner = jwt.JWT(
+        jwt=inner_raw,
+        key=signing_key,
+        expected_type="JWS",
+        algs=["EdDSA"],
+        check_claims={"iss": settings.JWT_ISSUER, "aud": settings.JWT_AUDIENCE},
+    )
+    return mapper(json.loads(inner.claims))
+
+
+def decode_nested_access_token(token: str) -> Authentication:
+    try:
+        return _decode_nested_jwt(
+            token,
+            signing_key=settings.JWT_SIGNING_PUBLIC_KEY,
+            encryption_key=settings.JWT_ENCRYPTION_PRIVATE_KEY,
+            mapper=access_token_entity_mapper,
+            token_kind="Access token",
         )
-        return authentication
     except JWTExpired:
-        logger.warning(
-            "Attempt to use an expired token. Raising token expired exception."
-        )
         raise AuthenticationTokenExpiredException()
     except JWTNotYetValid:
-        logger.warning(
-            "Attempt to use a token that has not yet been valid. Raising token not yet valid exception."
-        )
         raise AuthenticationTokenNotYetValidException()
-    except JWTMissingClaim as e:
-        logger.opt(exception=e).warning(
-            "Attempt to use a token with missing claims. Raising authentication token exception."
-        )
-        raise AuthenticationTokenException()
-    except JWTInvalidClaimValue as e:
-        logger.opt(exception=e).warning(
-            "Attempt to use a token with invalid claims. Raising authentication token exception."
-        )
-        raise AuthenticationTokenException()
-    except JWTInvalidClaimFormat as e:
-        logger.opt(exception=e).warning(
-            "Attempt to use a token with invalid claim format. Raising token authentication exception."
-        )
+    except (JWTMissingClaim, JWTInvalidClaimValue, JWTInvalidClaimFormat) as e:
+        logger.opt(exception=e).warning("Access token invalid claim.")
         raise AuthenticationTokenException()
     except InvalidJWSSignature as e:
-        logger.opt(exception=e).warning(
-            "Attempt to use a token with an invalid signature. Raising token authentication exception."
-        )
+        logger.opt(exception=e).warning("Access token invalid signature.")
         raise AuthenticationTokenException()
     except (InvalidJWEData, InvalidJWSObject) as e:
-        logger.opt(exception=e).warning(
-            "Attempt to use a token with an invalid format. Raising token authentication exception."
-        )
+        logger.opt(exception=e).warning("Access token invalid format.")
         raise AuthenticationTokenException()
     except json.JSONDecodeError as e:
-        logger.opt(exception=e).warning(
-            "Attempt to use a token with an invalid format. Raising token authentication exception."
-        )
-        raise AuthenticationTokenMalformedError()
+        raise AuthenticationTokenMalformedError(cause=str(e))
     except JWException as e:
-        logger.opt(exception=e).error(
-            "Attempt to use a token with an invalid format or signature. Raising token authentication exception."
-        )
+        logger.opt(exception=e).error("Access token JWException.")
         raise AuthenticationTokenException()
+    except StandardException:
+        raise
     except Exception as e:
-        logger.opt(exception=e).error("An error occurred during token decoding.")
+        logger.opt(exception=e).error(
+            f"Unexpected access token decode error: {type(e).__name__}: {e}"
+        )
         raise AuthenticationTokenException()
 
 
 def decode_nested_refresh_token(token: str) -> Authentication:
     try:
-        outer = jwt.JWT(
-            jwt=token,
-            key=settings.JWT_ENCRYPTION_PRIVATE_KEY,
-            expected_type="JWE",
-            algs=["ECDH-ES+A256KW", "A256GCM"],
+        return _decode_nested_jwt(
+            token,
+            signing_key=settings.JWT_SIGNING_PUBLIC_KEY,
+            encryption_key=settings.JWT_ENCRYPTION_PRIVATE_KEY,
+            mapper=refresh_token_entity_mapper,
+            token_kind="Refresh token",
         )
-        inner_raw = outer.claims
-
-        inner = jwt.JWT(
-            jwt=inner_raw,
-            key=settings.JWT_SIGNING_PUBLIC_KEY,
-            expected_type="JWS",
-            algs=["EdDSA"],
-            check_claims={
-                "iss": settings.JWT_ISSUER,
-                "sub": None,
-                "aud": settings.JWT_AUDIENCE,
-                "jti": None,
-                "client_id": None,
-                "grant_id": None,
-                "scope": None,
-                "iat": None,
-                "exp": None,
-                "nbf": None,
-            },
-        )
-
-        authentication: Authentication = refresh_token_entity_mapper(
-            json.loads(inner.claims)
-        )
-
-        logger.debug(
-            f"Refresh token decoded successfully for user: {authentication.user.email} with role: {authentication.user.role.value}"
-        )
-        return authentication
     except JWTExpired:
-        logger.warning(
-            "Attempt to use an expired refresh token. Raising refresh token expired exception."
-        )
         raise RefreshTokenExpiredException()
     except JWTNotYetValid:
-        logger.warning(
-            "Attempt to use a refresh token that has not yet been valid. Raising refresh token not yet valid exception."
-        )
         raise RefreshTokenNotYetValidException()
-    except JWTMissingClaim as e:
-        logger.opt(exception=e).warning(
-            "Attempt to use a refresh token with missing claims. Raising authentication refresh token exception."
-        )
-        raise RefreshTokenException()
-    except JWTInvalidClaimValue as e:
-        logger.opt(exception=e).warning(
-            "Attempt to use a refresh token with invalid claims. Raising authentication refresh token exception."
-        )
-        raise RefreshTokenException()
-    except JWTInvalidClaimFormat as e:
-        logger.opt(exception=e).warning(
-            "Attempt to use a refresh token with invalid claim format. Raising refresh token authentication exception."
-        )
-        raise RefreshTokenException()
+    except (JWTMissingClaim, JWTInvalidClaimValue, JWTInvalidClaimFormat) as e:
+        logger.opt(exception=e).warning("Refresh token invalid claim.")
+        raise RefreshTokenException(cause=str(e))
     except InvalidJWSSignature as e:
-        logger.opt(exception=e).warning(
-            "Attempt to use a refresh token with an invalid signature. Raising refresh token authentication exception."
-        )
-        raise RefreshTokenException()
+        logger.opt(exception=e).warning("Refresh token invalid signature.")
+        raise RefreshTokenException(cause=str(e))
     except (InvalidJWEData, InvalidJWSObject) as e:
-        logger.opt(exception=e).warning(
-            "Attempt to use a refresh token with an invalid format. Raising refresh token authentication exception."
-        )
-        raise RefreshTokenException()
+        logger.opt(exception=e).warning("Refresh token invalid format.")
+        raise RefreshTokenException(cause=str(e))
     except json.JSONDecodeError as e:
-        logger.opt(exception=e).warning(
-            "Attempt to use a refresh token with an invalid format. Raising refresh token authentication exception."
-        )
-        raise RefreshTokenMalformedError()
+        raise RefreshTokenMalformedError(cause=str(e))
     except JWException as e:
-        logger.opt(exception=e).error(
-            "Attempt to use a refresh token with an invalid format or signature. Raising refresh token authentication exception."
-        )
-        raise RefreshTokenException()
+        logger.opt(exception=e).error("Refresh token JWException.")
+        raise RefreshTokenException(cause=str(e))
+    except StandardException:
+        raise
     except Exception as e:
         logger.opt(exception=e).error(
-            "An error occurred during refresh token decoding."
+            f"Unexpected refresh token decode error: {type(e).__name__}: {e}"
         )
-        raise RefreshTokenException()
+        raise RefreshTokenException(cause=f"{type(e).__name__}: {e}")
 
 
+# ============================================================================
 # JWT HASHING
+# ============================================================================
 def _token_fingerprint(material: str, namespace: str) -> str:
     try:
         key = bytes.fromhex(settings.JWT_HASH_FINGERPRINT)
         msg = f"{namespace}:{material}".encode()
-
         return hmac.new(key, msg, hashlib.sha256).hexdigest()
     except StandardException:
         raise
@@ -370,20 +377,20 @@ def _token_fingerprint(material: str, namespace: str) -> str:
 
 def hash_tokens(authentication: Authentication) -> Authentication:
     try:
-        access_claims = authentication.refresh_token.access_token.claims
-        authentication.refresh_token.access_token.hashed_jti = (
-            _token_fingerprint(str(access_claims.jti), "access-jti")
-            if access_claims and access_claims.jti
-            else None
-        )
-
-        refresh_claims = authentication.refresh_token.refresh_claims
-        authentication.refresh_token.hashed_jti = (
-            _token_fingerprint(str(refresh_claims.jti), "refresh-jti")
-            if refresh_claims and refresh_claims.jti
-            else None
-        )
-
+        if authentication.refresh_token and authentication.refresh_token.access_token:
+            claims = authentication.refresh_token.access_token.claims
+            authentication.refresh_token.access_token.hashed_jti = (
+                _token_fingerprint(str(claims.jti), "access-jti")
+                if claims and claims.jti
+                else None
+            )
+        if authentication.refresh_token:
+            claims = authentication.refresh_token.refresh_claims
+            authentication.refresh_token.hashed_jti = (
+                _token_fingerprint(str(claims.jti), "refresh-jti")
+                if claims and claims.jti
+                else None
+            )
         return authentication
     except StandardException:
         raise
@@ -392,24 +399,14 @@ def hash_tokens(authentication: Authentication) -> Authentication:
         raise HashingException()
 
 
-# ---------------------------------------------------------------------------
+# ============================================================================
 # PATH RULE MATCHING
-# ---------------------------------------------------------------------------
+# ============================================================================
 @lru_cache(maxsize=512)
 def _compile_path_rule(endpoint: str) -> re.Pattern[str]:
-    """Compile a FastAPI-style path template into a regex.
-
-    Handles ``{param}`` placeholders and tolerates a trailing slash on both
-    the configured pattern and the incoming request path, so ``/sign-up`` and
-    ``/sign-up/`` are treated as equivalent. Static segments are escaped so
-    dots, hyphens, etc. cannot be misinterpreted as regex syntax.
-    """
     parts = re.split(r"\{[^}]+\}", endpoint)
     escaped = r"[^/]+".join(re.escape(part) for part in parts)
-
-    # Make the trailing slash optional on both sides of the match.
     escaped = escaped.rstrip("/") + "/?"
-
     return re.compile(f"^{escaped}$")
 
 
@@ -417,23 +414,17 @@ def _match_path_rules(paths: tuple[PathRule, ...], path: str, method: str) -> bo
     for allowed_path in paths:
         if allowed_path["method"] != method:
             continue
-
         try:
             pattern = _compile_path_rule(allowed_path["endpoint"])
         except re.error as e:
-            logger.opt(exception=e).error(
-                f"Invalid path rule configured: '{allowed_path['endpoint']}'. Skipping."
-            )
+            logger.opt(exception=e).error(f"Invalid path rule: {allowed_path}")
             continue
-
         if pattern.match(path):
             return True
-
     return False
 
 
 def _describe_rules(paths: tuple[PathRule, ...], method: str | None = None) -> str:
-    """Human-readable summary of a rule set, useful in warning logs."""
     items = [
         f"{p['method']} {p['endpoint']}"
         for p in paths
@@ -442,15 +433,15 @@ def _describe_rules(paths: tuple[PathRule, ...], method: str | None = None) -> s
     return ", ".join(items) if items else "<empty>"
 
 
+# ============================================================================
 # API KEY AUTHENTICATION
+# ============================================================================
 api_key_header = APIKeyHeader(
     name=settings.AUTH_API_KEY_NAME,
     scheme_name=settings.AUTH_API_KEY_SCHEME_NAME,
     description=settings.AUTH_API_KEY_DESCRIPTION,
     auto_error=False,
 )
-
-
 http_bearer = HTTPBearer(auto_error=False)
 
 
@@ -458,7 +449,6 @@ def _api_key_fingerprint(material: str) -> str:
     try:
         key = bytes.fromhex(settings.API_KEY_HASH_FINGERPRINT)
         msg = f"api-key:{material}".encode()
-
         return hmac.new(key, msg, hashlib.sha256).hexdigest()
     except StandardException:
         raise
@@ -472,14 +462,9 @@ def generate_api_key(key: Key) -> Key:
         key.prefix = settings.API_KEY_PREFIX
         random_part = secrets.token_urlsafe(settings.API_KEY_ENTROPY_BYTES)
         raw_key = f"{key.prefix}_{random_part}"
-
         key.plain_key = raw_key
         key.hashed_key = _api_key_fingerprint(raw_key)
         key.last_four = random_part[-4:]
-
-        logger.debug(
-            f"API key '{key.prefix}...{key.last_four}' generated successfully."
-        )
         return key
     except StandardException:
         raise
@@ -490,34 +475,17 @@ def generate_api_key(key: Key) -> Key:
 
 def _has_access_to_api_key_endpoint(path: str, method: str) -> bool:
     try:
-        logger.debug(
-            f"Checking if API key has access to endpoint '{path}' with method '{method}'."
-        )
-
-        if _match_path_rules(settings.SECURITY_API_KEY_ALLOWED_PATHS, path, method):
-            logger.debug(
-                f"API key has access to endpoint '{path}' with method '{method}'."
-            )
-            return True
-
-        logger.debug(
-            f"API key does not have access to endpoint '{path}' with method '{method}'."
-        )
-        return False
+        return _match_path_rules(settings.SECURITY_API_KEY_ALLOWED_PATHS, path, method)
     except StandardException:
         return False
     except Exception as e:
-        logger.opt(exception=e).error(
-            "An error occurred during API key endpoint access check."
-        )
+        logger.opt(exception=e).error("Error in API key endpoint check.")
         return False
 
 
 def verify_api_key(plain_key: str, hashed_key: str) -> bool:
     try:
-        computed = _api_key_fingerprint(plain_key)
-
-        return hmac.compare_digest(computed, hashed_key)
+        return hmac.compare_digest(_api_key_fingerprint(plain_key), hashed_key)
     except StandardException:
         raise
     except Exception as e:
@@ -534,68 +502,38 @@ async def _resolve_api_key(
 ) -> Key:
     if not plain_key:
         raise ApiKeyNotProvidedException()
-
     fingerprint = _api_key_fingerprint(plain_key)
-
     db_key: Key | None = await cache.get_by_hashed_key(fingerprint)
-
     if db_key is None:
         db_key = await repository.get_key_by_hashed_key(fingerprint)
-
         if db_key is not None:
             background_tasks.add_task(cache.insert, db_key)
-
     if db_key is None or not verify_api_key(plain_key, db_key.hashed_key):
-        client_host = request.client.host if request.client else "unknown"
-        logger.info(
-            f"API key attempt from '{client_host}' to endpoint '{request.url.path}' with method '{request.method}' did not match any key. Raising API key invalid exception."
-        )
         raise ApiKeyInvalidException()
-
     if not db_key.is_active:
-        logger.info(
-            f"Revoked API key '{db_key.prefix}...{db_key.last_four}' was used on endpoint '{request.url.path}' with method '{request.method}'. Raising API key revoked exception."
-        )
         raise ApiKeyRevokedException()
-
     if db_key.expires_at is not None and db_key.expires_at < datetime.now(UTC):
-        logger.info(
-            f"Expired API key '{db_key.prefix}...{db_key.last_four}' was used on endpoint '{request.url.path}' with method '{request.method}'. Raising API key expired exception."
-        )
         raise ApiKeyExpiredException()
-
     return db_key
 
 
 async def authenticate_api_key(
-    request: Request,
-    key: Key = Depends(_resolve_api_key),
+    request: Request, key: Key = Depends(_resolve_api_key)
 ) -> Key:
     try:
-        logger.debug(
-            f"Authenticating API key for endpoint '{request.url.path}' with method '{request.method}'."
-        )
-
         if not _has_access_to_api_key_endpoint(request.url.path, request.method):
-            logger.info(
-                f"API key '{key.prefix}...{key.last_four}' attempted to access endpoint '{request.url.path}' with method '{request.method}' that is not in the API key allowed paths. Raising authentication exception."
-            )
             raise UserHasNotPermissionException()
-
-        logger.debug(
-            f"API key '{key.prefix}...{key.last_four}' authenticated successfully."
-        )
         return key
     except StandardException:
         raise
     except Exception as e:
-        logger.opt(exception=e).error(
-            "An error occurred during API key authentication process."
-        )
+        logger.opt(exception=e).error("Error in API key authentication.")
         raise KeyException()
 
 
+# ============================================================================
 # BEARER TOKEN AUTHENTICATION
+# ============================================================================
 oauth2_scheme = OAuth2PasswordBearer(
     tokenUrl="/api/v1/authentication/login/",
     refreshUrl="/api/v1/authentication/refresh/",
@@ -610,23 +548,24 @@ def _matches_authentication_binding(
 ) -> bool:
     if cached.blacklisted:
         return False
-
     if cached.refresh_token is None or cached.refresh_token.revoked:
         return False
-
     if cached.user is None or cached.user.id != authentication.user.id:
         return False
-
     if cached.user_agent != authentication.user_agent:
         return False
-
-    # Every binding check above is a uniform guard clause. Collapsing only the last
-    # one into `return not (...)` would break that symmetry and make the next check
-    # harder to append, so SIM103 is suppressed here deliberately.
-    if authentication.device is not None and cached.device != authentication.device:  # noqa: SIM103
+    if authentication.device is not None and cached.device != authentication.device:
         return False
-
     return True
+
+
+def _is_refresh_endpoint(path: str) -> bool:
+    """Accept both /refresh and /refresh/ (trailing slash optional)."""
+    return path.rstrip("/").endswith("/api/v1/authentication/refresh")
+
+
+def _is_logout_endpoint(path: str) -> bool:
+    return path.rstrip("/").endswith("/api/v1/authentication/logout")
 
 
 async def _resolve_access_token_authentication(
@@ -636,7 +575,6 @@ async def _resolve_access_token_authentication(
     cache: IAuthenticationCache = Depends(get_authentication_cache),
 ) -> Authentication:
     credentials = await http_bearer(request)
-
     if credentials is None:
         token = request.cookies.get(settings.COOKIES_ACCESS_TOKEN_KEY, None)
         device = request.cookies.get(settings.COOKIES_DEVICE_KEY, None)
@@ -647,42 +585,33 @@ async def _resolve_access_token_authentication(
     if not token or (credentials is None and not device):
         raise AuthenticationCookiesNotProvidedException()
 
-    authentication: Authentication = decode_nested_access_token(token)
-    authentication: Authentication = hash_tokens(authentication)
-
+    authentication = decode_nested_access_token(token)
+    authentication = hash_tokens(authentication)
     authentication.device = device
     authentication.user_agent = (
         (request.headers.get("user-agent") or "").lower().strip()
     )
 
-    # Cache-aside: read from Redis first, fall back to PostgreSQL on a miss and
-    # repopulate the cache after the response is sent, never before it.
     db_authentication: Authentication | None = await cache.get_by_access_token(
         authentication
     )
-
     if db_authentication is not None:
         access_token = (
             db_authentication.refresh_token.access_token
             if db_authentication.refresh_token
             else None
         )
-
         if (
             access_token is None
             or access_token.revoked
             or not _matches_authentication_binding(db_authentication, authentication)
         ):
-            logger.info(
-                "Cached authentication did not match the request binding. Falling back to the database."
-            )
             db_authentication = None
 
     if db_authentication is None:
         db_authentication = await repository.get_access_token_by_authentication(
             authentication
         )
-
         if db_authentication is not None:
             background_tasks.add_task(
                 cache.insert_by_access_token,
@@ -695,19 +624,11 @@ async def _resolve_access_token_authentication(
         or db_authentication.refresh_token is None
         or db_authentication.refresh_token.access_token is None
     ):
-        logger.info(
-            f"Access token with hashed jti '{authentication.refresh_token.access_token.hashed_jti}' not found in database. Raising authentication token exception."
-        )
         raise AuthenticationTokenInvalidException()
 
-    authentication: Authentication = db_authentication
-
+    authentication = db_authentication
     if authentication.user.role != authentication.refresh_token.access_token.permission:
-        logger.info(
-            f"User '{authentication.user.email}' attempted to access endpoint '{request.url.path}' with method '{request.method}' with modified role. Raising authentication exception."
-        )
         raise ModifiedTokenException()
-
     return authentication
 
 
@@ -715,18 +636,11 @@ def _assert_endpoint_access(request: Request, authentication: Authentication) ->
     if not _has_access_to_endpoint(
         request.url.path, request.method, authentication.user.role
     ):
-        logger.info(
-            f"User '{authentication.user.email}' attempted to access endpoint '{request.url.path}' with method '{request.method}' that is not in the allowed paths. Raising authentication exception."
-        )
         raise UserHasNotPermissionException()
 
 
 def _has_access_to_endpoint(path: str, method: str, role: Role | None = None) -> bool:
     try:
-        logger.debug(
-            f"Checking if user has access to endpoint '{path}' with method '{method}'."
-        )
-
         if role is None:
             paths = settings.SECURITY_NO_AUTH_PATHS
         elif role == Role.ADMIN:
@@ -735,48 +649,33 @@ def _has_access_to_endpoint(path: str, method: str, role: Role | None = None) ->
             paths = settings.SECURITY_MANAGER_ALLOWED_PATHS
         else:
             paths = settings.SECURITY_USER_ALLOWED_PATHS
-
-        if _match_path_rules(paths, path, method):
-            logger.debug(
-                f"User has access to endpoint '{path}' with method '{method}'."
-            )
-            return True
-
-        logger.debug(
-            f"User does not have access to endpoint '{path}' with method '{method}'."
-        )
-        return False
+        return _match_path_rules(paths, path, method)
     except StandardException:
         return False
     except Exception as e:
-        logger.opt(exception=e).error("An error occurred during endpoint access check.")
+        logger.opt(exception=e).error("Error in endpoint access check.")
         return False
 
 
 async def no_authentication(request: Request) -> None:
+    """
+    Public endpoint guard — always allow; log warning if active credentials present.
+    """
     try:
-        logger.debug(
-            f"No authentication required for this endpoint '{request.url.path}'."
+        has_cookies = bool(request.cookies)
+        has_bearer = (request.headers.get("authorization") or "").lower().startswith(
+            "bearer "
         )
-
-        if not _has_access_to_endpoint(request.url.path, request.method):
+        if has_cookies or has_bearer:
             logger.warning(
-                f"Access attempt to endpoint '{request.url.path}' with method "
-                f"'{request.method}' that is not in the no authentication paths. "
-                f"Configured no-auth rules: "
-                f"[{_describe_rules(settings.SECURITY_NO_AUTH_PATHS, request.method)}]. "
-                f"Raising permission exception."
+                f"Active session credentials on public endpoint "
+                f"'{request.url.path}' ({request.method})."
             )
-            raise UserHasNotPermissionException()
-
-        logger.debug(f"No authentication required for endpoint '{request.url.path}'.")
         return
     except StandardException:
         raise
     except Exception as e:
-        logger.opt(exception=e).error(
-            "An error occurred during no authentication process."
-        )
+        logger.opt(exception=e).error("Error in no_authentication.")
         raise AuthenticationException()
 
 
@@ -785,20 +684,12 @@ async def authenticate_user(
     authentication: Authentication = Depends(_resolve_access_token_authentication),
 ) -> Authentication:
     try:
-        logger.debug(
-            f"Authenticating user for endpoint '{request.url.path}' with method '{request.method}'."
-        )
-
         _assert_endpoint_access(request, authentication)
-
-        logger.debug(f"User '{authentication.user.email}' authenticated successfully.")
         return authentication
     except StandardException:
         raise
     except Exception as e:
-        logger.opt(exception=e).error(
-            "An error occurred during user authentication process."
-        )
+        logger.opt(exception=e).error("Error in authenticate_user.")
         raise AuthenticationException()
 
 
@@ -807,28 +698,14 @@ async def authenticate_manager(
     authentication: Authentication = Depends(_resolve_access_token_authentication),
 ) -> Authentication:
     try:
-        logger.debug(
-            f"Authenticating manager for endpoint '{request.url.path}' with method '{request.method}'."
-        )
-
         if authentication.refresh_token.access_token.permission == Role.USER:
-            logger.info(
-                f"User '{authentication.user.email}' attempted to access endpoint '{request.url.path}' with method '{request.method}' with insufficient permissions. Raising authentication exception."
-            )
             raise UserHasNotPermissionException()
-
         _assert_endpoint_access(request, authentication)
-
-        logger.debug(
-            f"Manager '{authentication.user.email}' authenticated successfully."
-        )
         return authentication
     except StandardException:
         raise
     except Exception as e:
-        logger.opt(exception=e).error(
-            "An error occurred during manager authentication process."
-        )
+        logger.opt(exception=e).error("Error in authenticate_manager.")
         raise AuthenticationException()
 
 
@@ -837,28 +714,15 @@ async def authenticate_admin(
     authentication: Authentication = Depends(_resolve_access_token_authentication),
 ) -> Authentication:
     try:
-        logger.debug(
-            f"Authenticating admin for endpoint '{request.url.path}' with method '{request.method}'."
-        )
-
         if authentication.refresh_token.access_token.permission != Role.ADMIN:
-            logger.info(
-                f"User '{authentication.user.email}' attempted to access endpoint '{request.url.path}' with method '{request.method}' with insufficient permissions. Raising authentication exception."
-            )
             raise UserHasNotPermissionException()
-
         _assert_endpoint_access(request, authentication)
-
-        logger.debug(f"Admin '{authentication.user.email}' authenticated successfully.")
         return authentication
     except StandardException:
         raise
     except Exception as e:
-        logger.opt(exception=e).error(
-            "An error occurred during admin authentication process."
-        )
+        logger.opt(exception=e).error("Error in authenticate_admin.")
         raise AuthenticationException()
-
 
 async def authenticate_refresh(
     request: Request,
@@ -866,108 +730,136 @@ async def authenticate_refresh(
     repository: IAuthenticationRepository = Depends(get_authentication_repository),
     cache: IAuthenticationCache = Depends(get_authentication_cache),
 ) -> Authentication:
+    """
+    TH: Authenticate refresh endpoint — ลองทุก refresh_token cookie
+        จนกว่าจะเจอตัวที่ decode สำเร็จ + อยู่ใน DB
+        (Postman บางครั้งส่ง cookie เก่า + ใหม่พร้อมกัน → ต้องวนจนเจอตัวจริง)
+    EN: Authenticate refresh — try every refresh_token cookie until one
+        decodes successfully AND exists in DB.
+    """
     try:
-        logger.debug("Authenticating access for refresh token endpoint.")
+        logger.debug(
+            f"Authenticating refresh endpoint '{request.url.path}' "
+            f"({request.method})."
+        )
 
-        if not request.url.path.endswith("/api/v1/authentication/refresh/"):
-            logger.info(
-                f"Access attempt to endpoint '{request.url.path}' with method '{request.method}' that is not the refresh token endpoint. Raising authentication exception."
-            )
+        if not _is_refresh_endpoint(request.url.path):
             raise RefreshTokenInvalidEndpoint()
 
-        token = request.cookies.get(settings.COOKIES_REFRESH_TOKEN_KEY, None)
+        tokens = _all_cookie_values(request, settings.COOKIES_REFRESH_TOKEN_KEY)
+        logger.debug(f"Found {len(tokens)} refresh_token cookie(s).")
+
         device = request.cookies.get(settings.COOKIES_DEVICE_KEY, None)
 
-        if not token or not device:
+        if not tokens:
+            raise RefreshTokenNotProvidedException()
+        if not device:
+            logger.info("Refresh requested without device cookie.")
             raise RefreshTokenNotProvidedException()
 
-        authentication: Authentication = decode_nested_refresh_token(token)
-        authentication: Authentication = hash_tokens(authentication)
+        user_agent = (request.headers.get("user-agent") or "").lower().strip()
+        db_authentication: Authentication | None = None
+        last_error: StandardException | None = None
 
-        authentication.device = device
-        authentication.user_agent = (
-            (request.headers.get("user-agent") or "").lower().strip()
-        )
-
-        # Cache-aside: read from Redis first, fall back to PostgreSQL on a miss
-        # and repopulate the cache after the response is sent, never before it.
-        db_authentication: Authentication | None = await cache.get_by_refresh_token(
-            authentication
-        )
-
-        if db_authentication is not None and not _matches_authentication_binding(
-            db_authentication, authentication
-        ):
-            logger.info(
-                "Cached authentication did not match the request binding. Falling back to the database."
+        for i, token in enumerate(tokens, start=1):
+            fmt = _detect_jwt_format(token)
+            logger.debug(
+                f"Trying refresh_token #{i}/{len(tokens)} (format={fmt})."
             )
-            db_authentication = None
+            try:
+                authentication = decode_nested_refresh_token(token)
+                authentication = hash_tokens(authentication)
+                authentication.device = device
+                authentication.user_agent = user_agent
 
-        if db_authentication is None:
-            db_authentication = await repository.get_refresh_token_by_authentication(
-                authentication
-            )
-
-            if db_authentication is not None:
-                background_tasks.add_task(
-                    cache.insert_by_refresh_token,
-                    db_authentication,
-                    settings.REDIS_SESSION_TTL_SECONDS,
+                logger.debug(
+                    f"[DEBUG-REFRESH #{i}] user_id={authentication.user.id} "
+                    f"device={device!r} user_agent={user_agent!r} "
+                    f"hashed_jti={authentication.refresh_token.hashed_jti}"
                 )
 
-        if (
-            db_authentication is None
-            or db_authentication.refresh_token is None
-            or db_authentication.refresh_token.access_token is None
-        ):
-            logger.info(
-                f"Refresh token with hashed jti '{authentication.refresh_token.access_token.hashed_jti}' not found in database. Raising authentication token exception."
+                # ── Cache-aside ─────────────────────────────────────
+                db_auth: Authentication | None = await cache.get_by_refresh_token(
+                    authentication
+                )
+                if db_auth is not None and not _matches_authentication_binding(
+                    db_auth, authentication
+                ):
+                    logger.info(
+                        f"refresh_token #{i}: cached auth binding mismatch. "
+                        f"Falling back to DB."
+                    )
+                    db_auth = None
+
+                if db_auth is None:
+                    db_auth = await repository.get_refresh_token_by_authentication(
+                        authentication
+                    )
+
+                if db_auth is None:
+                    logger.info(
+                        f"refresh_token #{i} decoded but NOT FOUND IN DB. "
+                        f"Trying next cookie."
+                    )
+                    continue  # ← ลอง cookie ถัดไป ไม่ break
+
+                # ── Success ────────────────────────────────────────
+                db_authentication = db_auth
+                logger.debug(f"refresh_token #{i} accepted.")
+                break
+
+            except StandardException as e:
+                logger.info(
+                    f"refresh_token #{i} rejected: {type(e).__name__}: {e}"
+                )
+                last_error = e
+                continue
+
+        if db_authentication is None:
+            logger.warning(
+                f"All {len(tokens)} refresh_token cookie(s) failed. "
+                f"last_error="
+                f"{type(last_error).__name__ if last_error else 'None'}"
             )
-            raise AuthenticationTokenInvalidException()
+            raise last_error or AuthenticationTokenInvalidException()
+
+        # ── Repopulate cache in background ─────────────────────────
+        background_tasks.add_task(
+            cache.insert_by_refresh_token,
+            db_authentication,
+            settings.REDIS_SESSION_TTL_SECONDS,
+        )
 
         logger.debug(
-            f"Refresh token authenticated successfully for user '{authentication.user.email}'."
+            f"Refresh authenticated for user "
+            f"'{db_authentication.user.email}'."
         )
         return db_authentication
     except StandardException:
         raise
     except Exception as e:
         logger.opt(exception=e).error(
-            "An error occurred during refresh token authentication process."
+            f"Error in authenticate_refresh: {type(e).__name__}: {e}"
         )
-        raise RefreshTokenException()
-
+        raise RefreshTokenException(cause=f"{type(e).__name__}: {e}")
 
 async def authenticate_logout(
     request: Request,
     authentication: Authentication = Depends(_resolve_access_token_authentication),
 ) -> Authentication:
     try:
-        logger.debug("Authenticating access for logout endpoint.")
-
-        if not request.url.path.endswith("/api/v1/authentication/logout/"):
-            logger.info(
-                f"Access attempt to endpoint '{request.url.path}' with method '{request.method}' that is not the logout endpoint. Raising authentication exception."
-            )
+        if not _is_logout_endpoint(request.url.path):
             raise RefreshTokenInvalidEndpoint()
-
         if not _has_access_to_endpoint(
             request.url.path, request.method, authentication.user.role
         ):
-            logger.info(
-                f"User '{authentication.user.email}' attempted to access endpoint '{request.url.path}' with method '{request.method}' that is not in the allowed paths. Raising authentication exception."
-            )
             raise UserHasNotPermissionException()
-
-        logger.debug(f"User '{authentication.user.email}' authenticated successfully.")
         return authentication
     except StandardException:
         raise
     except Exception as e:
-        logger.opt(exception=e).error(
-            "An error occurred during logout authentication process."
-        )
-        raise RefreshTokenException()
+        logger.opt(exception=e).error(f"Error in authenticate_logout: {e}")
+        raise RefreshTokenException(cause=f"{type(e).__name__}: {e}")
 
 
 async def authenticate_websocket(
@@ -976,43 +868,31 @@ async def authenticate_websocket(
     cache: IAuthenticationCache = Depends(get_authentication_cache),
 ) -> Authentication:
     try:
-        logger.debug("Authenticating user for WebSocket connection.")
-
         origin = (websocket.headers.get("origin") or "").strip()
         if origin not in [str(o) for o in settings.SECURITY_ALLOW_ORIGINS]:
-            logger.info(
-                f"WebSocket connection rejected: origin '{origin}' not in allowlist."
-            )
             raise OriginNotAllowedException()
 
         token = websocket.cookies.get(settings.COOKIES_ACCESS_TOKEN_KEY, None)
         device = websocket.cookies.get(settings.COOKIES_DEVICE_KEY, None)
-
         if not token or not device:
             raise AuthenticationCookiesNotProvidedException()
 
-        authentication: Authentication = decode_nested_access_token(token)
-        authentication: Authentication = hash_tokens(authentication)
-
+        authentication = decode_nested_access_token(token)
+        authentication = hash_tokens(authentication)
         authentication.device = device
         authentication.user_agent = (
             (websocket.headers.get("user-agent") or "").lower().strip()
         )
 
-        # Read-only cache-aside: WebSocket routes produce no Response, so there
-        # is no BackgroundTasks to defer a write to. The cache is only read here
-        # and stays populated by the HTTP paths, which share the same key.
         db_authentication: Authentication | None = await cache.get_by_access_token(
             authentication
         )
-
         if db_authentication is not None:
             access_token = (
                 db_authentication.refresh_token.access_token
                 if db_authentication.refresh_token
                 else None
             )
-
             if (
                 access_token is None
                 or access_token.revoked
@@ -1020,9 +900,6 @@ async def authenticate_websocket(
                     db_authentication, authentication
                 )
             ):
-                logger.info(
-                    "Cached WebSocket authentication did not match the request binding. Falling back to the database."
-                )
                 db_authentication = None
 
         if db_authentication is None:
@@ -1035,33 +912,17 @@ async def authenticate_websocket(
             or db_authentication.refresh_token is None
             or db_authentication.refresh_token.access_token is None
         ):
-            logger.info(
-                f"WebSocket access token with hashed jti "
-                f"'{authentication.refresh_token.access_token.hashed_jti}' not found in database. "
-                "Raising authentication exception."
-            )
             raise AuthenticationTokenInvalidException()
 
         authentication = db_authentication
-
         if (
             authentication.user.role
             != authentication.refresh_token.access_token.permission
         ):
-            logger.info(
-                f"WebSocket user '{authentication.user.email}' has a modified role token. "
-                "Raising authentication exception."
-            )
             raise ModifiedTokenException()
-
-        logger.debug(
-            f"WebSocket user '{authentication.user.email}' authenticated successfully."
-        )
         return authentication
     except StandardException:
         raise
     except Exception as e:
-        logger.opt(exception=e).error(
-            "An error occurred during WebSocket authentication process."
-        )
+        logger.opt(exception=e).error(f"Error in authenticate_websocket: {e}")
         raise AuthenticationException()

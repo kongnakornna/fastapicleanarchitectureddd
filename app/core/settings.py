@@ -9,7 +9,8 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from cryptography.hazmat.primitives.asymmetric.x25519 import X25519PrivateKey
 from jwcrypto import jwk
-from pydantic import AnyHttpUrl, computed_field, field_validator
+from loguru import logger
+from pydantic import AnyHttpUrl, computed_field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy import URL
 
@@ -55,8 +56,6 @@ class Settings(BaseSettings):
     # ------------------------------------------------------------------
     # MIGRATIONS
     # ------------------------------------------------------------------
-    # true  → run `alembic upgrade head` on startup
-    # false → run `make migrate` manually (recommended in production)
     AUTO_MIGRATE_ON_STARTUP: bool = False
 
     # API KEY
@@ -79,7 +78,9 @@ class Settings(BaseSettings):
     COOKIES_REFRESH_TOKEN_KEY: str
     COOKIES_REFRESH_TOKEN_PATH: str
     COOKIES_DEVICE_KEY: str
-    COOKIES_DOMAIN: str
+    # TH: optional — None (default) = host-only cookie, ไม่มี Domain attribute
+    # EN: optional — None = host-only cookie (no Domain attribute)
+    COOKIES_DOMAIN: str | None = None
     COOKIES_SAME_SITE: CookieSameSite
 
     # JWT
@@ -187,6 +188,65 @@ class Settings(BaseSettings):
             "'dev', 'homolog', 'production'."
         )
 
+    @field_validator("COOKIES_DOMAIN", mode="before")
+    @classmethod
+    def normalize_cookie_domain(cls, v):
+        """
+        TH: แปลง "" / "none" / "null" / "localhost:8000" → None (host-only)
+        EN: coerce empty/sentinel values to None (host-only cookie)
+        """
+        if v is None:
+            return None
+        if isinstance(v, str):
+            stripped = v.strip().strip('"').strip("'")
+            if stripped == "" or stripped.lower() in ("none", "null"):
+                return None
+            # TH: Domain ที่มี port ไม่ valid → drop
+            # EN: Domain with port is invalid → drop
+            if ":" in stripped:
+                return None
+            return stripped
+        return v
+
+    @field_validator(
+        "COOKIES_ACCESS_TOKEN_PATH",
+        "COOKIES_REFRESH_TOKEN_PATH",
+        mode="before",
+    )
+    @classmethod
+    def normalize_cookie_path(cls, v):
+        """
+        TH: cookie path ต้องขึ้นต้นด้วย "/" — prepend ถ้าขาด
+        EN: cookie path must start with "/", prepend if missing
+        """
+        if v is None:
+            return "/"
+        if isinstance(v, str):
+            stripped = v.strip().strip('"').strip("'")
+            if not stripped:
+                return "/"
+            if not stripped.startswith("/"):
+                stripped = "/" + stripped
+            return stripped
+        return v
+
+    @model_validator(mode="after")
+    def validate_cookie_config(self) -> "Settings":
+        is_dev = self.APPLICATION_ENVIRONMENT != ApplicationEnvironment.PRODUCTION.value
+
+        if is_dev and self.COOKIES_SAME_SITE == CookieSameSite.NONE:
+            logger.warning(
+                "COOKIES_SAME_SITE=None on dev requires Secure=True "
+                "(breaks plain-HTTP localhost). Falling back to 'lax'."
+            )
+            object.__setattr__(self, "COOKIES_SAME_SITE", CookieSameSite.LAX)
+
+        if not is_dev and self.COOKIES_DOMAIN is None:
+            logger.warning(
+                "COOKIES_DOMAIN unset in production — cookies will be host-only."
+            )
+        return self
+
     # ==================================================================
     # COMPUTED FIELDS
     # ==================================================================
@@ -205,15 +265,13 @@ class Settings(BaseSettings):
     def COOKIES_REFRESH_TOKEN_MAX_AGE(self) -> int:
         return self.JWT_REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60
 
-    # JWT KEY LOADERS
     @computed_field
     @cached_property
     def JWT_SIGNING_PRIVATE_KEY(self) -> jwk.JWK:
         with open(self.JWT_SIGNING_PRIVATE_KEY_PATH, "rb") as key_file:
             pem_data = key_file.read()
         return jwk.JWK.from_pem(
-            pem_data,
-            password=self.JWT_SIGNING_KEY_PASSWORD.encode("utf-8"),
+            pem_data, password=self.JWT_SIGNING_KEY_PASSWORD.encode("utf-8")
         )
 
     @computed_field
@@ -229,8 +287,7 @@ class Settings(BaseSettings):
         with open(self.JWT_ENCRYPTION_PRIVATE_KEY_PATH, "rb") as key_file:
             pem_data = key_file.read()
         return jwk.JWK.from_pem(
-            pem_data,
-            password=self.JWT_ENCRYPTION_KEY_PASSWORD.encode("utf-8"),
+            pem_data, password=self.JWT_ENCRYPTION_KEY_PASSWORD.encode("utf-8")
         )
 
     @computed_field
@@ -240,7 +297,6 @@ class Settings(BaseSettings):
             pem_data = key_file.read()
         return jwk.JWK.from_pem(pem_data)
 
-    # POSTGRESQL URLS
     @computed_field
     @cached_property
     def POSTGRESQL_ASYNC_DATABASE_URL(self) -> URL:
@@ -265,7 +321,6 @@ class Settings(BaseSettings):
             database=self.POSTGRESQL_DATABASE,
         )
 
-    # REDIS
     @computed_field
     @cached_property
     def REDIS_URL(self) -> str:
@@ -286,23 +341,16 @@ class Settings(BaseSettings):
     @computed_field
     @cached_property
     def SECURITY_NO_AUTH_PATHS(self) -> tuple[PathRule, ...]:
-        """Path ที่ไม่ต้อง authenticate — ใช้โดย no_authentication"""
         return (
-            # ═══ AUTHENTICATION ═══
             _path_rule("/api/v1/authentication/sign-up", "POST"),
             _path_rule("/api/v1/authentication/login", "POST"),
             _path_rule("/api/v1/authentication/logout", "DELETE"),
             _path_rule("/api/v1/authentication/forgot-password", "POST"),
             _path_rule("/api/v1/authentication/reset-password", "POST"),
-            # ═══ EXAMPLE ═══
             _path_rule("/api/v1/example", "POST"),
-            # ═══ HEALTH ═══
             _path_rule("/health", "GET"),
-            # ═══ USER (sign-up) ═══
             _path_rule("/api/v1/user", "POST"),
-            # ═══ WEBSOCKET handshake ═══
             _path_rule("/api/v1/websocket/connect", "GET"),
-            # ═══ IOT — PUBLIC ═══
             _path_rule("/iot/status", "GET"),
             _path_rule("/iot/ws/stats", "GET"),
             _path_rule("/iot/topic", "GET"),
@@ -329,20 +377,15 @@ class Settings(BaseSettings):
     @computed_field
     @cached_property
     def SECURITY_USER_ALLOWED_PATHS(self) -> tuple[PathRule, ...]:
-        """Path ที่ user role ทั่วไปเข้าถึงได้ (authenticate_user)"""
         return (
             *self.SECURITY_NO_AUTH_PATHS,
-            # ═══ AUTHENTICATION ═══
             _path_rule("/api/v1/authentication/refresh", "PATCH"),
             _path_rule("/api/v1/authentication/lock-screen", "POST"),
             _path_rule("/api/v1/authentication/two-step-verification", "POST"),
             _path_rule("/api/v1/authentication/two-step-code", "POST"),
-            # ═══ USER ═══
             _path_rule("/api/v1/user/me", "GET"),
-            # ═══ NOTIFICATION ═══
             _path_rule("/api/v1/notification", "GET"),
             _path_rule("/api/v1/notification/{id}", "PATCH"),
-            # ═══ IOT — PROTECTED ═══
             _path_rule("/iot/controls", "GET"),
             _path_rule("/iot/control", "POST"),
             _path_rule("/iot/devicestatus", "PUT"),
@@ -357,7 +400,6 @@ class Settings(BaseSettings):
     @computed_field
     @cached_property
     def SECURITY_MANAGER_ALLOWED_PATHS(self) -> tuple[PathRule, ...]:
-        """Path ที่ manager เข้าถึงได้ (authenticate_manager)"""
         return (
             *self.SECURITY_USER_ALLOWED_PATHS,
             _path_rule("/api/v1/knowledge", "POST"),
@@ -369,7 +411,6 @@ class Settings(BaseSettings):
     @computed_field
     @cached_property
     def SECURITY_ADMIN_ALLOWED_PATHS(self) -> tuple[PathRule, ...]:
-        """Path ที่ admin เข้าถึงได้ (authenticate_admin)"""
         return (
             *self.SECURITY_MANAGER_ALLOWED_PATHS,
             _path_rule("/api/v1/alembic-version", "GET"),
@@ -384,7 +425,6 @@ class Settings(BaseSettings):
     @computed_field
     @cached_property
     def SECURITY_API_KEY_ALLOWED_PATHS(self) -> tuple[PathRule, ...]:
-        """Path ที่ API key เข้าถึงได้ — ปิดไว้ทั้งหมดตอนนี้"""
         return ()
 
     # ==================================================================
@@ -438,9 +478,18 @@ class Settings(BaseSettings):
                 )
             )
 
-    # ==================================================================
-    # INIT
-    # ==================================================================
+    def log_cookie_config(self) -> None:
+        is_dev = self.APPLICATION_ENVIRONMENT_DEBUG
+        logger.info(
+            "Cookie config effective — "
+            f"env={'dev' if is_dev else 'prod'} "
+            f"domain={self.COOKIES_DOMAIN!r} "
+            f"access_path={self.COOKIES_ACCESS_TOKEN_PATH!r} "
+            f"refresh_path={self.COOKIES_REFRESH_TOKEN_PATH!r} "
+            f"same_site={self.COOKIES_SAME_SITE.value!r} "
+            f"secure={not is_dev}"
+        )
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
@@ -466,3 +515,4 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+settings.log_cookie_config()

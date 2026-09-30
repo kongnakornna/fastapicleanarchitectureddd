@@ -1,0 +1,3041 @@
+
+    # ─── INFRASTRUCTURE ─────────────────────────────────────────
+    def _create_infrastructure(self) -> None:
+        base = f"{self.mod_root}/infrastructure"
+
+        self.writer.write(f"{base}/__init__.py", dedent('''\
+            """bigo infrastructure layer"""
+            from .big_o_monitor import BigOMonitor
+            from .kafka_queue_manager import InMemoryProducer, KafkaQueueManager
+            from .management_service import ManagementService
+            from .memory_manager import MemoryManager
+            from .metrics_registry import MetricsRegistry
+            from .redis_cache import CacheStats, RedisCache
+            from .websocket_manager import WebSocketManager
+
+            __all__ = [
+                "BigOMonitor", "KafkaQueueManager", "InMemoryProducer",
+                "MemoryManager", "MetricsRegistry",
+                "RedisCache", "CacheStats", "WebSocketManager",
+                "ManagementService",
+            ]
+        '''))
+
+        self.writer.write(f"{base}/models.py", self._models_content())
+        self.writer.write(f"{base}/metric_repository.py", self._metric_repo())
+        self.writer.write(f"{base}/profile_repository.py", self._profile_repo())
+        self.writer.write(f"{base}/memory_repository.py", self._memory_repo())
+        self.writer.write(f"{base}/kafka_repository.py", self._kafka_repos())
+        self.writer.write(f"{base}/pipeline_report_repository.py", self._pipeline_repo())
+        self.writer.write(f"{base}/metrics_registry.py", self._metrics_registry_content())
+        self.writer.write(f"{base}/big_o_monitor.py", self._big_o_monitor_content())
+        self.writer.write(f"{base}/memory_manager.py", self._memory_manager_content())
+        self.writer.write(f"{base}/kafka_queue_manager.py", self._kafka_queue_content())
+        self.writer.write(f"{base}/services.py", self._services_content())
+        self.writer.write(f"{base}/pipeline.py", self._pipeline_content())
+
+    def _create_cache_layer(self) -> None:
+        base = f"{self.mod_root}/infrastructure"
+        self.writer.write(f"{base}/redis_cache.py", self._redis_cache_content())
+
+    def _create_websocket_layer(self) -> None:
+        base = f"{self.mod_root}/infrastructure"
+        self.writer.write(f"{base}/websocket_manager.py", self._websocket_content())
+
+    def _create_management_layer(self) -> None:
+        base = f"{self.mod_root}/infrastructure"
+        self.writer.write(f"{base}/management_service.py", self._management_content())
+
+    def _models_content(self) -> str:
+        return dedent('''\
+            """bigo SQLAlchemy 2.0 models — schema=public, prefix=bigo_"""
+            from __future__ import annotations
+            import uuid
+            from datetime import datetime
+            from decimal import Decimal
+
+            from sqlalchemy import (
+                Boolean, CheckConstraint, DateTime, Index, Integer,
+                Numeric, String, Text, UniqueConstraint, func, text,
+            )
+            from sqlalchemy.dialects.postgresql import UUID
+            from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+            SCHEMA = "public"
+
+
+            class Base(DeclarativeBase):
+                """TH: declarative base | EN: declarative base"""
+
+
+            class MetricModel(Base):
+                __tablename__ = "bigo_metrics"
+                __table_args__ = (
+                    CheckConstraint(
+                        "kind IN ('latency','throughput','memory_rss','memory_heap',"
+                        "'cpu_percent','gc_pause','queue_depth','kafka_lag','error_rate')",
+                        name="ck_bigo_metric_kind",
+                    ),
+                    Index("ix_bigo_metric_tenant", "tenant_id", "captured_at"),
+                    Index("ix_bigo_metric_kind", "tenant_id", "kind", "captured_at"),
+                    Index("ix_bigo_metric_name", "name"),
+                    {"schema": SCHEMA},
+                )
+                id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"))
+                tenant_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+                kind: Mapped[str] = mapped_column(String(50), nullable=False)
+                name: Mapped[str] = mapped_column(String(200), nullable=False)
+                value: Mapped[Decimal] = mapped_column(Numeric(20, 8), nullable=False, server_default="0")
+                unit: Mapped[str] = mapped_column(String(20), nullable=False, server_default="")
+                labels_json: Mapped[str] = mapped_column(Text, nullable=False, server_default="{{}}")
+                captured_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+                created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+                updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
+
+
+            class ProfileModel(Base):
+                __tablename__ = "bigo_profiles"
+                __table_args__ = (
+                    CheckConstraint(
+                        "complexity IN ('O(1)','O(log n)','O(n)','O(n log n)',"
+                        "'O(n^2)','O(n^3)','O(2^n)','O(n!)','UNKNOWN')",
+                        name="ck_bigo_profile_complexity",
+                    ),
+                    Index("ix_bigo_profile_tenant", "tenant_id", "captured_at"),
+                    Index("ix_bigo_profile_function", "function_name", "captured_at"),
+                    {"schema": SCHEMA},
+                )
+                id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"))
+                tenant_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+                function_name: Mapped[str] = mapped_column(String(200), nullable=False)
+                module: Mapped[str] = mapped_column(String(200), nullable=False, server_default="")
+                complexity: Mapped[str] = mapped_column(String(20), nullable=False, server_default="UNKNOWN")
+                sample_size: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+                avg_ms: Mapped[Decimal] = mapped_column(Numeric(20, 8), nullable=False, server_default="0")
+                p95_ms: Mapped[Decimal] = mapped_column(Numeric(20, 8), nullable=False, server_default="0")
+                memory_peak_mb: Mapped[Decimal] = mapped_column(Numeric(20, 8), nullable=False, server_default="0")
+                notes: Mapped[str] = mapped_column(Text, nullable=False, server_default="")
+                captured_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+                created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+                updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
+
+
+            class MemorySnapshotModel(Base):
+                __tablename__ = "bigo_memory_snapshots"
+                __table_args__ = (
+                    CheckConstraint("pressure IN ('NORMAL','ELEVATED','HIGH','CRITICAL','OOM')", name="ck_bigo_mem_pressure"),
+                    Index("ix_bigo_mem_tenant", "tenant_id", "captured_at"),
+                    Index("ix_bigo_mem_pressure", "tenant_id", "pressure", "captured_at"),
+                    {"schema": SCHEMA},
+                )
+                id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"))
+                tenant_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+                process_id: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+                rss_mb: Mapped[Decimal] = mapped_column(Numeric(20, 4), nullable=False, server_default="0")
+                vms_mb: Mapped[Decimal] = mapped_column(Numeric(20, 4), nullable=False, server_default="0")
+                percent: Mapped[Decimal] = mapped_column(Numeric(8, 4), nullable=False, server_default="0")
+                pressure: Mapped[str] = mapped_column(String(20), nullable=False, server_default="NORMAL")
+                top_allocations_json: Mapped[str] = mapped_column(Text, nullable=False, server_default="[]")
+                captured_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+                created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+                updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
+
+
+            class MemoryLeakModel(Base):
+                __tablename__ = "bigo_memory_leaks"
+                __table_args__ = (
+                    CheckConstraint(
+                        "leak_type IN ('REFERENCE_CYCLE','UNBOUNDED_CACHE',"
+                        "'LISTENER_LEAK','THREAD_LOCAL','NATIVE_BUFFER','UNKNOWN')",
+                        name="ck_bigo_leak_type",
+                    ),
+                    CheckConstraint("status IN ('OPEN','INVESTIGATING','RESOLVED','IGNORED')", name="ck_bigo_leak_status"),
+                    Index("ix_bigo_leak_tenant", "tenant_id", "status", "detected_at"),
+                    {"schema": SCHEMA},
+                )
+                id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"))
+                tenant_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+                location: Mapped[str] = mapped_column(String(500), nullable=False)
+                leak_type: Mapped[str] = mapped_column(String(50), nullable=False, server_default="UNKNOWN")
+                growth_mb_per_hour: Mapped[Decimal] = mapped_column(Numeric(20, 4), nullable=False, server_default="0")
+                current_bytes: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+                samples: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+                status: Mapped[str] = mapped_column(String(20), nullable=False, server_default="OPEN")
+                detected_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+                created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+                updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
+
+
+            class KafkaTopicModel(Base):
+                __tablename__ = "bigo_kafka_topics"
+                __table_args__ = (
+                    UniqueConstraint("tenant_id", "name", name="uq_bigo_topic_name"),
+                    Index("ix_bigo_topic_tenant", "tenant_id"),
+                    {"schema": SCHEMA},
+                )
+                id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"))
+                tenant_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+                name: Mapped[str] = mapped_column(String(300), nullable=False)
+                partitions: Mapped[int] = mapped_column(Integer, nullable=False, server_default="3")
+                replication_factor: Mapped[int] = mapped_column(Integer, nullable=False, server_default="1")
+                retention_ms: Mapped[int] = mapped_column(Integer, nullable=False, server_default="604800000")
+                max_message_bytes: Mapped[int] = mapped_column(Integer, nullable=False, server_default="1048576")
+                is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("true"))
+                created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+                updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
+
+
+            class KafkaQueueModel(Base):
+                __tablename__ = "bigo_kafka_queues"
+                __table_args__ = (
+                    CheckConstraint("health IN ('HEALTHY','WARNING','DEGRADED','CRITICAL','OFFLINE')", name="ck_bigo_queue_health"),
+                    Index("ix_bigo_queue_topic", "topic", "partition", "captured_at"),
+                    Index("ix_bigo_queue_tenant", "tenant_id", "captured_at"),
+                    {"schema": SCHEMA},
+                )
+                id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"))
+                tenant_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+                topic: Mapped[str] = mapped_column(String(300), nullable=False)
+                partition: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+                current_offset: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+                log_end_offset: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+                lag: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+                health: Mapped[str] = mapped_column(String(20), nullable=False, server_default="HEALTHY")
+                captured_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+                created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+                updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
+
+
+            class KafkaConsumerModel(Base):
+                __tablename__ = "bigo_kafka_consumers"
+                __table_args__ = (
+                    CheckConstraint("health IN ('HEALTHY','WARNING','DEGRADED','CRITICAL','OFFLINE')", name="ck_bigo_consumer_health"),
+                    UniqueConstraint("tenant_id", "group_id", "topic", name="uq_bigo_consumer"),
+                    Index("ix_bigo_consumer_tenant", "tenant_id"),
+                    Index("ix_bigo_consumer_group", "group_id", "topic"),
+                    {"schema": SCHEMA},
+                )
+                id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"))
+                tenant_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+                group_id: Mapped[str] = mapped_column(String(300), nullable=False)
+                topic: Mapped[str] = mapped_column(String(300), nullable=False)
+                member_count: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+                total_lag: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+                health: Mapped[str] = mapped_column(String(20), nullable=False, server_default="HEALTHY")
+                last_commit_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+                created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+                updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
+
+
+            class PipelineReportModel(Base):
+                __tablename__ = "bigo_pipeline_reports"
+                __table_args__ = (
+                    CheckConstraint("status IN ('PASS','WARNING','CRITICAL')", name="ck_bigo_pipeline_status"),
+                    CheckConstraint("priority IN ('high','normal','low','dlq')", name="ck_bigo_pipeline_priority"),
+                    CheckConstraint("pressure IN ('NORMAL','ELEVATED','HIGH','CRITICAL','OOM')", name="ck_bigo_pipeline_pressure"),
+                    Index("ix_bigo_pipeline_tenant", "tenant_id", "created_at"),
+                    Index("ix_bigo_pipeline_trace", "trace_id"),
+                    Index("ix_bigo_pipeline_status", "tenant_id", "status", "created_at"),
+                    {"schema": SCHEMA},
+                )
+                id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"))
+                tenant_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+                trace_id: Mapped[str] = mapped_column(String(64), nullable=False)
+                n: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+                complexity: Mapped[str] = mapped_column(String(20), nullable=False, server_default="O(n)")
+                status: Mapped[str] = mapped_column(String(20), nullable=False, server_default="PASS")
+                priority: Mapped[str] = mapped_column(String(20), nullable=False, server_default="normal")
+                rss_mb: Mapped[Decimal] = mapped_column(Numeric(20, 4), nullable=False, server_default="0")
+                pressure: Mapped[str] = mapped_column(String(20), nullable=False, server_default="NORMAL")
+                duration_ms: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+                kafka_partition: Mapped[int] = mapped_column(Integer, nullable=False, server_default="1")
+                kafka_sent: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("false"))
+                created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+                updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
+
+
+            class CacheStatModel(Base):
+                __tablename__ = "bigo_cache_stats"
+                __table_args__ = (
+                    Index("ix_bigo_cache_stats_tenant", "tenant_id", "captured_at"),
+                    {"schema": SCHEMA},
+                )
+                id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"))
+                tenant_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+                namespace: Mapped[str] = mapped_column(String(100), nullable=False, server_default="bigo")
+                hits: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+                misses: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+                sets: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+                deletes: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+                errors: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+                hit_ratio: Mapped[Decimal] = mapped_column(Numeric(6, 4), nullable=False, server_default="0")
+                captured_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+                created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+                updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
+
+
+            class WSSessionModel(Base):
+                __tablename__ = "bigo_ws_sessions"
+                __table_args__ = (
+                    UniqueConstraint("tenant_id", "conn_id", name="uq_bigo_ws_conn"),
+                    Index("ix_bigo_ws_tenant", "tenant_id", "connected_at"),
+                    Index("ix_bigo_ws_user", "user_id"),
+                    {"schema": SCHEMA},
+                )
+                id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"))
+                tenant_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+                conn_id: Mapped[str] = mapped_column(String(64), nullable=False)
+                user_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+                rooms_json: Mapped[str] = mapped_column(Text, nullable=False, server_default="[]")
+                connected_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+                disconnected_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+                duration_s: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+                messages_sent: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+                messages_recv: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+                close_reason: Mapped[str | None] = mapped_column(String(100), nullable=True)
+                created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+                updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
+
+
+            __all__ = [
+                "Base", "MetricModel", "ProfileModel",
+                "MemorySnapshotModel", "MemoryLeakModel",
+                "KafkaTopicModel", "KafkaQueueModel", "KafkaConsumerModel",
+                "PipelineReportModel", "CacheStatModel", "WSSessionModel",
+            ]
+        ''')
+
+    def _metric_repo(self) -> str:
+        return dedent('''\
+            """Metric repository"""
+            from __future__ import annotations
+            from datetime import datetime
+            from typing import Any
+
+            from loguru import logger
+            from sqlalchemy import func, select
+            from sqlalchemy.exc import SQLAlchemyError
+            from sqlalchemy.ext.asyncio import AsyncSession
+
+            from app.modules.bigo.application.exceptions import ApplicationError
+            from app.modules.bigo.infrastructure.models import MetricModel
+
+
+            class SqlMetricRepository:
+                def __init__(self, session: AsyncSession) -> None:
+                    self._session = session
+
+                async def create(self, ctx: Any, metric: MetricModel) -> MetricModel:
+                    try:
+                        self._session.add(metric)
+                        await self._session.flush()
+                        return metric
+                    except SQLAlchemyError as exc:
+                        logger.error(f"metric.create failed: {exc}")
+                        raise ApplicationError(str(exc)) from exc
+
+                async def find_by_kind(
+                    self, ctx: Any, kind: str, since: datetime, limit: int = 500,
+                ) -> list[MetricModel]:
+                    try:
+                        stmt = select(MetricModel).where(MetricModel.captured_at >= since)
+                        if kind:
+                            stmt = stmt.where(MetricModel.kind == kind)
+                        stmt = stmt.order_by(MetricModel.captured_at.desc()).limit(limit)
+                        result = await self._session.execute(stmt)
+                        return list(result.scalars().all())
+                    except SQLAlchemyError as exc:
+                        logger.error(f"metric.find_by_kind failed: {exc}")
+                        raise ApplicationError(str(exc)) from exc
+
+                async def aggregate(
+                    self, ctx: Any, name: str, since: datetime,
+                ) -> dict[str, Any]:
+                    try:
+                        stmt = select(
+                            func.coalesce(func.avg(MetricModel.value), 0),
+                            func.coalesce(func.min(MetricModel.value), 0),
+                            func.coalesce(func.max(MetricModel.value), 0),
+                            func.count(MetricModel.id),
+                        ).where(MetricModel.name == name, MetricModel.captured_at >= since)
+                        result = await self._session.execute(stmt)
+                        row = result.one()
+                        return {"avg": float(row[0]), "min": float(row[1]),
+                                "max": float(row[2]), "count": int(row[3])}
+                    except SQLAlchemyError as exc:
+                        logger.error(f"metric.aggregate failed: {exc}")
+                        raise ApplicationError(str(exc)) from exc
+        ''')
+
+    def _profile_repo(self) -> str:
+        return dedent('''\
+            """Profile repository"""
+            from __future__ import annotations
+            import uuid
+            from datetime import datetime
+            from typing import Any
+
+            from loguru import logger
+            from sqlalchemy import select
+            from sqlalchemy.exc import SQLAlchemyError
+            from sqlalchemy.ext.asyncio import AsyncSession
+
+            from app.modules.bigo.application.exceptions import ApplicationError
+            from app.modules.bigo.infrastructure.models import ProfileModel
+
+
+            class SqlProfileRepository:
+                def __init__(self, session: AsyncSession) -> None:
+                    self._session = session
+
+                async def create(self, ctx: Any, profile: ProfileModel) -> ProfileModel:
+                    try:
+                        self._session.add(profile)
+                        await self._session.flush()
+                        return profile
+                    except SQLAlchemyError as exc:
+                        logger.error(f"profile.create failed: {exc}")
+                        raise ApplicationError(str(exc)) from exc
+
+                async def find_by_id(self, ctx: Any, id: uuid.UUID) -> ProfileModel | None:
+                    try:
+                        result = await self._session.execute(
+                            select(ProfileModel).where(ProfileModel.id == id)
+                        )
+                        return result.scalar_one_or_none()
+                    except SQLAlchemyError as exc:
+                        raise ApplicationError(str(exc)) from exc
+
+                async def find_by_function(
+                    self, ctx: Any, function_name: str, limit: int = 100,
+                ) -> list[ProfileModel]:
+                    try:
+                        result = await self._session.execute(
+                            select(ProfileModel)
+                            .where(ProfileModel.function_name == function_name)
+                            .order_by(ProfileModel.captured_at.desc())
+                            .limit(limit)
+                        )
+                        return list(result.scalars().all())
+                    except SQLAlchemyError as exc:
+                        raise ApplicationError(str(exc)) from exc
+
+                async def find_recent(
+                    self, ctx: Any, since: datetime, limit: int = 100,
+                ) -> list[ProfileModel]:
+                    try:
+                        result = await self._session.execute(
+                            select(ProfileModel)
+                            .where(ProfileModel.captured_at >= since)
+                            .order_by(ProfileModel.captured_at.desc())
+                            .limit(limit)
+                        )
+                        return list(result.scalars().all())
+                    except SQLAlchemyError as exc:
+                        raise ApplicationError(str(exc)) from exc
+        ''')
+
+    def _memory_repo(self) -> str:
+        return dedent('''\
+            """Memory repository"""
+            from __future__ import annotations
+            import uuid
+            from datetime import datetime
+            from typing import Any
+
+            from loguru import logger
+            from sqlalchemy import select
+            from sqlalchemy.exc import SQLAlchemyError
+            from sqlalchemy.ext.asyncio import AsyncSession
+
+            from app.modules.bigo.application.exceptions import ApplicationError
+            from app.modules.bigo.infrastructure.models import (
+                MemoryLeakModel, MemorySnapshotModel,
+            )
+
+
+            class SqlMemoryRepository:
+                def __init__(self, session: AsyncSession) -> None:
+                    self._session = session
+
+                async def save_snapshot(self, ctx: Any, snap: MemorySnapshotModel) -> MemorySnapshotModel:
+                    try:
+                        self._session.add(snap)
+                        await self._session.flush()
+                        return snap
+                    except SQLAlchemyError as exc:
+                        raise ApplicationError(str(exc)) from exc
+
+                async def save_leak(self, ctx: Any, leak: MemoryLeakModel) -> MemoryLeakModel:
+                    try:
+                        self._session.add(leak)
+                        await self._session.flush()
+                        return leak
+                    except SQLAlchemyError as exc:
+                        raise ApplicationError(str(exc)) from exc
+
+                async def find_snapshots(
+                    self, ctx: Any, since: datetime, limit: int = 50,
+                ) -> list[MemorySnapshotModel]:
+                    try:
+                        result = await self._session.execute(
+                            select(MemorySnapshotModel)
+                            .where(MemorySnapshotModel.captured_at >= since)
+                            .order_by(MemorySnapshotModel.captured_at.desc())
+                            .limit(limit)
+                        )
+                        return list(result.scalars().all())
+                    except SQLAlchemyError as exc:
+                        raise ApplicationError(str(exc)) from exc
+
+                async def find_leaks(
+                    self, ctx: Any, status: str = "OPEN", limit: int = 50,
+                ) -> list[MemoryLeakModel]:
+                    try:
+                        stmt = select(MemoryLeakModel).where(MemoryLeakModel.status == status)
+                        stmt = stmt.order_by(MemoryLeakModel.growth_mb_per_hour.desc()).limit(limit)
+                        result = await self._session.execute(stmt)
+                        return list(result.scalars().all())
+                    except SQLAlchemyError as exc:
+                        raise ApplicationError(str(exc)) from exc
+
+                async def update_leak_status(
+                    self, ctx: Any, leak_id: uuid.UUID, status: str,
+                ) -> bool:
+                    try:
+                        leak = await self._session.get(MemoryLeakModel, leak_id)
+                        if leak is None:
+                            return False
+                        leak.status = status
+                        await self._session.flush()
+                        return True
+                    except SQLAlchemyError as exc:
+                        raise ApplicationError(str(exc)) from exc
+        ''')
+
+    def _kafka_repos(self) -> str:
+        return dedent('''\
+            """Kafka repositories"""
+            from __future__ import annotations
+            import uuid
+            from typing import Any
+
+            from loguru import logger
+            from sqlalchemy import func, select
+            from sqlalchemy.exc import SQLAlchemyError
+            from sqlalchemy.ext.asyncio import AsyncSession
+
+            from app.modules.bigo.application.exceptions import ApplicationError
+            from app.modules.bigo.infrastructure.models import (
+                KafkaConsumerModel, KafkaQueueModel, KafkaTopicModel,
+            )
+
+
+            class SqlKafkaTopicRepository:
+                def __init__(self, session: AsyncSession) -> None:
+                    self._session = session
+
+                async def save(self, ctx: Any, topic: KafkaTopicModel) -> KafkaTopicModel:
+                    try:
+                        self._session.add(topic)
+                        await self._session.flush()
+                        return topic
+                    except SQLAlchemyError as exc:
+                        raise ApplicationError(str(exc)) from exc
+
+                async def find_by_name(self, ctx: Any, name: str) -> KafkaTopicModel | None:
+                    try:
+                        result = await self._session.execute(
+                            select(KafkaTopicModel).where(KafkaTopicModel.name == name)
+                        )
+                        return result.scalar_one_or_none()
+                    except SQLAlchemyError as exc:
+                        raise ApplicationError(str(exc)) from exc
+
+                async def find_all_active(self, ctx: Any) -> list[KafkaTopicModel]:
+                    try:
+                        result = await self._session.execute(
+                            select(KafkaTopicModel).where(KafkaTopicModel.is_active.is_(True))
+                        )
+                        return list(result.scalars().all())
+                    except SQLAlchemyError as exc:
+                        raise ApplicationError(str(exc)) from exc
+
+                async def update(self, ctx: Any, topic: KafkaTopicModel) -> KafkaTopicModel:
+                    try:
+                        await self._session.flush()
+                        return topic
+                    except SQLAlchemyError as exc:
+                        raise ApplicationError(str(exc)) from exc
+
+
+            class SqlKafkaQueueRepository:
+                def __init__(self, session: AsyncSession) -> None:
+                    self._session = session
+
+                async def save(self, ctx: Any, q: KafkaQueueModel) -> KafkaQueueModel:
+                    try:
+                        self._session.add(q)
+                        await self._session.flush()
+                        return q
+                    except SQLAlchemyError as exc:
+                        raise ApplicationError(str(exc)) from exc
+
+                async def find_by_topic(
+                    self, ctx: Any, topic: str, limit: int = 100,
+                ) -> list[KafkaQueueModel]:
+                    try:
+                        result = await self._session.execute(
+                            select(KafkaQueueModel)
+                            .where(KafkaQueueModel.topic == topic)
+                            .order_by(KafkaQueueModel.captured_at.desc())
+                            .limit(limit)
+                        )
+                        return list(result.scalars().all())
+                    except SQLAlchemyError as exc:
+                        raise ApplicationError(str(exc)) from exc
+
+                async def latest_by_topic(self, ctx: Any, topic: str) -> list[KafkaQueueModel]:
+                    try:
+                        subq = (
+                            select(
+                                KafkaQueueModel.partition,
+                                func.max(KafkaQueueModel.captured_at).label("max_at"),
+                            )
+                            .where(KafkaQueueModel.topic == topic)
+                            .group_by(KafkaQueueModel.partition)
+                            .subquery()
+                        )
+                        result = await self._session.execute(
+                            select(KafkaQueueModel).join(
+                                subq,
+                                (KafkaQueueModel.partition == subq.c.partition)
+                                & (KafkaQueueModel.captured_at == subq.c.max_at),
+                            )
+                        )
+                        return list(result.scalars().all())
+                    except SQLAlchemyError as exc:
+                        raise ApplicationError(str(exc)) from exc
+
+                async def total_lag(self, ctx: Any, topic: str) -> int:
+                    try:
+                        result = await self._session.execute(
+                            select(func.coalesce(func.sum(KafkaQueueModel.lag), 0))
+                            .where(KafkaQueueModel.topic == topic)
+                        )
+                        return int(result.scalar() or 0)
+                    except SQLAlchemyError as exc:
+                        raise ApplicationError(str(exc)) from exc
+
+
+            class SqlKafkaConsumerRepository:
+                def __init__(self, session: AsyncSession) -> None:
+                    self._session = session
+
+                async def save(self, ctx: Any, c: KafkaConsumerModel) -> KafkaConsumerModel:
+                    try:
+                        existing = await self.find_by_group(ctx, c.group_id)
+                        if existing and existing.topic == c.topic:
+                            existing.member_count = c.member_count
+                            existing.total_lag = c.total_lag
+                            existing.health = c.health
+                            existing.last_commit_at = c.last_commit_at
+                            await self._session.flush()
+                            return existing
+                        self._session.add(c)
+                        await self._session.flush()
+                        return c
+                    except SQLAlchemyError as exc:
+                        raise ApplicationError(str(exc)) from exc
+
+                async def find_by_group(self, ctx: Any, group_id: str) -> KafkaConsumerModel | None:
+                    try:
+                        result = await self._session.execute(
+                            select(KafkaConsumerModel).where(KafkaConsumerModel.group_id == group_id)
+                        )
+                        return result.scalars().first()
+                    except SQLAlchemyError as exc:
+                        raise ApplicationError(str(exc)) from exc
+
+                async def find_all(self, ctx: Any, limit: int = 100) -> list[KafkaConsumerModel]:
+                    try:
+                        result = await self._session.execute(
+                            select(KafkaConsumerModel)
+                            .order_by(KafkaConsumerModel.total_lag.desc())
+                            .limit(limit)
+                        )
+                        return list(result.scalars().all())
+                    except SQLAlchemyError as exc:
+                        raise ApplicationError(str(exc)) from exc
+
+                async def update_lag(
+                    self, ctx: Any, consumer_id: uuid.UUID,
+                    total_lag: int, health: str,
+                ) -> None:
+                    try:
+                        c = await self._session.get(KafkaConsumerModel, consumer_id)
+                        if c:
+                            c.total_lag = total_lag
+                            c.health = health
+                            await self._session.flush()
+                    except SQLAlchemyError as exc:
+                        raise ApplicationError(str(exc)) from exc
+        ''')
+
+    def _pipeline_repo(self) -> str:
+        return dedent('''\
+            """Pipeline report repository"""
+            from __future__ import annotations
+            from datetime import datetime
+            from typing import Any
+
+            from loguru import logger
+            from sqlalchemy import select
+            from sqlalchemy.exc import SQLAlchemyError
+            from sqlalchemy.ext.asyncio import AsyncSession
+
+            from app.modules.bigo.application.exceptions import ApplicationError
+            from app.modules.bigo.infrastructure.models import PipelineReportModel
+
+
+            class SqlPipelineReportRepository:
+                def __init__(self, session: AsyncSession) -> None:
+                    self._session = session
+
+                async def save(self, ctx: Any, report: PipelineReportModel) -> PipelineReportModel:
+                    try:
+                        self._session.add(report)
+                        await self._session.flush()
+                        return report
+                    except SQLAlchemyError as exc:
+                        raise ApplicationError(str(exc)) from exc
+
+                async def find_recent(
+                    self, ctx: Any, since: datetime, limit: int = 100,
+                ) -> list[PipelineReportModel]:
+                    try:
+                        result = await self._session.execute(
+                            select(PipelineReportModel)
+                            .where(PipelineReportModel.created_at >= since)
+                            .order_by(PipelineReportModel.created_at.desc())
+                            .limit(limit)
+                        )
+                        return list(result.scalars().all())
+                    except SQLAlchemyError as exc:
+                        raise ApplicationError(str(exc)) from exc
+
+                async def find_by_trace(
+                    self, ctx: Any, trace_id: str,
+                ) -> PipelineReportModel | None:
+                    try:
+                        result = await self._session.execute(
+                            select(PipelineReportModel)
+                            .where(PipelineReportModel.trace_id == trace_id)
+                            .limit(1)
+                        )
+                        return result.scalar_one_or_none()
+                    except SQLAlchemyError as exc:
+                        raise ApplicationError(str(exc)) from exc
+        ''')
+
+    def _metrics_registry_content(self) -> str:
+        return dedent('''\
+            """MetricsRegistry — Prometheus-style counter/gauge/histogram"""
+            from __future__ import annotations
+
+            import collections
+            import statistics
+            import threading
+            from typing import Any
+
+
+            class MetricsRegistry:
+                """TH: metrics registry (thread-safe)"""
+
+                def __init__(self) -> None:
+                    self._lock = threading.Lock()
+                    self._counters: dict[str, int] = collections.Counter()
+                    self._gauges: dict[str, float] = {}
+                    self._histograms: dict[str, list[float]] = collections.defaultdict(list)
+
+                def incr(self, name: str, value: int = 1, **labels: Any) -> None:
+                    key = self._key(name, labels)
+                    with self._lock:
+                        self._counters[key] += value
+
+                def gauge(self, name: str, value: float, **labels: Any) -> None:
+                    key = self._key(name, labels)
+                    with self._lock:
+                        self._gauges[key] = float(value)
+
+                def observe(self, name: str, value: float, **labels: Any) -> None:
+                    key = self._key(name, labels)
+                    with self._lock:
+                        self._histograms[key].append(float(value))
+
+                def snapshot(self) -> dict[str, Any]:
+                    with self._lock:
+                        return {
+                            "counters": dict(self._counters),
+                            "gauges": dict(self._gauges),
+                            "histograms": {
+                                k: {
+                                    "count": len(v),
+                                    "min": min(v) if v else 0.0,
+                                    "max": max(v) if v else 0.0,
+                                    "mean": statistics.fmean(v) if v else 0.0,
+                                    "p95": self._quantile(v, 0.95),
+                                }
+                                for k, v in self._histograms.items()
+                            },
+                        }
+
+                def reset(self) -> None:
+                    with self._lock:
+                        self._counters.clear()
+                        self._gauges.clear()
+                        self._histograms.clear()
+
+                @staticmethod
+                def _key(name: str, labels: dict[str, Any]) -> str:
+                    if not labels:
+                        return name
+                    suffix = ",".join(f"{k}={v}" for k, v in sorted(labels.items()))
+                    return f"{name}{{{suffix}}}"
+
+                @staticmethod
+                def _quantile(values: list[float], q: float) -> float:
+                    if not values:
+                        return 0.0
+                    sorted_v = sorted(values)
+                    idx = max(0, min(len(sorted_v) - 1, int(q * len(sorted_v)) - 1))
+                    return sorted_v[idx]
+        ''')
+
+    def _big_o_monitor_content(self) -> str:
+        return dedent('''\
+            """BigOMonitor — policy checks + dynamic complexity analysis"""
+            from __future__ import annotations
+
+            from typing import Any, Callable, Iterable
+
+            from app.modules.bigo.domain.enums import ComplexityClass, Priority
+            from app.modules.bigo.domain.helpers import analyze_complexity
+            from app.modules.bigo.domain.pipeline_config import PipelineConfig
+            from app.modules.bigo.domain.value_objects import Complexity, ComplexityPolicy
+            from app.modules.bigo.infrastructure.metrics_registry import MetricsRegistry
+
+            _COMPLEXITY_ORDER: dict[str, int] = {
+                "O(1)": 0, "O(log n)": 1, "O(n)": 2,
+                "O(n log n)": 3, "O(n^2)": 4, "O(n^3)": 5,
+                "O(2^n)": 6, "O(n!)": 7, "UNKNOWN": -1,
+            }
+
+
+            class BigOMonitor:
+                """TH: ตรวจสอบ Big-O + policy enforcement"""
+
+                def __init__(
+                    self,
+                    config: PipelineConfig,
+                    metrics: MetricsRegistry | None = None,
+                ) -> None:
+                    self._config = config
+                    self._metrics = metrics or MetricsRegistry()
+                    self._policies: dict[str, ComplexityPolicy] = {
+                        "O(1)": ComplexityPolicy(ComplexityClass.CONSTANT, 10_000_000, partition=Priority.HIGH),
+                        "O(log n)": ComplexityPolicy(ComplexityClass.LOGARITHMIC, 10_000_000, partition=Priority.HIGH),
+                        "O(n)": ComplexityPolicy(ComplexityClass.LINEAR, config.max_n_linear,
+                                                 warn_ratio=config.warn_ratio, partition=Priority.NORMAL),
+                        "O(n log n)": ComplexityPolicy(ComplexityClass.LINEARITHMIC, config.max_n_linearithmic,
+                                                       warn_ratio=config.warn_ratio, partition=Priority.NORMAL),
+                        "O(n^2)": ComplexityPolicy(ComplexityClass.QUADRATIC, config.max_n_quadratic,
+                                                   warn_ratio=config.warn_ratio, partition=Priority.LOW),
+                        "O(n^3)": ComplexityPolicy(ComplexityClass.CUBIC, config.max_n_cubic,
+                                                   warn_ratio=config.warn_ratio, partition=Priority.LOW),
+                        "O(2^n)": ComplexityPolicy(ComplexityClass.EXPONENTIAL, 25,
+                                                   warn_ratio=config.warn_ratio, partition=Priority.LOW),
+                    }
+
+                def check(self, n: int, algorithm_type: str = "O(n)") -> tuple[str, Priority]:
+                    policy = self._policies.get(algorithm_type)
+                    if policy is None:
+                        self._metrics.incr("bigo.check", status="UNKNOWN", complexity=algorithm_type)
+                        return "PASS", Priority.NORMAL
+                    status = policy.classify(n)
+                    self._metrics.incr("bigo.check", status=status, complexity=algorithm_type)
+                    self._metrics.observe("bigo.n", n, complexity=algorithm_type)
+                    return status, policy.partition
+
+                def analyze(
+                    self,
+                    fn: Callable[[int], Any],
+                    sizes: Iterable[int] | None = None,
+                    repeats: int = 3,
+                ) -> Complexity:
+                    sizes_list = list(sizes or self._config.sample_sizes)
+                    result = analyze_complexity(fn, sizes=sizes_list, repeats=repeats)
+                    self._metrics.observe("bigo.analyze.r_squared", result.r_squared)
+                    return result
+
+                @staticmethod
+                def compare(a: str, b: str) -> int:
+                    return _COMPLEXITY_ORDER.get(a, -1) - _COMPLEXITY_ORDER.get(b, -1)
+
+                def policies(self) -> dict[str, ComplexityPolicy]:
+                    return dict(self._policies)
+
+                def register_policy(self, policy: ComplexityPolicy) -> None:
+                    self._policies[policy.cls.value] = policy
+        ''')
+
+    def _memory_manager_content(self) -> str:
+        return dedent('''\
+            """MemoryManager — LRU + TTL + bytes tracking"""
+            from __future__ import annotations
+
+            import collections
+            import sys
+            import threading
+            import time
+            from dataclasses import dataclass
+            from typing import Any
+
+            from app.modules.bigo.domain.enums import MemoryPressure
+            from app.modules.bigo.domain.pipeline_config import PipelineConfig
+            from app.modules.bigo.infrastructure.metrics_registry import MetricsRegistry
+
+
+            @dataclass(slots=True)
+            class _MemEntry:
+                key: str
+                value: Any
+                size_bytes: int
+                inserted_at: float
+                ttl_s: int
+
+
+            class MemoryManager:
+                """TH: จัดการ memory ด้วย LRU + TTL"""
+
+                def __init__(
+                    self,
+                    config: PipelineConfig,
+                    metrics: MetricsRegistry | None = None,
+                ) -> None:
+                    self._config = config
+                    self._metrics = metrics or MetricsRegistry()
+                    self._lock = threading.Lock()
+                    self._store: collections.OrderedDict[str, _MemEntry] = collections.OrderedDict()
+                    self._current_bytes = 0
+
+                def put(self, key: str, value: Any, ttl_s: int | None = None) -> tuple[bool, int]:
+                    size = self._estimate_size(value)
+                    ttl = ttl_s if ttl_s is not None else self._config.memory_default_ttl_s
+                    with self._lock:
+                        self._evict_expired_locked()
+                        evicted = 0
+                        while (self._current_bytes + size > self._config.memory_max_bytes and self._store):
+                            self._evict_lru_locked()
+                            evicted += 1
+                            if evicted >= self._config.memory_evict_batch:
+                                if self._current_bytes + size > self._config.memory_max_bytes:
+                                    self._metrics.incr("bigo.memory.reject")
+                                    return False, self._current_bytes
+                                break
+                        if size > self._config.memory_max_bytes:
+                            self._metrics.incr("bigo.memory.reject", reason="too_large")
+                            return False, self._current_bytes
+                        if key in self._store:
+                            old = self._store.pop(key)
+                            self._current_bytes -= old.size_bytes
+                        entry = _MemEntry(key=key, value=value, size_bytes=size,
+                                          inserted_at=time.time(), ttl_s=ttl)
+                        self._store[key] = entry
+                        self._current_bytes += size
+                        self._metrics.gauge("bigo.memory.bytes", self._current_bytes)
+                        self._metrics.incr("bigo.memory.put")
+                        return True, self._current_bytes
+
+                def get(self, key: str) -> Any | None:
+                    with self._lock:
+                        entry = self._store.get(key)
+                        if entry is None:
+                            self._metrics.incr("bigo.memory.miss")
+                            return None
+                        if time.time() - entry.inserted_at > entry.ttl_s:
+                            self._store.pop(key, None)
+                            self._current_bytes -= entry.size_bytes
+                            self._metrics.incr("bigo.memory.expired")
+                            return None
+                        self._store.move_to_end(key)
+                        self._metrics.incr("bigo.memory.hit")
+                        return entry.value
+
+                def pressure(self) -> MemoryPressure:
+                    ratio = (
+                        self._current_bytes / self._config.memory_max_bytes
+                        if self._config.memory_max_bytes > 0 else 0.0
+                    )
+                    if ratio >= self._config.memory_critical_ratio:
+                        return MemoryPressure.CRITICAL
+                    if ratio >= self._config.memory_high_ratio:
+                        return MemoryPressure.HIGH
+                    if ratio >= 0.5:
+                        return MemoryPressure.ELEVATED
+                    return MemoryPressure.NORMAL
+
+                def stats(self) -> dict[str, Any]:
+                    with self._lock:
+                        return {
+                            "entries": len(self._store),
+                            "current_bytes": self._current_bytes,
+                            "max_bytes": self._config.memory_max_bytes,
+                            "utilization": round(
+                                self._current_bytes / self._config.memory_max_bytes, 4,
+                            ) if self._config.memory_max_bytes else 0.0,
+                            "pressure": self.pressure().value,
+                        }
+
+                def clear(self) -> None:
+                    with self._lock:
+                        self._store.clear()
+                        self._current_bytes = 0
+                    self._metrics.gauge("bigo.memory.bytes", 0)
+
+                @staticmethod
+                def _estimate_size(value: Any) -> int:
+                    try:
+                        return sys.getsizeof(value)
+                    except Exception:
+                        return 64
+
+                def _evict_lru_locked(self) -> None:
+                    if not self._store:
+                        return
+                    key, entry = self._store.popitem(last=False)
+                    self._current_bytes -= entry.size_bytes
+                    self._metrics.incr("bigo.memory.evict", reason="lru")
+
+                def _evict_expired_locked(self) -> None:
+                    now = time.time()
+                    expired = [
+                        k for k, e in self._store.items()
+                        if now - e.inserted_at > e.ttl_s
+                    ]
+                    for k in expired:
+                        e = self._store.pop(k, None)
+                        if e:
+                            self._current_bytes -= e.size_bytes
+                            self._metrics.incr("bigo.memory.evict", reason="ttl")
+        ''')
+
+    def _kafka_queue_content(self) -> str:
+        return dedent('''\
+            """KafkaQueueManager — priority + retry + DLQ + compression"""
+            from __future__ import annotations
+
+            import time
+            from typing import Any, Callable, Protocol
+
+            from app.modules.bigo.domain.enums import Priority
+            from app.modules.bigo.domain.pipeline_config import PipelineConfig
+            from app.modules.bigo.infrastructure.metrics_registry import MetricsRegistry
+
+
+            class KafkaProducerLike(Protocol):
+                def produce(
+                    self, topic: str, value: bytes, partition: int = 0,
+                    key: bytes | None = None, on_delivery: Any = None,
+                ) -> None: ...
+                def flush(self, timeout: float = 5.0) -> int: ...
+
+
+            class InMemoryProducer:
+                """TH: mock producer สำหรับ demo/test"""
+
+                def __init__(self) -> None:
+                    self.buffer: list[dict[str, Any]] = []
+
+                def produce(
+                    self, topic: str, value: bytes, partition: int = 0,
+                    key: bytes | None = None, on_delivery: Any = None,
+                ) -> None:
+                    self.buffer.append({
+                        "topic": topic, "value": value, "partition": partition,
+                        "key": key, "ts": time.time(),
+                    })
+                    if on_delivery is not None:
+                        on_delivery(None, None)
+
+                def flush(self, timeout: float = 5.0) -> int:
+                    return 0
+
+
+            class KafkaQueueManager:
+                """TH: จัดคิว + priority + retry + DLQ"""
+
+                def __init__(
+                    self,
+                    config: PipelineConfig,
+                    producer: KafkaProducerLike | None = None,
+                    metrics: MetricsRegistry | None = None,
+                    backpressure_check: Callable[[], bool] | None = None,
+                ) -> None:
+                    self._config = config
+                    self._producer = producer or InMemoryProducer()
+                    self._metrics = metrics or MetricsRegistry()
+                    self._bp_check = backpressure_check or (lambda: False)
+
+                def send(
+                    self,
+                    data: Any,
+                    topic: str | None = None,
+                    priority: Priority = Priority.NORMAL,
+                    key: bytes | None = None,
+                ) -> tuple[bool, int]:
+                    topic = topic or self._config.kafka_topic
+                    partition = self._config.kafka_partition_map.get(priority.value, 1)
+
+                    if self._bp_check():
+                        self._metrics.incr("bigo.kafka.backpressure", priority=priority.value)
+                        topic = self._config.kafka_dlq_topic
+                        partition = self._config.kafka_partition_map["dlq"]
+
+                    payload = self._encode(data, priority)
+
+                    for attempt in range(self._config.kafka_max_retries):
+                        try:
+                            self._producer.produce(
+                                topic=topic, value=payload,
+                                partition=partition, key=key,
+                            )
+                            self._producer.flush(timeout=self._config.kafka_flush_timeout_s)
+                            self._metrics.incr("bigo.kafka.sent", priority=priority.value, topic=topic)
+                            return True, partition
+                        except Exception:
+                            wait = (
+                                self._config.kafka_backoff[attempt]
+                                if attempt < len(self._config.kafka_backoff) else 4.0
+                            )
+                            time.sleep(wait)
+
+                    self._metrics.incr("bigo.kafka.failed", priority=priority.value)
+                    try:
+                        self._producer.produce(
+                            topic=self._config.kafka_dlq_topic,
+                            value=payload,
+                            partition=self._config.kafka_partition_map["dlq"],
+                            key=key,
+                        )
+                        self._producer.flush(timeout=self._config.kafka_flush_timeout_s)
+                    except Exception:
+                        self._metrics.incr("bigo.kafka.dlq_failed")
+                    return False, self._config.kafka_partition_map["dlq"]
+
+                def _encode(self, data: Any, priority: Priority) -> bytes:
+                    raw = str(data).encode("utf-8")
+                    if priority == Priority.LOW and self._config.compress_low_priority:
+                        try:
+                            import zlib
+                            compressed = zlib.compress(raw, level=6)
+                            return b"\\x01" + compressed
+                        except Exception:
+                            pass
+                    return b"\\x00" + raw
+        ''')
+
+    def _services_content(self) -> str:
+        return dedent('''\
+            """bigo infrastructure services"""
+            from __future__ import annotations
+
+            from typing import Any
+
+            import structlog
+
+            from app.modules.bigo.domain.helpers import (
+                analyze_complexity as _analyze,
+                detect_leaks as _detect,
+                diff_snapshots as _diff,
+                take_snapshot as _snapshot,
+            )
+            from app.modules.bigo.domain.helpers.memory_analyzer import (
+                get_memory_info as _mem_info,
+            )
+
+            log = structlog.get_logger()
+
+
+            class DefaultComplexityAnalyzer:
+                def analyze(self, fn: Any, sizes: list[int] | None = None):
+                    return _analyze(fn, sizes=sizes)
+
+
+            class DefaultMemoryProfiler:
+                def snapshot(self) -> list[tuple[str, int, int]]:
+                    try:
+                        return _snapshot()
+                    except Exception as exc:
+                        log.warning("mem.snapshot.failed", err=str(exc))
+                        return []
+
+                def diff(self, before, after) -> list[dict[str, Any]]:
+                    try:
+                        return _diff(before, after)
+                    except Exception as exc:
+                        log.warning("mem.diff.failed", err=str(exc))
+                        return []
+
+                def info(self) -> dict[str, Any]:
+                    try:
+                        return _mem_info()
+                    except Exception as exc:
+                        log.warning("mem.info.failed", err=str(exc))
+                        return {"rss_mb": 0.0, "vms_mb": 0.0, "percent": 0.0}
+
+
+            class DefaultKafkaAdmin:
+                def __init__(self, bootstrap: str = "localhost:9092") -> None:
+                    self._bootstrap = bootstrap
+                    self._admin: Any = None
+
+                def _get_admin(self) -> Any:
+                    if self._admin is not None:
+                        return self._admin
+                    try:
+                        from aiokafka.admin import AIOKafkaAdminClient
+                        self._admin = AIOKafkaAdminClient(bootstrap_servers=self._bootstrap)
+                    except Exception as exc:
+                        log.warning("kafka.admin.init_failed", err=str(exc))
+                    return self._admin
+
+                async def list_topics(self) -> list[str]:
+                    admin = self._get_admin()
+                    if admin is None:
+                        return []
+                    try:
+                        return list(await admin.list_topics())
+                    except Exception as exc:
+                        log.warning("kafka.list_topics.failed", err=str(exc))
+                        return []
+
+                async def describe_topic(self, name: str) -> dict[str, Any]:
+                    return {"name": name, "partitions": 3, "replication": 1}
+
+                async def consumer_lag(self, group_id: str, topic: str) -> dict[str, Any]:
+                    try:
+                        from aiokafka.admin import AIOKafkaAdminClient
+                        admin = AIOKafkaAdminClient(bootstrap_servers=self._bootstrap)
+                        await admin.start()
+                        try:
+                            return {"member_count": 0, "total_lag": 0, "partitions": []}
+                        finally:
+                            await admin.close()
+                    except Exception as exc:
+                        log.warning("kafka.consumer_lag.failed", err=str(exc))
+                        return {"member_count": 0, "total_lag": 0, "partitions": []}
+
+                async def create_topic(self, name: str, partitions: int, replication: int) -> None:
+                    admin = self._get_admin()
+                    if admin is None:
+                        return
+                    try:
+                        from aiokafka.admin import NewTopic
+                        await admin.create_topics([
+                            NewTopic(name=name, num_partitions=partitions,
+                                     replication_factor=replication),
+                        ])
+                    except Exception as exc:
+                        log.warning("kafka.create_topic.failed", err=str(exc))
+
+                async def delete_topic(self, name: str) -> None:
+                    admin = self._get_admin()
+                    if admin is None:
+                        return
+                    try:
+                        await admin.delete_topics([name])
+                    except Exception as exc:
+                        log.warning("kafka.delete_topic.failed", err=str(exc))
+
+
+            class RedisBackpressureController:
+                def __init__(self, redis: Any | None = None) -> None:
+                    self._redis = redis
+
+                def _key(self, topic: str) -> str:
+                    return f"bigo:bp:{topic}"
+
+                async def activate(self, topic: str, reason: str) -> None:
+                    if self._redis is None:
+                        return
+                    try:
+                        await self._redis.set(self._key(topic), reason, ex=3600)
+                    except Exception as exc:
+                        log.warning("bp.activate.failed", err=str(exc))
+
+                async def deactivate(self, topic: str) -> None:
+                    if self._redis is None:
+                        return
+                    try:
+                        await self._redis.delete(self._key(topic))
+                    except Exception as exc:
+                        log.warning("bp.deactivate.failed", err=str(exc))
+
+                async def is_active(self, topic: str) -> bool:
+                    if self._redis is None:
+                        return False
+                    try:
+                        val = await self._redis.get(self._key(topic))
+                        return val is not None
+                    except Exception as exc:
+                        log.warning("bp.is_active.failed", err=str(exc))
+                        return False
+
+
+            class RedisCache:
+                """TH: cache-aside (legacy)"""
+
+                def __init__(self, redis: Any | None = None) -> None:
+                    self._redis = redis
+
+                async def get(self, key: str) -> Any | None:
+                    if self._redis is None:
+                        return None
+                    try:
+                        import json
+                        raw = await self._redis.get(key)
+                        return json.loads(raw) if raw else None
+                    except Exception as exc:
+                        log.warning("cache.get.failed", err=str(exc))
+                        return None
+
+                async def set(self, key: str, value: Any, ttl: int = 60) -> bool:
+                    if self._redis is None:
+                        return False
+                    try:
+                        import json
+                        await self._redis.set(key, json.dumps(value, default=str), ex=ttl)
+                        return True
+                    except Exception as exc:
+                        log.warning("cache.set.failed", err=str(exc))
+                        return False
+
+                async def invalidate(self, key: str) -> bool:
+                    if self._redis is None:
+                        return False
+                    try:
+                        await self._redis.delete(key)
+                        return True
+                    except Exception as exc:
+                        log.warning("cache.invalidate.failed", err=str(exc))
+                        return False
+
+
+            class LoggingEventBus:
+                async def publish(self, event: object) -> None:
+                    try:
+                        log.info("event", type=type(event).__name__)
+                    except Exception:
+                        pass
+
+
+            class KafkaEventBus:
+                def __init__(self, producer: Any, topic: str = "bigo.events") -> None:
+                    self._producer = producer
+                    self._topic = topic
+
+                async def publish(self, event: object) -> None:
+                    try:
+                        payload = {
+                            "type": type(event).__name__,
+                            "data": {k: str(v) for k, v in vars(event).items()},
+                        }
+                        await self._producer.send_and_wait(self._topic, payload)
+                    except Exception as exc:
+                        log.warning("event.publish_failed", err=str(exc))
+        ''')
+
+    def _pipeline_content(self) -> str:
+        return dedent('''\
+            """BigOPipeline — orchestrator: monitor → memory → kafka"""
+            from __future__ import annotations
+
+            import time
+            import uuid
+            from typing import Any, Callable, Iterable
+
+            from app.modules.bigo.domain.enums import MemoryPressure, Priority
+            from app.modules.bigo.domain.pipeline_config import PipelineConfig
+            from app.modules.bigo.domain.value_objects import Complexity, ProcessReport
+            from app.modules.bigo.infrastructure.big_o_monitor import BigOMonitor
+            from app.modules.bigo.infrastructure.kafka_queue_manager import (
+                KafkaProducerLike, KafkaQueueManager,
+            )
+            from app.modules.bigo.infrastructure.memory_manager import MemoryManager
+            from app.modules.bigo.infrastructure.metrics_registry import MetricsRegistry
+
+
+            class BigOPipeline:
+                """TH: pipeline รวม monitor + memory + kafka"""
+
+                def __init__(
+                    self,
+                    config: PipelineConfig | None = None,
+                    producer: KafkaProducerLike | None = None,
+                    metrics: MetricsRegistry | None = None,
+                ) -> None:
+                    self._config = config or PipelineConfig()
+                    self._metrics = metrics or MetricsRegistry()
+                    self._monitor = BigOMonitor(self._config, self._metrics)
+                    self._memory = MemoryManager(self._config, self._metrics)
+
+                    def _bp() -> bool:
+                        return self._memory.pressure() == MemoryPressure.CRITICAL
+
+                    self._kafka = KafkaQueueManager(
+                        self._config, producer=producer,
+                        metrics=self._metrics, backpressure_check=_bp,
+                    )
+
+                def process(
+                    self,
+                    data: list[Any],
+                    algorithm_type: str = "O(n)",
+                    topic: str | None = None,
+                    cache_key: str | None = None,
+                ) -> ProcessReport:
+                    trace_id = str(uuid.uuid4())
+                    t0 = time.perf_counter()
+
+                    n = len(data)
+                    status, policy_priority = self._monitor.check(n, algorithm_type)
+                    pressure = self._memory.pressure()
+                    priority = self._final_priority(status, policy_priority, pressure)
+
+                    key = cache_key or f"batch:{trace_id}"
+                    accepted, _ = self._memory.put(key, data)
+
+                    sent = False
+                    partition = self._config.kafka_partition_map["dlq"]
+                    if accepted:
+                        sent, partition = self._kafka.send(
+                            data, topic=topic, priority=priority,
+                            key=trace_id.encode(),
+                        )
+
+                    duration_ms = int((time.perf_counter() - t0) * 1000)
+                    rss_mb = 0.0
+                    try:
+                        import psutil
+                        rss_mb = psutil.Process().memory_info().rss / (1024 * 1024)
+                    except ImportError:
+                        rss_mb = self._memory.stats()["current_bytes"] / (1024 * 1024)
+
+                    self._metrics.observe("bigo.pipeline.duration_ms", duration_ms)
+                    self._metrics.incr("bigo.pipeline.processed", status=status)
+
+                    return ProcessReport(
+                        n=n, complexity=algorithm_type, status=status,
+                        priority=priority, rss_mb=rss_mb, pressure=pressure,
+                        duration_ms=duration_ms, kafka_partition=partition,
+                        kafka_sent=sent, trace_id=trace_id,
+                    )
+
+                def analyze(
+                    self,
+                    fn: Callable[[int], Any],
+                    sizes: Iterable[int] | None = None,
+                ) -> Complexity:
+                    return self._monitor.analyze(fn, sizes=sizes)
+
+                @property
+                def memory(self) -> MemoryManager:
+                    return self._memory
+
+                @property
+                def monitor(self) -> BigOMonitor:
+                    return self._monitor
+
+                @property
+                def kafka(self) -> KafkaQueueManager:
+                    return self._kafka
+
+                @property
+                def config(self) -> PipelineConfig:
+                    return self._config
+
+                def metrics_snapshot(self) -> dict[str, Any]:
+                    return self._metrics.snapshot()
+
+                @staticmethod
+                def _final_priority(
+                    status: str, policy: Priority, pressure: MemoryPressure,
+                ) -> Priority:
+                    if pressure in (MemoryPressure.CRITICAL, MemoryPressure.HIGH):
+                        return Priority.LOW
+                    if status == "CRITICAL":
+                        return Priority.LOW
+                    if status == "WARNING":
+                        return Priority.NORMAL if policy == Priority.HIGH else policy
+                    return policy
+        ''')
+
+    def _redis_cache_content(self) -> str:
+        return dedent('''\
+            """RedisCache — async cache-aside with namespaces, TTL, stats, stampede lock"""
+            from __future__ import annotations
+
+            import asyncio
+            import hashlib
+            import json
+            import time
+            from typing import Any, Awaitable, Callable
+
+            import structlog
+
+            from app.modules.bigo.infrastructure.metrics_registry import MetricsRegistry
+
+            log = structlog.get_logger()
+
+
+            class CacheStats:
+                def __init__(self) -> None:
+                    self.hits = 0
+                    self.misses = 0
+                    self.sets = 0
+                    self.deletes = 0
+                    self.errors = 0
+
+                def snapshot(self) -> dict[str, Any]:
+                    total = self.hits + self.misses
+                    return {
+                        "hits": self.hits,
+                        "misses": self.misses,
+                        "sets": self.sets,
+                        "deletes": self.deletes,
+                        "errors": self.errors,
+                        "hit_ratio": round(self.hits / total, 4) if total else 0.0,
+                    }
+
+
+            class RedisCache:
+                """TH: cache-aside + TTL + namespace + stampede lock"""
+
+                def __init__(
+                    self,
+                    redis: Any | None = None,
+                    *,
+                    namespace: str = "bigo",
+                    default_ttl: int = 300,
+                    metrics: MetricsRegistry | None = None,
+                ) -> None:
+                    self._redis = redis
+                    self._ns = namespace
+                    self._ttl = default_ttl
+                    self._metrics = metrics or MetricsRegistry()
+                    self._stats = CacheStats()
+
+                def key(self, *parts: str) -> str:
+                    return f"{self._ns}:" + ":".join(parts)
+
+                @staticmethod
+                def hash_key(payload: Any) -> str:
+                    raw = json.dumps(payload, sort_keys=True, default=str)
+                    return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:32]
+
+                async def get(self, key: str) -> Any | None:
+                    if self._redis is None:
+                        self._stats.misses += 1
+                        return None
+                    try:
+                        raw = await self._redis.get(key)
+                        if raw is None:
+                            self._stats.misses += 1
+                            self._metrics.incr("bigo.cache.miss", ns=self._ns)
+                            return None
+                        self._stats.hits += 1
+                        self._metrics.incr("bigo.cache.hit", ns=self._ns)
+                        try:
+                            return json.loads(raw)
+                        except (TypeError, ValueError):
+                            return raw
+                    except Exception as exc:
+                        self._stats.errors += 1
+                        self._metrics.incr("bigo.cache.error", op="get")
+                        log.warning("cache.get.failed", key=key, err=str(exc))
+                        return None
+
+                async def set(self, key: str, value: Any, ttl: int | None = None) -> bool:
+                    if self._redis is None:
+                        return False
+                    try:
+                        await self._redis.set(
+                            key,
+                            json.dumps(value, default=str),
+                            ex=ttl if ttl is not None else self._ttl,
+                        )
+                        self._stats.sets += 1
+                        self._metrics.incr("bigo.cache.set", ns=self._ns)
+                        return True
+                    except Exception as exc:
+                        self._stats.errors += 1
+                        log.warning("cache.set.failed", key=key, err=str(exc))
+                        return False
+
+                async def delete(self, key: str) -> bool:
+                    if self._redis is None:
+                        return False
+                    try:
+                        await self._redis.delete(key)
+                        self._stats.deletes += 1
+                        return True
+                    except Exception as exc:
+                        self._stats.errors += 1
+                        log.warning("cache.delete.failed", key=key, err=str(exc))
+                        return False
+
+                async def delete_prefix(self, prefix: str) -> int:
+                    if self._redis is None:
+                        return 0
+                    pattern = prefix if prefix.endswith("*") else f"{prefix}*"
+                    count = 0
+                    try:
+                        async for k in self._redis.scan_iter(match=pattern, count=200):
+                            await self._redis.delete(k)
+                            count += 1
+                        self._stats.deletes += count
+                        return count
+                    except Exception as exc:
+                        log.warning("cache.delete_prefix.failed", prefix=prefix, err=str(exc))
+                        return 0
+
+                async def get_or_set(
+                    self,
+                    key: str,
+                    loader: Callable[[], Awaitable[Any]],
+                    ttl: int | None = None,
+                    *,
+                    lock_timeout: float = 5.0,
+                ) -> Any:
+                    cached = await self.get(key)
+                    if cached is not None:
+                        return cached
+
+                    lock_key = f"{key}:lock"
+                    acquired = False
+                    if self._redis is not None:
+                        try:
+                            acquired = bool(
+                                await self._redis.set(lock_key, "1", nx=True, ex=int(lock_timeout))
+                            )
+                        except Exception:
+                            acquired = False
+
+                    if acquired:
+                        try:
+                            value = await loader()
+                            await self.set(key, value, ttl=ttl)
+                            return value
+                        finally:
+                            try:
+                                await self._redis.delete(lock_key)
+                            except Exception:
+                                pass
+
+                    await asyncio.sleep(0.05)
+                    cached = await self.get(key)
+                    if cached is not None:
+                        return cached
+                    return await loader()
+
+                def stats(self) -> dict[str, Any]:
+                    return {
+                        "namespace": self._ns,
+                        "default_ttl": self._ttl,
+                        "connected": self._redis is not None,
+                        **self._stats.snapshot(),
+                    }
+
+                async def health(self) -> dict[str, Any]:
+                    if self._redis is None:
+                        return {"connected": False, "ping_ms": None}
+                    try:
+                        t0 = time.perf_counter()
+                        await self._redis.ping()
+                        return {
+                            "connected": True,
+                            "ping_ms": round((time.perf_counter() - t0) * 1000, 3),
+                        }
+                    except Exception as exc:
+                        return {"connected": False, "error": str(exc)}
+        ''')
+
+    def _websocket_content(self) -> str:
+        return dedent('''\
+            """WebSocketManager — connection lifecycle + rooms + broadcast + heartbeat"""
+            from __future__ import annotations
+
+            import asyncio
+            import json
+            import time
+            import uuid
+            from dataclasses import dataclass, field
+            from typing import Any
+
+            import structlog
+
+            from app.modules.bigo.infrastructure.metrics_registry import MetricsRegistry
+
+            log = structlog.get_logger()
+
+
+            @dataclass
+            class WSConnection:
+                id: str
+                tenant_id: str
+                user_id: str | None
+                websocket: Any
+                rooms: set[str] = field(default_factory=set)
+                connected_at: float = field(default_factory=time.time)
+                last_seen: float = field(default_factory=time.time)
+                metadata: dict[str, Any] = field(default_factory=dict)
+
+                def to_dict(self) -> dict[str, Any]:
+                    return {
+                        "id": self.id,
+                        "tenant_id": self.tenant_id,
+                        "user_id": self.user_id,
+                        "rooms": sorted(self.rooms),
+                        "connected_at": self.connected_at,
+                        "last_seen": self.last_seen,
+                        "uptime_s": round(time.time() - self.connected_at, 1),
+                    }
+
+
+            class WebSocketManager:
+                """TH: จัดการ WS connections + rooms + broadcast + heartbeat"""
+
+                def __init__(
+                    self,
+                    metrics: MetricsRegistry | None = None,
+                    *,
+                    heartbeat_interval_s: int = 30,
+                    max_connections_per_tenant: int = 1000,
+                    send_timeout_s: float = 5.0,
+                ) -> None:
+                    self._metrics = metrics or MetricsRegistry()
+                    self._lock = asyncio.Lock()
+                    self._conns: dict[str, WSConnection] = {}
+                    self._rooms: dict[str, set[str]] = {}
+                    self._by_tenant: dict[str, set[str]] = {}
+                    self._heartbeat_interval = heartbeat_interval_s
+                    self._max_per_tenant = max_connections_per_tenant
+                    self._send_timeout = send_timeout_s
+                    self._heartbeat_task: asyncio.Task | None = None
+
+                async def connect(
+                    self,
+                    websocket: Any,
+                    *,
+                    tenant_id: str,
+                    user_id: str | None = None,
+                    rooms: set[str] | None = None,
+                    metadata: dict[str, Any] | None = None,
+                ) -> WSConnection:
+                    conn_id = str(uuid.uuid4())
+                    async with self._lock:
+                        tenant_conns = self._by_tenant.setdefault(tenant_id, set())
+                        if len(tenant_conns) >= self._max_per_tenant:
+                            self._metrics.incr("bigo.ws.reject", reason="tenant_limit")
+                            raise RuntimeError(
+                                f"tenant {tenant_id} reached max connections ({self._max_per_tenant})"
+                            )
+                        conn = WSConnection(
+                            id=conn_id, tenant_id=tenant_id, user_id=user_id,
+                            websocket=websocket,
+                            rooms=set(rooms or {f"tenant:{tenant_id}"}),
+                            metadata=metadata or {},
+                        )
+                        self._conns[conn_id] = conn
+                        tenant_conns.add(conn_id)
+                        for room in conn.rooms:
+                            self._rooms.setdefault(room, set()).add(conn_id)
+                    self._metrics.incr("bigo.ws.connect", tenant=tenant_id)
+                    self._metrics.gauge("bigo.ws.connections", len(self._conns))
+                    log.info("ws.connect", conn_id=conn_id, tenant=tenant_id)
+                    return conn
+
+                async def disconnect(self, conn_id: str) -> None:
+                    async with self._lock:
+                        conn = self._conns.pop(conn_id, None)
+                        if conn is None:
+                            return
+                        for room in conn.rooms:
+                            members = self._rooms.get(room)
+                            if members:
+                                members.discard(conn_id)
+                                if not members:
+                                    self._rooms.pop(room, None)
+                        tenant_conns = self._by_tenant.get(conn.tenant_id)
+                        if tenant_conns:
+                            tenant_conns.discard(conn_id)
+                            if not tenant_conns:
+                                self._by_tenant.pop(conn.tenant_id, None)
+                    self._metrics.incr("bigo.ws.disconnect", tenant=conn.tenant_id)
+                    self._metrics.gauge("bigo.ws.connections", len(self._conns))
+                    log.info("ws.disconnect", conn_id=conn_id)
+
+                async def join(self, conn_id: str, room: str) -> bool:
+                    async with self._lock:
+                        conn = self._conns.get(conn_id)
+                        if conn is None:
+                            return False
+                        conn.rooms.add(room)
+                        self._rooms.setdefault(room, set()).add(conn_id)
+                    return True
+
+                async def leave(self, conn_id: str, room: str) -> bool:
+                    async with self._lock:
+                        conn = self._conns.get(conn_id)
+                        if conn is None:
+                            return False
+                        conn.rooms.discard(room)
+                        members = self._rooms.get(room)
+                        if members:
+                            members.discard(conn_id)
+                            if not members:
+                                self._rooms.pop(room, None)
+                    return True
+
+                async def send_personal(self, conn_id: str, message: dict[str, Any]) -> bool:
+                    conn = self._conns.get(conn_id)
+                    if conn is None:
+                        return False
+                    return await self._safe_send(conn, message)
+
+                async def broadcast(
+                    self,
+                    message: dict[str, Any],
+                    *,
+                    room: str | None = None,
+                    tenant_id: str | None = None,
+                    exclude: set[str] | None = None,
+                ) -> int:
+                    exclude = exclude or set()
+                    async with self._lock:
+                        if room is not None:
+                            targets = [self._conns[cid] for cid in self._rooms.get(room, set())
+                                       if cid in self._conns and cid not in exclude]
+                        elif tenant_id is not None:
+                            targets = [self._conns[cid] for cid in self._by_tenant.get(tenant_id, set())
+                                       if cid in self._conns and cid not in exclude]
+                        else:
+                            targets = [c for cid, c in self._conns.items() if cid not in exclude]
+                    if not targets:
+                        return 0
+                    results = await asyncio.gather(
+                        *(self._safe_send(c, message) for c in targets),
+                        return_exceptions=True,
+                    )
+                    sent = sum(1 for r in results if r is True)
+                    self._metrics.incr("bigo.ws.broadcast", sent=sent, total=len(targets))
+                    return sent
+
+                async def _safe_send(self, conn: WSConnection, message: dict[str, Any]) -> bool:
+                    try:
+                        payload = json.dumps(message, default=str)
+                        await asyncio.wait_for(
+                            conn.websocket.send_text(payload),
+                            timeout=self._send_timeout,
+                        )
+                        conn.last_seen = time.time()
+                        self._metrics.incr("bigo.ws.sent")
+                        return True
+                    except Exception as exc:
+                        self._metrics.incr("bigo.ws.send_failed")
+                        log.warning("ws.send_failed", conn_id=conn.id, err=str(exc))
+                        return False
+
+                async def start_heartbeat(self) -> None:
+                    if self._heartbeat_task is not None:
+                        return
+                    self._heartbeat_task = asyncio.create_task(self._heartbeat_loop())
+
+                async def stop_heartbeat(self) -> None:
+                    if self._heartbeat_task is None:
+                        return
+                    self._heartbeat_task.cancel()
+                    try:
+                        await self._heartbeat_task
+                    except asyncio.CancelledError:
+                        pass
+                    self._heartbeat_task = None
+
+                async def _heartbeat_loop(self) -> None:
+                    while True:
+                        try:
+                            await asyncio.sleep(self._heartbeat_interval)
+                            await self.broadcast({"type": "ping", "ts": time.time()})
+                            await self._sweep_stale()
+                        except asyncio.CancelledError:
+                            raise
+                        except Exception as exc:
+                            log.warning("ws.heartbeat.error", err=str(exc))
+
+                async def _sweep_stale(self) -> None:
+                    cutoff = time.time() - self._heartbeat_interval * 3
+                    async with self._lock:
+                        stale = [cid for cid, c in self._conns.items() if c.last_seen < cutoff]
+                    for cid in stale:
+                        self._metrics.incr("bigo.ws.sweep")
+                        await self.disconnect(cid)
+
+                def list_connections(
+                    self, *, tenant_id: str | None = None, room: str | None = None,
+                ) -> list[dict[str, Any]]:
+                    if tenant_id is not None:
+                        ids = self._by_tenant.get(tenant_id, set())
+                    elif room is not None:
+                        ids = self._rooms.get(room, set())
+                    else:
+                        ids = set(self._conns)
+                    return [self._conns[i].to_dict() for i in ids if i in self._conns]
+
+                def stats(self) -> dict[str, Any]:
+                    return {
+                        "connections": len(self._conns),
+                        "rooms": {r: len(m) for r, m in self._rooms.items()},
+                        "tenants": {t: len(m) for t, m in self._by_tenant.items()},
+                        "heartbeat_interval_s": self._heartbeat_interval,
+                        "max_per_tenant": self._max_per_tenant,
+                    }
+        ''')
+
+    def _management_content(self) -> str:
+        return dedent('''\
+            """ManagementService — admin ops: config, cache, ws, pipeline control"""
+            from __future__ import annotations
+
+            from dataclasses import asdict, replace
+            from typing import Any
+
+            import structlog
+
+            from app.modules.bigo.infrastructure.pipeline import BigOPipeline
+            from app.modules.bigo.infrastructure.redis_cache import RedisCache
+            from app.modules.bigo.infrastructure.websocket_manager import WebSocketManager
+
+            log = structlog.get_logger()
+
+
+            class ManagementService:
+                """TH: บริการจัดการ (admin)"""
+
+                def __init__(
+                    self,
+                    pipeline: BigOPipeline,
+                    cache: RedisCache,
+                    ws_manager: WebSocketManager,
+                ) -> None:
+                    self._pipeline = pipeline
+                    self._cache = cache
+                    self._ws = ws_manager
+
+                def get_config(self) -> dict[str, Any]:
+                    cfg = self._pipeline._config
+                    data = asdict(cfg)
+                    data["kafka_backoff"] = list(cfg.kafka_backoff)
+                    data["sample_sizes"] = list(cfg.sample_sizes)
+                    return data
+
+                def update_config(self, **changes: Any) -> dict[str, Any]:
+                    cfg = self._pipeline._config
+                    allowed = set(cfg.__dataclass_fields__.keys())
+                    unknown = set(changes) - allowed
+                    if unknown:
+                        raise ValueError(f"unknown config keys: {sorted(unknown)}")
+                    new_cfg = replace(cfg, **changes)
+                    self._pipeline._config = new_cfg
+                    log.info("mgmt.config.updated", changes=list(changes.keys()))
+                    return self.get_config()
+
+                async def cache_stats(self) -> dict[str, Any]:
+                    return self._cache.stats()
+
+                async def cache_health(self) -> dict[str, Any]:
+                    return await self._cache.health()
+
+                async def cache_clear(self, prefix: str | None = None) -> dict[str, Any]:
+                    if prefix:
+                        n = await self._cache.delete_prefix(prefix)
+                        return {"deleted": n, "prefix": prefix}
+                    n = await self._cache.delete_prefix(f"{self._cache._ns}:")
+                    return {"deleted": n, "prefix": f"{self._cache._ns}:"}
+
+                def ws_stats(self) -> dict[str, Any]:
+                    return self._ws.stats()
+
+                def ws_list(
+                    self, *, tenant_id: str | None = None, room: str | None = None,
+                ) -> list[dict[str, Any]]:
+                    return self._ws.list_connections(tenant_id=tenant_id, room=room)
+
+                async def ws_broadcast(
+                    self,
+                    message: dict[str, Any],
+                    *,
+                    room: str | None = None,
+                    tenant_id: str | None = None,
+                ) -> dict[str, Any]:
+                    n = await self._ws.broadcast(message, room=room, tenant_id=tenant_id)
+                    return {"sent": n, "room": room, "tenant_id": tenant_id}
+
+                async def ws_kick(self, conn_id: str) -> dict[str, Any]:
+                    await self._ws.send_personal(
+                        conn_id, {"type": "kicked", "reason": "admin_action"},
+                    )
+                    await self._ws.disconnect(conn_id)
+                    return {"conn_id": conn_id, "kicked": True}
+
+                def pipeline_metrics(self) -> dict[str, Any]:
+                    return self._pipeline.metrics_snapshot()
+
+                def pipeline_memory(self) -> dict[str, Any]:
+                    return self._pipeline.memory.stats()
+
+                def pipeline_policies(self) -> dict[str, Any]:
+                    return {
+                        k: {
+                            "cls": v.cls.value,
+                            "max_n": v.max_n,
+                            "warn_ratio": v.warn_ratio,
+                            "critical_ratio": v.critical_ratio,
+                            "partition": v.partition.value,
+                        }
+                        for k, v in self._pipeline.monitor.policies().items()
+                    }
+
+                def pipeline_reset_metrics(self) -> dict[str, Any]:
+                    self._pipeline._metrics.reset()
+                    return {"reset": True}
+
+                async def health(self) -> dict[str, Any]:
+                    cache_h = await self._cache.health()
+                    mem = self._pipeline.memory.stats()
+                    return {
+                        "status": "ok" if cache_h.get("connected") else "degraded",
+                        "cache": cache_h,
+                        "memory": mem,
+                        "ws": {"connections": self._ws.stats()["connections"]},
+                    }
+        ''')
+
+    # ─── PRESENTATION ───────────────────────────────────────────
+    def _create_presentation(self) -> None:
+        base = f"{self.mod_root}/presentation"
+
+        self.writer.write(f"{base}/__init__.py", '"""bigo presentation layer"""')
+        self.writer.write(f"{base}/schemas.py", self._schemas_content())
+        self.writer.write(f"{base}/docs.py", self._docs_content())
+        self.writer.write(f"{base}/dependencies.py", self._dependencies_content())
+        self.writer.write(f"{base}/router.py", self._router_content())
+        self.writer.write(f"{base}/swagger.py", self._swagger_content())
+
+    def _schemas_content(self) -> str:
+        return dedent('''\
+            """bigo Pydantic v2 schemas"""
+            from __future__ import annotations
+            from typing import Any
+
+            from pydantic import BaseModel, ConfigDict, Field
+
+
+            class ProfileAnalyzeRequest(BaseModel):
+                function_name: str = Field(..., min_length=1, max_length=200)
+                module: str = ""
+                sizes: list[int] = Field(default_factory=list)
+                model_config = ConfigDict(extra="forbid")
+
+
+            class ProfileResponse(BaseModel):
+                id: str
+                function_name: str
+                module: str = ""
+                complexity: str
+                sample_size: int = 0
+                avg_ms: float = 0.0
+                p95_ms: float = 0.0
+                captured_at: str = ""
+                model_config = ConfigDict(extra="forbid")
+
+
+            class ProfileAnalyzeResponse(ProfileResponse):
+                r_squared: float = 0.0
+                coefficients: dict[str, float] = Field(default_factory=dict)
+
+
+            class MemorySnapshotResponse(BaseModel):
+                snapshot_id: str
+                rss_mb: float
+                vms_mb: float
+                percent: float
+                pressure: str
+                top_allocations: list[Any] = Field(default_factory=list)
+                model_config = ConfigDict(extra="forbid")
+
+
+            class MemoryLeakResponse(BaseModel):
+                id: str
+                location: str
+                leak_type: str
+                growth_mb_per_hour: float
+                current_bytes: int
+                samples: int = 0
+                status: str
+                model_config = ConfigDict(extra="forbid")
+
+
+            class ResolveLeakResponse(BaseModel):
+                id: str
+                status: str
+                updated: bool
+                model_config = ConfigDict(extra="forbid")
+
+
+            class KafkaTopicCreateRequest(BaseModel):
+                name: str = Field(..., min_length=1, max_length=300)
+                partitions: int = Field(default=3, ge=1, le=1000)
+                replication: int = Field(default=1, ge=1, le=10)
+                retention_ms: int = Field(default=604800000, ge=1000)
+                max_message_bytes: int = Field(default=1048576, ge=1024)
+                model_config = ConfigDict(extra="forbid")
+
+
+            class KafkaTopicResponse(BaseModel):
+                id: str
+                name: str
+                partitions: int
+                replication_factor: int = 1
+                is_active: bool = True
+                already_exists: bool = False
+                model_config = ConfigDict(extra="forbid")
+
+
+            class KafkaLagMonitorRequest(BaseModel):
+                group_id: str = Field(..., min_length=1, max_length=300)
+                topic: str = Field(..., min_length=1, max_length=300)
+                threshold: int = Field(default=10000, ge=1)
+                model_config = ConfigDict(extra="forbid")
+
+
+            class KafkaLagResponse(BaseModel):
+                consumer_id: str
+                topic: str
+                group_id: str
+                total_lag: int
+                health: str
+                partitions: list[dict[str, Any]] = Field(default_factory=list)
+                model_config = ConfigDict(extra="forbid")
+
+
+            class BackpressureRequest(BaseModel):
+                topic: str = Field(..., min_length=1, max_length=300)
+                reason: str = "lag_exceeded"
+                model_config = ConfigDict(extra="forbid")
+
+
+            class BackpressureResponse(BaseModel):
+                topic: str
+                active: bool
+                reason: str = ""
+                model_config = ConfigDict(extra="forbid")
+
+
+            class MetricCreateRequest(BaseModel):
+                kind: str = Field(..., min_length=1, max_length=50)
+                name: str = Field(..., min_length=1, max_length=200)
+                value: float
+                unit: str = ""
+                labels: dict[str, Any] = Field(default_factory=dict)
+                model_config = ConfigDict(extra="forbid")
+
+
+            class MetricResponse(BaseModel):
+                id: str
+                kind: str
+                name: str
+                value: float
+                unit: str = ""
+                captured_at: str = ""
+                model_config = ConfigDict(extra="forbid")
+
+
+            class AlertTriggerRequest(BaseModel):
+                severity: str = Field(..., pattern="^(INFO|WARNING|ERROR|CRITICAL)$")
+                kind: str = Field(..., min_length=1, max_length=100)
+                message: str = Field(..., min_length=1, max_length=2000)
+                payload: dict[str, Any] = Field(default_factory=dict)
+                model_config = ConfigDict(extra="forbid")
+
+
+            class AlertResponse(BaseModel):
+                alert_id: str
+                severity: str
+                kind: str
+                message: str
+                model_config = ConfigDict(extra="forbid")
+
+
+            class PipelineProcessRequest(BaseModel):
+                n: int = Field(..., ge=0, le=10_000_000)
+                algorithm_type: str = Field(default="O(n)", max_length=20)
+                topic: str | None = None
+                cache_key: str | None = None
+                model_config = ConfigDict(extra="forbid")
+
+
+            class PipelineProcessResponse(BaseModel):
+                trace_id: str
+                n: int
+                complexity: str
+                status: str
+                priority: str
+                rss_mb: float
+                pressure: str
+                duration_ms: int
+                kafka_partition: int
+                kafka_sent: bool
+                model_config = ConfigDict(extra="forbid")
+
+
+            class PipelineMetricsResponse(BaseModel):
+                counters: dict[str, int] = Field(default_factory=dict)
+                gauges: dict[str, float] = Field(default_factory=dict)
+                histograms: dict[str, dict[str, float]] = Field(default_factory=dict)
+                model_config = ConfigDict(extra="forbid")
+
+
+            class PipelineMemoryResponse(BaseModel):
+                entries: int
+                current_bytes: int
+                max_bytes: int
+                utilization: float
+                pressure: str
+                model_config = ConfigDict(extra="forbid")
+
+
+            class PipelineCheckRequest(BaseModel):
+                n: int = Field(..., ge=0)
+                algorithm_type: str = "O(n)"
+                model_config = ConfigDict(extra="forbid")
+
+
+            class PipelineCheckResponse(BaseModel):
+                n: int
+                algorithm_type: str
+                status: str
+                priority: str
+                model_config = ConfigDict(extra="forbid")
+
+
+            # ═══════════ ADMIN / CACHE / WS ═══════════
+            class AdminConfigResponse(BaseModel):
+                max_n_linear: int
+                max_n_quadratic: int
+                max_n_cubic: int
+                max_n_linearithmic: int
+                warn_ratio: float
+                memory_max_bytes: int
+                memory_high_ratio: float
+                memory_critical_ratio: float
+                memory_default_ttl_s: int
+                memory_evict_batch: int
+                kafka_bootstrap: str
+                kafka_topic: str
+                kafka_dlq_topic: str
+                kafka_partition_map: dict[str, int]
+                kafka_max_retries: int
+                kafka_backoff: list[float]
+                kafka_flush_timeout_s: float
+                compress_low_priority: bool
+                sample_sizes: list[int]
+                model_config = ConfigDict(extra="ignore")
+
+
+            class AdminConfigUpdateRequest(BaseModel):
+                model_config = ConfigDict(extra="forbid")
+                max_n_linear: int | None = None
+                max_n_quadratic: int | None = None
+                max_n_cubic: int | None = None
+                max_n_linearithmic: int | None = None
+                warn_ratio: float | None = None
+                memory_max_bytes: int | None = None
+                memory_high_ratio: float | None = None
+                memory_critical_ratio: float | None = None
+                memory_default_ttl_s: int | None = None
+                kafka_max_retries: int | None = None
+                kafka_flush_timeout_s: float | None = None
+                compress_low_priority: bool | None = None
+
+
+            class AdminCacheClearRequest(BaseModel):
+                prefix: str | None = None
+                model_config = ConfigDict(extra="forbid")
+
+
+            class AdminCacheClearResponse(BaseModel):
+                deleted: int
+                prefix: str
+
+
+            class AdminHealthResponse(BaseModel):
+                status: str
+                cache: dict[str, Any]
+                memory: dict[str, Any]
+                ws: dict[str, Any]
+
+
+            class AdminWSStatsResponse(BaseModel):
+                connections: int
+                rooms: dict[str, int]
+                tenants: dict[str, int]
+                heartbeat_interval_s: int
+                max_per_tenant: int
+
+
+            class AdminWSListResponse(BaseModel):
+                connections: list[dict[str, Any]]
+
+
+            class AdminWSBroadcastRequest(BaseModel):
+                message: dict[str, Any]
+                room: str | None = None
+                tenant_id: str | None = None
+                model_config = ConfigDict(extra="forbid")
+
+
+            class AdminWSBroadcastResponse(BaseModel):
+                sent: int
+                room: str | None = None
+                tenant_id: str | None = None
+
+
+            class AdminWSKickResponse(BaseModel):
+                conn_id: str
+                kicked: bool
+        ''')
+
+    def _docs_content(self) -> str:
+        return dedent('''\
+            """bigo OpenAPI docs metadata"""
+            from __future__ import annotations
+
+            RESPONSE_PROFILE_200 = {
+                "description": "Complexity analysis result",
+                "content": {"application/json": {"example": {
+                    "id": "uuid",
+                    "function_name": "process_orders",
+                    "module": "app.services.orders",
+                    "complexity": "O(n log n)",
+                    "sample_size": 7,
+                    "r_squared": 0.984,
+                }}},
+            }
+            RESPONSE_MEMORY_200 = {
+                "description": "Memory snapshot",
+                "content": {"application/json": {"example": {
+                    "snapshot_id": "uuid",
+                    "rss_mb": 384.2,
+                    "percent": 4.8,
+                    "pressure": "NORMAL",
+                }}},
+            }
+            RESPONSE_KAFKA_LAG_200 = {
+                "description": "Kafka consumer lag",
+                "content": {"application/json": {"example": {
+                    "consumer_id": "uuid",
+                    "topic": "orders.events",
+                    "total_lag": 1523,
+                    "health": "HEALTHY",
+                }}},
+            }
+            RESPONSE_ERROR_400 = {"description": "Domain error"}
+            RESPONSE_ERROR_404 = {"description": "Not found"}
+            RESPONSE_ERROR_429 = {"description": "Lag threshold exceeded"}
+            RESPONSE_ERROR_502 = {"description": "Kafka connection error"}
+            RESPONSE_ERROR_507 = {"description": "Memory limit exceeded"}
+        ''')
+
+    def _dependencies_content(self) -> str:
+        return dedent('''\
+            """bigo DI container"""
+            from __future__ import annotations
+            from typing import Annotated, Any
+
+            from fastapi import Depends
+            from sqlalchemy.ext.asyncio import AsyncSession
+
+            from app.core.db import get_session
+            from app.modules.bigo.application.use_case import BigOUseCase
+            from app.modules.bigo.domain.pipeline_config import PipelineConfig
+            from app.modules.bigo.infrastructure.kafka_repository import (
+                SqlKafkaConsumerRepository, SqlKafkaQueueRepository,
+                SqlKafkaTopicRepository,
+            )
+            from app.modules.bigo.infrastructure.management_service import ManagementService
+            from app.modules.bigo.infrastructure.memory_repository import SqlMemoryRepository
+            from app.modules.bigo.infrastructure.metric_repository import SqlMetricRepository
+            from app.modules.bigo.infrastructure.pipeline import BigOPipeline
+            from app.modules.bigo.infrastructure.pipeline_report_repository import (
+                SqlPipelineReportRepository,
+            )
+            from app.modules.bigo.infrastructure.profile_repository import SqlProfileRepository
+            from app.modules.bigo.infrastructure.redis_cache import RedisCache
+            from app.modules.bigo.infrastructure.services import (
+                DefaultComplexityAnalyzer, DefaultKafkaAdmin,
+                DefaultMemoryProfiler, LoggingEventBus,
+                RedisBackpressureController, RedisCache as LegacyCache,
+            )
+            from app.modules.bigo.infrastructure.websocket_manager import WebSocketManager
+
+            _complexity = DefaultComplexityAnalyzer()
+            _memory = DefaultMemoryProfiler()
+            _kafka: DefaultKafkaAdmin | None = None
+            _pipeline: BigOPipeline | None = None
+            _ws_manager: WebSocketManager | None = None
+            _cache: RedisCache | None = None
+
+
+            def _get_kafka() -> DefaultKafkaAdmin:
+                global _kafka
+                if _kafka is None:
+                    try:
+                        from app.core.settings import settings
+                        bootstrap = getattr(settings, "KAFKA_BOOTSTRAP", "localhost:9092")
+                    except Exception:
+                        bootstrap = "localhost:9092"
+                    _kafka = DefaultKafkaAdmin(bootstrap)
+                return _kafka
+
+
+            async def _get_redis() -> Any:
+                try:
+                    from app.core.redis import get_redis
+                    return await get_redis()
+                except Exception:
+                    return None
+
+
+            def get_bigo_pipeline() -> BigOPipeline:
+                global _pipeline
+                if _pipeline is None:
+                    _pipeline = BigOPipeline(PipelineConfig())
+                return _pipeline
+
+
+            def get_ws_manager() -> WebSocketManager:
+                global _ws_manager
+                if _ws_manager is None:
+                    _ws_manager = WebSocketManager()
+                return _ws_manager
+
+
+            async def get_cache() -> RedisCache:
+                global _cache
+                if _cache is None:
+                    redis = await _get_redis()
+                    _cache = RedisCache(redis=redis, namespace="bigo", default_ttl=300)
+                return _cache
+
+
+            async def get_management_service() -> ManagementService:
+                cache = await get_cache()
+                return ManagementService(
+                    pipeline=get_bigo_pipeline(),
+                    cache=cache,
+                    ws_manager=get_ws_manager(),
+                )
+
+
+            async def get_bigo_use_case(
+                session: Annotated[AsyncSession, Depends(get_session)],
+            ) -> BigOUseCase:
+                redis = await _get_redis()
+                return BigOUseCase(
+                    metric_repo=SqlMetricRepository(session),
+                    profile_repo=SqlProfileRepository(session),
+                    memory_repo=SqlMemoryRepository(session),
+                    topic_repo=SqlKafkaTopicRepository(session),
+                    queue_repo=SqlKafkaQueueRepository(session),
+                    consumer_repo=SqlKafkaConsumerRepository(session),
+                    complexity=_complexity,
+                    memory=_memory,
+                    kafka=_get_kafka(),
+                    backpressure=RedisBackpressureController(redis),
+                    cache=LegacyCache(redis),
+                    event_bus=LoggingEventBus(),
+                    pipeline_report_repo=SqlPipelineReportRepository(session),
+                )
+        ''')
+
+    def _router_content(self) -> str:
+        return dedent('''\
+            """bigo HTTP routers"""
+            from __future__ import annotations
+            import uuid
+            from typing import Annotated, Any
+
+            from fastapi import APIRouter, Depends, HTTPException, status
+
+            from app.modules.bigo.application.use_case import BigOUseCase
+            from app.modules.bigo.domain.exceptions import (
+                BigOError, KafkaConnectionError,
+                LagThresholdExceededError, MemoryLimitExceededError,
+            )
+            from app.modules.bigo.infrastructure.pipeline import BigOPipeline
+            from app.modules.bigo.presentation.dependencies import (
+                get_bigo_pipeline, get_bigo_use_case,
+            )
+            from app.modules.bigo.presentation.schemas import (
+                AlertResponse, AlertTriggerRequest, BackpressureRequest,
+                BackpressureResponse, KafkaLagMonitorRequest, KafkaLagResponse,
+                KafkaTopicCreateRequest, KafkaTopicResponse,
+                MemoryLeakResponse, MemorySnapshotResponse,
+                MetricCreateRequest, MetricResponse,
+                PipelineCheckRequest, PipelineCheckResponse,
+                PipelineMemoryResponse, PipelineMetricsResponse,
+                PipelineProcessRequest, PipelineProcessResponse,
+                ProfileAnalyzeRequest, ProfileAnalyzeResponse,
+                ProfileResponse, ResolveLeakResponse,
+            )
+
+            router = APIRouter(prefix="/bigo", tags=["Big-O Monitoring"])
+
+
+            class _CtxStub:
+                def __init__(self, tenant_id: uuid.UUID, user_id: uuid.UUID) -> None:
+                    self.tenant_id = tenant_id
+                    self.user_id = user_id
+
+
+            async def _get_ctx() -> Any:
+                try:
+                    from app.core.context import get_context
+                    return await get_context()
+                except Exception:
+                    return _CtxStub(tenant_id=uuid.UUID(int=1), user_id=uuid.UUID(int=2))
+
+
+            def _error_status(exc: Exception) -> int:
+                if isinstance(exc, LagThresholdExceededError):
+                    return status.HTTP_429_TOO_MANY_REQUESTS
+                if isinstance(exc, MemoryLimitExceededError):
+                    return status.HTTP_507_INSUFFICIENT_STORAGE
+                if isinstance(exc, KafkaConnectionError):
+                    return status.HTTP_502_BAD_GATEWAY
+                return status.HTTP_400_BAD_REQUEST
+
+
+            @router.post("/profiles/analyze", response_model=ProfileAnalyzeResponse,
+                         summary="Analyze function complexity", operation_id="bigo_analyze_function")
+            async def analyze_function(
+                payload: ProfileAnalyzeRequest,
+                uc: Annotated[BigOUseCase, Depends(get_bigo_use_case)],
+            ) -> ProfileAnalyzeResponse:
+                ctx = await _get_ctx()
+
+                def _stub(n: int) -> int:
+                    return sum(range(n))
+
+                try:
+                    result = await uc.analyze_function(
+                        ctx, fn=_stub, name=payload.function_name,
+                        module=payload.module, sizes=payload.sizes or None,
+                    )
+                    return ProfileAnalyzeResponse(**result)
+                except BigOError as e:
+                    raise HTTPException(_error_status(e), detail=str(e)) from e
+
+
+            @router.get("/profiles", response_model=list[ProfileResponse],
+                        summary="List profiles", operation_id="bigo_list_profiles")
+            async def list_profiles(
+                uc: Annotated[BigOUseCase, Depends(get_bigo_use_case)],
+                function_name: str = "", days: int = 7, limit: int = 100,
+            ) -> list[ProfileResponse]:
+                ctx = await _get_ctx()
+                rows = await uc.list_profiles(ctx, function_name=function_name, since_days=days, limit=limit)
+                return [ProfileResponse(**r) for r in rows]
+
+
+            @router.post("/memory/snapshots", response_model=MemorySnapshotResponse,
+                         summary="Take memory snapshot", operation_id="bigo_take_snapshot")
+            async def take_snapshot(
+                uc: Annotated[BigOUseCase, Depends(get_bigo_use_case)],
+            ) -> MemorySnapshotResponse:
+                ctx = await _get_ctx()
+                try:
+                    result = await uc.take_memory_snapshot(ctx)
+                    return MemorySnapshotResponse(**result)
+                except BigOError as e:
+                    raise HTTPException(_error_status(e), detail=str(e)) from e
+
+
+            @router.post("/memory/leaks/detect", response_model=list[MemoryLeakResponse],
+                         summary="Detect memory leaks", operation_id="bigo_detect_leaks")
+            async def detect_leaks(
+                uc: Annotated[BigOUseCase, Depends(get_bigo_use_case)],
+                threshold_mb_per_hour: float = 10.0,
+            ) -> list[MemoryLeakResponse]:
+                ctx = await _get_ctx()
+                rows = await uc.detect_memory_leaks(ctx, threshold_mb_per_hour=threshold_mb_per_hour)
+                return [MemoryLeakResponse(**r) for r in rows]
+
+
+            @router.get("/memory/leaks", response_model=list[MemoryLeakResponse],
+                        summary="List memory leaks", operation_id="bigo_list_leaks")
+            async def list_leaks(
+                uc: Annotated[BigOUseCase, Depends(get_bigo_use_case)],
+                status_filter: str = "OPEN", limit: int = 50,
+            ) -> list[MemoryLeakResponse]:
+                ctx = await _get_ctx()
+                rows = await uc.list_leaks(ctx, status=status_filter, limit=limit)
+                return [MemoryLeakResponse(**r) for r in rows]
+
+
+            @router.post("/memory/leaks/{leak_id}/resolve", response_model=ResolveLeakResponse,
+                         summary="Resolve memory leak", operation_id="bigo_resolve_leak")
+            async def resolve_leak(
+                leak_id: uuid.UUID,
+                uc: Annotated[BigOUseCase, Depends(get_bigo_use_case)],
+            ) -> ResolveLeakResponse:
+                ctx = await _get_ctx()
+                result = await uc.resolve_leak(ctx, leak_id)
+                return ResolveLeakResponse(**result)
+
+
+            @router.post("/kafka/topics", response_model=KafkaTopicResponse,
+                         status_code=status.HTTP_201_CREATED,
+                         summary="Register Kafka topic", operation_id="bigo_register_topic")
+            async def register_topic(
+                payload: KafkaTopicCreateRequest,
+                uc: Annotated[BigOUseCase, Depends(get_bigo_use_case)],
+            ) -> KafkaTopicResponse:
+                ctx = await _get_ctx()
+                result = await uc.register_topic(
+                    ctx, name=payload.name, partitions=payload.partitions,
+                    replication=payload.replication,
+                    retention_ms=payload.retention_ms,
+                    max_message_bytes=payload.max_message_bytes,
+                )
+                return KafkaTopicResponse(**result)
+
+
+            @router.get("/kafka/topics", response_model=list[KafkaTopicResponse],
+                        summary="List Kafka topics", operation_id="bigo_list_topics")
+            async def list_topics(
+                uc: Annotated[BigOUseCase, Depends(get_bigo_use_case)],
+            ) -> list[KafkaTopicResponse]:
+                ctx = await _get_ctx()
+                rows = await uc.list_topics(ctx)
+                return [KafkaTopicResponse(**r) for r in rows]
+
+
+            @router.post("/kafka/lag/monitor", response_model=KafkaLagResponse,
+                         summary="Monitor consumer lag", operation_id="bigo_monitor_lag")
+            async def monitor_lag(
+                payload: KafkaLagMonitorRequest,
+                uc: Annotated[BigOUseCase, Depends(get_bigo_use_case)],
+            ) -> KafkaLagResponse:
+                ctx = await _get_ctx()
+                try:
+                    result = await uc.monitor_lag(
+                        ctx, group_id=payload.group_id,
+                        topic=payload.topic, threshold=payload.threshold,
+                    )
+                    return KafkaLagResponse(**result)
+                except BigOError as e:
+                    raise HTTPException(_error_status(e), detail=str(e)) from e
+
+
+            @router.post("/kafka/backpressure/activate", response_model=BackpressureResponse,
+                         summary="Activate backpressure", operation_id="bigo_bp_activate")
+            async def activate_bp(
+                payload: BackpressureRequest,
+                uc: Annotated[BigOUseCase, Depends(get_bigo_use_case)],
+            ) -> BackpressureResponse:
+                ctx = await _get_ctx()
+                result = await uc.activate_backpressure(ctx, topic=payload.topic, reason=payload.reason)
+                return BackpressureResponse(**result)
+
+
+            @router.post("/kafka/backpressure/deactivate", response_model=BackpressureResponse,
+                         summary="Deactivate backpressure", operation_id="bigo_bp_deactivate")
+            async def deactivate_bp(
+                payload: BackpressureRequest,
+                uc: Annotated[BigOUseCase, Depends(get_bigo_use_case)],
+            ) -> BackpressureResponse:
+                ctx = await _get_ctx()
+                result = await uc.deactivate_backpressure(ctx, payload.topic)
+                return BackpressureResponse(**result)
+
+
+            @router.post("/metrics", response_model=MetricResponse,
+                         status_code=status.HTTP_201_CREATED,
+                         summary="Record metric", operation_id="bigo_record_metric")
+            async def record_metric(
+                payload: MetricCreateRequest,
+                uc: Annotated[BigOUseCase, Depends(get_bigo_use_case)],
+            ) -> MetricResponse:
+                ctx = await _get_ctx()
+                result = await uc.record_metric(
+                    ctx, kind=payload.kind, name=payload.name,
+                    value=payload.value, unit=payload.unit, labels=payload.labels,
+                )
+                return MetricResponse(**result)
+
+
+            @router.get("/metrics", response_model=list[MetricResponse],
+                        summary="List metrics", operation_id="bigo_list_metrics")
+            async def list_metrics(
+                uc: Annotated[BigOUseCase, Depends(get_bigo_use_case)],
+                kind: str = "", days: int = 1, limit: int = 500,
+            ) -> list[MetricResponse]:
+                ctx = await _get_ctx()
+                rows = await uc.get_metrics(ctx, kind=kind, days=days, limit=limit)
+                return [MetricResponse(**r) for r in rows]
+
+
+            @router.post("/alerts", response_model=AlertResponse,
+                         status_code=status.HTTP_201_CREATED,
+                         summary="Trigger alert", operation_id="bigo_trigger_alert")
+            async def trigger_alert(
+                payload: AlertTriggerRequest,
+                uc: Annotated[BigOUseCase, Depends(get_bigo_use_case)],
+            ) -> AlertResponse:
+                ctx = await _get_ctx()
+                result = await uc.trigger_alert(
+                    ctx, severity=payload.severity, kind=payload.kind,
+                    message=payload.message, payload=payload.payload,
+                )
+                return AlertResponse(**result)
+
+
+            @router.post("/pipeline/check", response_model=PipelineCheckResponse,
+                         summary="Static Big-O policy check", operation_id="bigo_pipeline_check")
+            async def pipeline_check(
+                payload: PipelineCheckRequest,
+                pipe: Annotated[BigOPipeline, Depends(get_bigo_pipeline)],
+            ) -> PipelineCheckResponse:
+                status_, priority = pipe.monitor.check(payload.n, payload.algorithm_type)
+                return PipelineCheckResponse(
+                    n=payload.n, algorithm_type=payload.algorithm_type,
+                    status=status_, priority=priority.value,
+                )
+
+
+            @router.post("/pipeline/process", response_model=PipelineProcessResponse,
+                         summary="Process synthetic batch", operation_id="bigo_pipeline_process")
+            async def pipeline_process(
+                payload: PipelineProcessRequest,
+                pipe: Annotated[BigOPipeline, Depends(get_bigo_pipeline)],
+            ) -> PipelineProcessResponse:
+                data = list(range(payload.n))
+                report = pipe.process(
+                    data, algorithm_type=payload.algorithm_type,
+                    topic=payload.topic, cache_key=payload.cache_key,
+                )
+                return PipelineProcessResponse(**report.to_dict())
+
+
+            @router.get("/pipeline/metrics", response_model=PipelineMetricsResponse,
+                        summary="Get pipeline metrics", operation_id="bigo_pipeline_metrics")
+            async def pipeline_metrics(
+                pipe: Annotated[BigOPipeline, Depends(get_bigo_pipeline)],
+            ) -> PipelineMetricsResponse:
+                snap = pipe.metrics_snapshot()
+                return PipelineMetricsResponse(**snap)
+
+
+            @router.get("/pipeline/memory", response_model=PipelineMemoryResponse,
+                        summary="Get pipeline memory stats", operation_id="bigo_pipeline_memory")
+            async def pipeline_memory(
+                pipe: Annotated[BigOPipeline, Depends(get_bigo_pipeline)],
+            ) -> PipelineMemoryResponse:
+                stats = pipe.memory.stats()
+                return PipelineMemoryResponse(**stats)
+        ''')
+
+    def _swagger_content(self) -> str:
+        return dedent('''\
+            """OpenAPI docs — bigo module"""
+            from __future__ import annotations
+            from typing import Any
+
+
+            def register_bigo_openapi(app: object) -> None:
+                """TH: register OpenAPI metadata"""
+                original_openapi = app.openapi
+
+                def custom_openapi() -> dict[str, Any]:
+                    if getattr(app, "openapi_schema", None):
+                        return app.openapi_schema
+                    schema = original_openapi()
+                    tags = schema.setdefault("tags", [])
+                    if not any(t.get("name") == "Big-O Monitoring" for t in tags):
+                        tags.append({
+                            "name": "Big-O Monitoring",
+                            "description": (
+                                "โมดูล bigo — Big-O Monitoring & Resource Optimization\\n\\n"
+                                "• Big-O complexity analysis per function\\n"
+                                "• Memory LRU+TTL manager + snapshots + leak detection\\n"
+                                "• Kafka priority queue + retry + DLQ + lag monitoring\\n"
+                                "• Backpressure control (Redis-based)\\n"
+                                "• Prometheus-style metrics (counter/gauge/histogram)\\n"
+                                "• Pipeline orchestrator (/bigo/pipeline/*)\\n"
+                                "• Redis Cache + WebSocket + Admin (/bigo/admin/*)"
+                            ),
+                        })
+                    if not any(t.get("name") == "Big-O Admin" for t in tags):
+                        tags.append({
+                            "name": "Big-O Admin",
+                            "description": "Admin ops — config, cache, ws, health",
+                        })
+                    if not any(t.get("name") == "Big-O WebSocket" for t in tags):
+                        tags.append({
+                            "name": "Big-O WebSocket",
+                            "description": "Realtime stream — rooms, broadcast, heartbeat",
+                        })
+                    info = schema.setdefault("info", {})
+                    info.setdefault("x-module", "bigo")
+                    info.setdefault("x-layer", "6-Monitor")
+                    info.setdefault("x-prefix", "bigo")
+                    info.setdefault("x-schema", "public")
+                    info.setdefault("x-version", "1.2.0")
+                    app.openapi_schema = schema
+                    return schema
+
+                app.openapi = custom_openapi
+        ''')
+
+    def _create_ws_presentation(self) -> None:
+        base = f"{self.mod_root}/presentation"
+        self.writer.write(f"{base}/ws_router.py", self._ws_router_content())
+
+    def _ws_router_content(self) -> str:
+        return dedent('''\
+            """bigo WebSocket router — realtime stream"""
+            from __future__ import annotations
+
+            import json
+            from typing import Annotated
+
+            import structlog
+            from fastapi import APIRouter, Depends, Query, WebSocket, WebSocketDisconnect
+
+            from app.modules.bigo.infrastructure.websocket_manager import WebSocketManager
+            from app.modules.bigo.presentation.dependencies import get_ws_manager
+
+            log = structlog.get_logger()
+
+            ws_router = APIRouter(prefix="/bigo/ws", tags=["Big-O WebSocket"])
+
+
+            @ws_router.websocket("/stream")
+            async def ws_stream(
+                websocket: WebSocket,
+                manager: Annotated[WebSocketManager, Depends(get_ws_manager)],
+                tenant_id: str = Query(default="00000000-0000-0000-0000-000000000001"),
+                user_id: str | None = Query(default=None),
+                room: str | None = Query(default=None),
+            ) -> None:
+                await websocket.accept()
+                rooms = {f"tenant:{tenant_id}"}
+                if room:
+                    rooms.add(room)
+
+                conn = await manager.connect(
+                    websocket, tenant_id=tenant_id, user_id=user_id, rooms=rooms,
+                )
+                try:
+                    await manager.send_personal(conn.id, {
+                        "type": "welcome",
+                        "conn_id": conn.id,
+                        "rooms": sorted(rooms),
+                    })
+                    while True:
+                        raw = await websocket.receive_text()
+                        try:
+                            msg = json.loads(raw)
+                        except (TypeError, ValueError):
+                            msg = {"type": "raw", "data": raw}
+
+                        t = msg.get("type")
+                        if t == "pong":
+                            continue
+                        if t == "subscribe" and isinstance(msg.get("room"), str):
+                            await manager.join(conn.id, msg["room"])
+                            await manager.send_personal(conn.id, {
+                                "type": "subscribed", "room": msg["room"],
+                            })
+                            continue
+                        if t == "unsubscribe" and isinstance(msg.get("room"), str):
+                            await manager.leave(conn.id, msg["room"])
+                            await manager.send_personal(conn.id, {
+                                "type": "unsubscribed", "room": msg["room"],
+                            })
+                            continue
+                        if t == "broadcast" and msg.get("room"):
+                            n = await manager.broadcast(
+                                {"type": "message", "from": conn.id, "data": msg.get("data")},
+                                room=msg["room"], exclude={conn.id},
+                            )
+                            await manager.send_personal(conn.id, {
+                                "type": "broadcast_ack", "sent": n,
+                            })
+                            continue
+                        await manager.send_personal(conn.id, {"type": "echo", "data": msg})
+                except WebSocketDisconnect:
+                    pass
+                except Exception as exc:
+                    log.warning("ws.stream.error", err=str(exc))
+                finally:
+                    await manager.disconnect(conn.id)
+        ''')
+
+    def _create_management_presentation(self) -> None:
+        base = f"{self.mod_root}/presentation"
+        self.writer.write(f"{base}/management_router.py", self._management_router_content())
+
+    def _management_router_content(self) -> str:
+        return dedent('''\
+            """bigo Management router — admin ops"""
+            from __future__ import annotations
+
+            from typing import Annotated, Any
+
+            from fastapi import APIRouter, Depends, HTTPException, status
+
+            from app.modules.bigo.infrastructure.management_service import ManagementService
+            from app.modules.bigo.presentation.dependencies import get_management_service
+            from app.modules.bigo.presentation.schemas import (
+                AdminCacheClearRequest, AdminCacheClearResponse, AdminConfigResponse,
+                AdminConfigUpdateRequest, AdminHealthResponse, AdminWSBroadcastRequest,
+                AdminWSBroadcastResponse, AdminWSKickResponse, AdminWSListResponse,
+                AdminWSStatsResponse,
+            )
+
+            admin_router = APIRouter(prefix="/bigo/admin", tags=["Big-O Admin"])
+
+
+            @admin_router.get("/config", response_model=AdminConfigResponse)
+            async def get_config(
+                svc: Annotated[ManagementService, Depends(get_management_service)],
+            ) -> AdminConfigResponse:
+                return AdminConfigResponse(**svc.get_config())
+
+
+            @admin_router.patch("/config", response_model=AdminConfigResponse)
+            async def update_config(
+                payload: AdminConfigUpdateRequest,
+                svc: Annotated[ManagementService, Depends(get_management_service)],
+            ) -> AdminConfigResponse:
+                try:
+                    data = svc.update_config(**payload.model_dump(exclude_unset=True))
+                    return AdminConfigResponse(**data)
+                except ValueError as exc:
+                    raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
+
+            @admin_router.get("/health", response_model=AdminHealthResponse)
+            async def health(
+                svc: Annotated[ManagementService, Depends(get_management_service)],
+            ) -> AdminHealthResponse:
+                return AdminHealthResponse(**await svc.health())
+
+
+            @admin_router.get("/cache/stats")
+            async def cache_stats(
+                svc: Annotated[ManagementService, Depends(get_management_service)],
+            ) -> dict[str, Any]:
+                return await svc.cache_stats()
+
+
+            @admin_router.post("/cache/clear", response_model=AdminCacheClearResponse)
+            async def cache_clear(
+                payload: AdminCacheClearRequest,
+                svc: Annotated[ManagementService, Depends(get_management_service)],
+            ) -> AdminCacheClearResponse:
+                data = await svc.cache_clear(prefix=payload.prefix)
+                return AdminCacheClearResponse(**data)
+
+
+            @admin_router.get("/ws/stats", response_model=AdminWSStatsResponse)
+            async def ws_stats(
+                svc: Annotated[ManagementService, Depends(get_management_service)],
+            ) -> AdminWSStatsResponse:
+                return AdminWSStatsResponse(**svc.ws_stats())
+
+
+            @admin_router.get("/ws/connections", response_model=AdminWSListResponse)
+            async def ws_list(
+                svc: Annotated[ManagementService, Depends(get_management_service)],
+                tenant_id: str | None = None,
+                room: str | None = None,
+            ) -> AdminWSListResponse:
+                return AdminWSListResponse(
+                    connections=svc.ws_list(tenant_id=tenant_id, room=room),
+                )
+
+
+            @admin_router.post("/ws/broadcast", response_model=AdminWSBroadcastResponse)
+            async def ws_broadcast(
+                payload: AdminWSBroadcastRequest,
+                svc: Annotated[ManagementService, Depends(get_management_service)],
+            ) -> AdminWSBroadcastResponse:
+                data = await svc.ws_broadcast(
+                    payload.message, room=payload.room, tenant_id=payload.tenant_id,
+                )
+                return AdminWSBroadcastResponse(**data)
+
+
+            @admin_router.post("/ws/kick/{conn_id}", response_model=AdminWSKickResponse)
+            async def ws_kick(
+                conn_id: str,
+                svc: Annotated[ManagementService, Depends(get_management_service)],
+            ) -> AdminWSKickResponse:
+                return AdminWSKickResponse(**await svc.ws_kick(conn_id))
+
+
+            @admin_router.get("/pipeline/policies")
+            async def pipeline_policies(
+                svc: Annotated[ManagementService, Depends(get_management_service)],
+            ) -> dict[str, Any]:
+                return svc.pipeline_policies()
+
+
+            @admin_router.post("/pipeline/reset-metrics")
+            async def pipeline_reset_metrics(
+                svc: Annotated[ManagementService, Depends(get_management_service)],
+            ) -> dict[str, Any]:
+                return svc.pipeline_reset_metrics()
+        ''')
+
+    def _create_root_init(self) -> None:
+        self.writer.write(f"{self.mod_root}/__init__.py", dedent('''\
+            """bigo module — Big-O Monitoring & Resource Optimization"""
+            from .infrastructure.pipeline import BigOPipeline
+            from .presentation.management_router import admin_router as bigo_admin_router
+            from .presentation.router import router as bigo_router
+            from .presentation.ws_router import ws_router as bigo_ws_router
+
+            __all__ = [
+                "bigo_router", "bigo_admin_router", "bigo_ws_router",
+                "BigOPipeline",
+            ]
+        '''))
+
+# ═══════════════════════════════════════════════════════════════
+# END PART 2/4 — ต่อไปเป็น PART 3/4
+# ═══════════════════════════════════════════════════════════════

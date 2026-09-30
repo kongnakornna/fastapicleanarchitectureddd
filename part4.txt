@@ -1,0 +1,618 @@
+
+    # ─── TESTS ──────────────────────────────────────────────────
+    def create_tests(self) -> None:
+        info(f"[TESTS] {self.module}")
+        self.writer.write(f"{self.tests_dir}/unit/test_{self.module}.py", self._test_unit())
+        self.writer.write(f"{self.tests_dir}/unit/test_{self.module}_pipeline.py", self._test_pipeline())
+        self.writer.write(f"{self.tests_dir}/unit/test_{self.module}_cache.py", self._test_cache())
+        self.writer.write(f"{self.tests_dir}/unit/test_{self.module}_websocket.py", self._test_ws())
+
+    def _test_unit(self) -> str:
+        return dedent('''\
+            """Unit tests for bigo domain"""
+            from __future__ import annotations
+            import pytest
+
+            from app.modules.bigo.domain.enums import (
+                ComplexityClass, MemoryPressure, Priority,
+            )
+            from app.modules.bigo.domain.value_objects import (
+                Complexity, ComplexityPolicy, KafkaLag, MemoryDelta,
+            )
+
+            pytestmark = pytest.mark.unit
+
+
+            class TestEnums:
+                def test_complexity(self) -> None:
+                    assert ComplexityClass.CONSTANT == "O(1)"
+                    assert ComplexityClass.LINEAR == "O(n)"
+                    assert ComplexityClass.QUADRATIC == "O(n^2)"
+
+                def test_priority(self) -> None:
+                    assert Priority.HIGH == "high"
+                    assert Priority.DLQ == "dlq"
+
+
+            class TestComplexityVO:
+                def test_create(self) -> None:
+                    c = Complexity(cls=ComplexityClass.LINEAR, sample_size=7, r_squared=0.98)
+                    assert c.notation == "O(n)"
+
+                def test_invalid_r2(self) -> None:
+                    with pytest.raises(ValueError):
+                        Complexity(cls=ComplexityClass.LINEAR, sample_size=5, r_squared=1.5)
+
+
+            class TestComplexityPolicy:
+                def test_pass(self) -> None:
+                    p = ComplexityPolicy(ComplexityClass.LINEAR, 1000)
+                    assert p.classify(100) == "PASS"
+
+                def test_warning(self) -> None:
+                    p = ComplexityPolicy(ComplexityClass.LINEAR, 1000, warn_ratio=0.8)
+                    assert p.classify(900) == "WARNING"
+
+                def test_critical(self) -> None:
+                    p = ComplexityPolicy(ComplexityClass.LINEAR, 1000)
+                    assert p.classify(1500) == "CRITICAL"
+
+
+            class TestMemoryDelta:
+                def test_delta(self) -> None:
+                    d = MemoryDelta(before_mb=100.0, after_mb=150.0)
+                    assert d.delta_mb == 50.0
+                    assert d.growth_rate == 1.5
+
+
+            class TestKafkaLag:
+                def test_compute(self) -> None:
+                    lag = KafkaLag.compute("orders", 0, 100, 500)
+                    assert lag.lag == 400
+        ''')
+
+    def _test_pipeline(self) -> str:
+        return dedent('''\
+            """Unit tests for bigo pipeline"""
+            from __future__ import annotations
+            import time
+            import pytest
+
+            from app.modules.bigo.domain.enums import MemoryPressure, Priority
+            from app.modules.bigo.domain.pipeline_config import PipelineConfig
+            from app.modules.bigo.infrastructure.big_o_monitor import BigOMonitor
+            from app.modules.bigo.infrastructure.kafka_queue_manager import (
+                InMemoryProducer, KafkaQueueManager,
+            )
+            from app.modules.bigo.infrastructure.memory_manager import MemoryManager
+            from app.modules.bigo.infrastructure.metrics_registry import MetricsRegistry
+            from app.modules.bigo.infrastructure.pipeline import BigOPipeline
+
+            pytestmark = pytest.mark.unit
+
+
+            class TestMetricsRegistry:
+                def test_counter(self) -> None:
+                    m = MetricsRegistry()
+                    m.incr("hits")
+                    m.incr("hits", 3)
+                    assert m.snapshot()["counters"]["hits"] == 4
+
+                def test_histogram(self) -> None:
+                    m = MetricsRegistry()
+                    for i in range(100):
+                        m.observe("latency", float(i))
+                    h = m.snapshot()["histograms"]["latency"]
+                    assert h["count"] == 100
+                    assert 90 <= h["p95"] <= 99
+
+
+            class TestBigOMonitor:
+                def test_pass(self) -> None:
+                    m = BigOMonitor(PipelineConfig(max_n_linear=10_000))
+                    status, priority = m.check(100, "O(n)")
+                    assert status == "PASS"
+                    assert priority == Priority.NORMAL
+
+                def test_critical(self) -> None:
+                    m = BigOMonitor(PipelineConfig(max_n_linear=10_000))
+                    status, _ = m.check(20_000, "O(n)")
+                    assert status == "CRITICAL"
+
+
+            class TestMemoryManager:
+                def test_put_get(self) -> None:
+                    m = MemoryManager(PipelineConfig(memory_max_bytes=1024 * 1024))
+                    ok, _ = m.put("k1", [1, 2, 3])
+                    assert ok
+                    assert m.get("k1") == [1, 2, 3]
+
+                def test_ttl(self) -> None:
+                    m = MemoryManager(PipelineConfig(memory_max_bytes=1024))
+                    m.put("k1", "hello", ttl_s=1)
+                    time.sleep(1.1)
+                    assert m.get("k1") is None
+
+
+            class TestKafkaQueueManager:
+                def test_send_high(self) -> None:
+                    cfg = PipelineConfig()
+                    q = KafkaQueueManager(cfg, producer=InMemoryProducer())
+                    sent, partition = q.send([1, 2, 3], priority=Priority.HIGH)
+                    assert sent is True
+                    assert partition == 0
+
+                def test_backpressure_dlq(self) -> None:
+                    cfg = PipelineConfig()
+                    q = KafkaQueueManager(
+                        cfg, producer=InMemoryProducer(),
+                        backpressure_check=lambda: True,
+                    )
+                    _, partition = q.send([1], priority=Priority.HIGH)
+                    assert partition == cfg.kafka_partition_map["dlq"]
+
+
+            class TestBigOPipeline:
+                def test_process(self) -> None:
+                    p = BigOPipeline(PipelineConfig(memory_max_bytes=1024 * 1024))
+                    r = p.process(list(range(100)), algorithm_type="O(n)")
+                    assert r.status == "PASS"
+                    assert r.kafka_sent is True
+
+                def test_process_critical(self) -> None:
+                    p = BigOPipeline(PipelineConfig(max_n_linear=10_000))
+                    r = p.process(list(range(50_000)), algorithm_type="O(n)")
+                    assert r.status == "CRITICAL"
+                    assert r.priority == Priority.LOW
+        ''')
+
+    def _test_cache(self) -> str:
+        return dedent('''\
+            """Unit tests for RedisCache"""
+            from __future__ import annotations
+            import pytest
+
+            from app.modules.bigo.infrastructure.redis_cache import RedisCache
+
+            pytestmark = pytest.mark.unit
+
+
+            class FakeRedis:
+                def __init__(self):
+                    self._data: dict[str, str] = {}
+
+                async def get(self, k): return self._data.get(k)
+
+                async def set(self, k, v, ex=None, nx=False):
+                    if nx and k in self._data:
+                        return None
+                    self._data[k] = v
+                    return True
+
+                async def delete(self, *keys):
+                    n = 0
+                    for k in keys:
+                        if k in self._data:
+                            del self._data[k]
+                            n += 1
+                    return n
+
+                async def ping(self): return True
+
+                async def scan_iter(self, match=None, count=200):
+                    pat = (match or "*").rstrip("*")
+                    for k in list(self._data):
+                        if k.startswith(pat):
+                            yield k
+
+
+            @pytest.mark.asyncio
+            async def test_set_get():
+                c = RedisCache(FakeRedis())
+                await c.set("k1", {"a": 1})
+                assert await c.get("k1") == {"a": 1}
+
+
+            @pytest.mark.asyncio
+            async def test_get_or_set_caches():
+                c = RedisCache(FakeRedis())
+                calls = {"n": 0}
+
+                async def loader():
+                    calls["n"] += 1
+                    return [1, 2, 3]
+
+                v1 = await c.get_or_set("k", loader)
+                v2 = await c.get_or_set("k", loader)
+                assert v1 == v2 == [1, 2, 3]
+                assert calls["n"] == 1
+
+
+            @pytest.mark.asyncio
+            async def test_no_redis():
+                c = RedisCache(None)
+                assert await c.get("x") is None
+                assert await c.set("x", 1) is False
+
+
+            @pytest.mark.asyncio
+            async def test_stats():
+                c = RedisCache(FakeRedis())
+                await c.set("x", 1)
+                await c.get("x")
+                await c.get("missing")
+                s = c.stats()
+                assert s["hits"] == 1
+                assert s["misses"] == 1
+        ''')
+
+    def _test_ws(self) -> str:
+        return dedent('''\
+            """Unit tests for WebSocketManager"""
+            from __future__ import annotations
+            import pytest
+
+            from app.modules.bigo.infrastructure.websocket_manager import WebSocketManager
+
+            pytestmark = pytest.mark.unit
+
+
+            class FakeWS:
+                def __init__(self): self.sent: list[str] = []
+                async def send_text(self, s): self.sent.append(s)
+
+
+            @pytest.mark.asyncio
+            async def test_connect_disconnect():
+                m = WebSocketManager()
+                ws = FakeWS()
+                conn = await m.connect(ws, tenant_id="t1")
+                assert conn.id in m._conns
+                await m.disconnect(conn.id)
+                assert conn.id not in m._conns
+
+
+            @pytest.mark.asyncio
+            async def test_broadcast_room():
+                m = WebSocketManager()
+                a, b = FakeWS(), FakeWS()
+                await m.connect(a, tenant_id="t1", rooms={"room1"})
+                await m.connect(b, tenant_id="t1", rooms={"room2"})
+                n = await m.broadcast({"x": 1}, room="room1")
+                assert n == 1
+                assert len(a.sent) == 1
+                assert len(b.sent) == 0
+
+
+            @pytest.mark.asyncio
+            async def test_max_per_tenant():
+                m = WebSocketManager(max_connections_per_tenant=2)
+                await m.connect(FakeWS(), tenant_id="t1")
+                await m.connect(FakeWS(), tenant_id="t1")
+                with pytest.raises(RuntimeError):
+                    await m.connect(FakeWS(), tenant_id="t1")
+
+
+            @pytest.mark.asyncio
+            async def test_stats():
+                m = WebSocketManager()
+                await m.connect(FakeWS(), tenant_id="t1")
+                s = m.stats()
+                assert s["connections"] == 1
+                assert "t1" in s["tenants"]
+        ''')
+
+    # ─── VERIFY ─────────────────────────────────────────────────
+    def verify(self) -> None:
+        info("[VERIFY] bigo module")
+        issues: list[str] = []
+
+        files_to_check = [
+            f"{self.mod_root}/presentation/swagger.py",
+            f"{self.mod_root}/presentation/router.py",
+            f"{self.mod_root}/presentation/ws_router.py",
+            f"{self.mod_root}/presentation/management_router.py",
+            f"{self.mod_root}/infrastructure/models.py",
+            f"{self.mod_root}/infrastructure/pipeline.py",
+            f"{self.mod_root}/infrastructure/big_o_monitor.py",
+            f"{self.mod_root}/infrastructure/memory_manager.py",
+            f"{self.mod_root}/infrastructure/kafka_queue_manager.py",
+            f"{self.mod_root}/infrastructure/metrics_registry.py",
+            f"{self.mod_root}/infrastructure/redis_cache.py",
+            f"{self.mod_root}/infrastructure/websocket_manager.py",
+            f"{self.mod_root}/infrastructure/management_service.py",
+            f"{self.mod_root}/domain/pipeline_config.py",
+        ]
+        for f in files_to_check:
+            if (self.root / f).exists():
+                ok(f"{f.split('/')[-1]} ✓")
+            else:
+                issues.append(f"missing: {f}")
+
+        app_file = self.root / self.app_py
+        if app_file.exists():
+            content = app_file.read_text(encoding="utf-8")
+            for marker in ("register_bigo_openapi(app)", "bigo_router", "bigo_ws_router", "bigo_admin_router"):
+                if marker in content:
+                    ok(f"app.py: {marker} ✓")
+                else:
+                    issues.append(f"app.py missing: {marker}")
+
+        for ver in ("V001", "V002", "V003", "V004", "V005"):
+            d = self.root / self.sql_dir
+            matches = list(d.glob(f"{ver}__*{self.module}*.sql")) if d.exists() else []
+            if matches:
+                ok(f"SQL {ver} ✓")
+            else:
+                issues.append(f"SQL {ver} not found")
+
+        alembic_file = self.root / self.alembic_dir / "bigo_001_add_bigo_tables.py"
+        if alembic_file.exists():
+            ok("alembic bigo_001 ✓")
+        else:
+            issues.append(f"alembic not found: {alembic_file}")
+
+        postman = self.root / f"docs/postman/{self.module}.json"
+        if postman.exists():
+            try:
+                _json_mod.loads(postman.read_text(encoding="utf-8"))
+                ok("postman.json valid ✓")
+            except Exception as e:
+                issues.append(f"postman invalid: {e}")
+        else:
+            issues.append(f"postman.json not found: {postman}")
+
+        print()
+        if issues:
+            info("═" * 60)
+            warn(f"พบ {len(issues)} ปัญหา:")
+            for i, msg in enumerate(issues, 1):
+                err(f"  {i}. {msg}")
+            info("═" * 60)
+        else:
+            info("═" * 60)
+            ok("ALL CHECKS PASSED ✓")
+            info("═" * 60)
+
+    # ─── ACTIVATE / UPDATE ──────────────────────────────────────
+    def activate_module(self) -> None:
+        info("[ACTIVATE] register routers + swagger + models")
+        self._update_app_py()
+        self._update_env_py()
+
+    def update_app(self) -> None:
+        self._update_app_py()
+
+    def update_env(self) -> None:
+        self._update_env_py()
+
+    def _update_app_py(self) -> None:
+        app_file = self.root / self.app_py
+        if not app_file.exists():
+            warn(f"{self.app_py} not found — skipping")
+            return
+
+        content = app_file.read_text(encoding="utf-8")
+        original = content
+
+        imports = [
+            ("from app.modules.bigo.presentation.router import router as bigo_router", "bigo_router"),
+            ("from app.modules.bigo.presentation.ws_router import ws_router as bigo_ws_router", "bigo_ws_router"),
+            ("from app.modules.bigo.presentation.management_router import admin_router as bigo_admin_router", "bigo_admin_router"),
+            ("from app.modules.bigo.presentation.swagger import register_bigo_openapi", "register_bigo_openapi"),
+        ]
+
+        for imp, marker in imports:
+            if imp not in content and marker not in content:
+                lines = content.split("\n")
+                last = 0
+                for i, line in enumerate(lines):
+                    if line.startswith("from ") or line.startswith("import "):
+                        last = i
+                lines.insert(last + 1, imp)
+                content = "\n".join(lines)
+                ok(f"added: {imp}")
+
+        if "app.include_router(bigo_router" not in content:
+            anchor = re.search(r"(app\.include_router\([^\n]*\n)", content)
+            if anchor:
+                insert_at = anchor.end(1)
+                includes = (
+                    "app.include_router(bigo_router, prefix=\"/api/v1\")\n"
+                    "app.include_router(bigo_ws_router)\n"
+                    "app.include_router(bigo_admin_router, prefix=\"/api/v1\")\n"
+                )
+                content = content[:insert_at] + includes + content[insert_at:]
+                ok("included bigo routers")
+
+        if "register_bigo_openapi(app)" not in content:
+            content = content.rstrip() + "\n\nregister_bigo_openapi(app)\n"
+            ok("called register_bigo_openapi(app)")
+
+        if content != original:
+            bak = app_file.with_suffix(".py.bak")
+            bak.write_bytes(app_file.read_bytes())
+            app_file.write_text(content, encoding="utf-8", newline="\n")
+            ok(f"{self.app_py} updated")
+        else:
+            skip(f"{self.app_py} unchanged")
+
+    def _update_env_py(self) -> None:
+        env_file = self.root / self.env_py
+        if not env_file.exists():
+            warn(f"{self.env_py} not found — skipping")
+            return
+        content = env_file.read_text(encoding="utf-8")
+        original = content
+        marker = "# --- module bigo ---"
+        if marker in content:
+            skip("bigo models block already present")
+            return
+        block = f'''{marker}
+try:
+    from app.modules.bigo.infrastructure.models import (  # noqa: F401
+        CacheStatModel, KafkaConsumerModel, KafkaQueueModel,
+        KafkaTopicModel, MemoryLeakModel, MemorySnapshotModel,
+        MetricModel, PipelineReportModel, ProfileModel, WSSessionModel,
+    )
+except ImportError:
+    pass
+
+
+'''
+        anchor = "config = context.config"
+        idx = content.find(anchor)
+        if idx == -1:
+            warn("Cannot find anchor in env.py — skipping")
+            return
+        content = content[:idx] + block + content[idx:]
+
+        if content != original:
+            bak = env_file.with_suffix(".py.bak")
+            bak.write_bytes(env_file.read_bytes())
+            env_file.write_text(content, encoding="utf-8", newline="\n")
+            ok(f"{self.env_py} updated")
+
+    # ─── ALL + SUMMARY ──────────────────────────────────────────
+    def run_all(self) -> None:
+        self.create_module()
+        self.create_sql()
+        self.create_migration()
+        self.create_swagger()
+        self.create_postman()
+        self.create_tests()
+        self.activate_module()
+
+    def summary(self) -> None:
+        print()
+        info("═" * 60)
+        ok(f"DONE — module: {self.module}  (v{VERSION})")
+        info(f"  Schema  : {SCHEMA}")
+        info(f"  Prefix  : {self.prefix}_")
+        info(f"  Tables  : {len(TABLE_NAMES)}")
+        info(f"  Written : {len(self.writer.written)} files")
+        info(f"  Skipped : {len(self.writer.skipped)} files")
+        info("═" * 60)
+        print(f"  {C.YELLOW}Next steps:{C.RESET}")
+        print(f"    1. Verify:    python create_module_bigo.py verify bigo")
+        print(f"    2. Alembic:   alembic upgrade head")
+        print(f"    3. Run:       uvicorn app.app:app --reload")
+        print(f"    4. Swagger:   http://localhost:8000/docs")
+        print(f"    5. Postman:   Import docs/postman/bigo.json")
+        print(f"    6. Pipeline:  POST /api/v1/bigo/pipeline/process")
+        print(f"    7. Admin:     GET  /api/v1/bigo/admin/health")
+        print(f"    8. WS:        ws://localhost:8000/api/v1/bigo/ws/stream")
+        print()
+
+
+HELP = f"""
+═══════════════════════════════════════════════════════════════
+  create_module_bigo.py — Big-O Monitoring Generator v{VERSION}
+  Schema: {SCHEMA}  ·  Prefix: bigo_  ·  Tables: {len(TABLE_NAMES)}
+═══════════════════════════════════════════════════════════════
+
+  USAGE
+    python create_module_bigo.py <action> <module> [layer] [prefix] [options]
+
+  ACTIONS (11)
+    create      สร้าง module structure (4 layers + pipeline + cache + ws + mgmt)
+    activate    Register router + swagger + models
+    sql         สร้าง SQL migrations V001..V005
+    update      Update app/app.py
+    update-env  Update migrations/env.py
+    alembic     สร้าง Alembic migration (10 tables)
+    swagger     สร้าง OpenAPI docs
+    postman     สร้าง Postman collection
+    test        สร้าง tests
+    verify      ตรวจสอบ
+    all         ทำทั้งหมด
+    help        แสดง help
+
+  WHAT'S NEW in v1.2.1
+    • Fix: _entity_content ใช้ string concatenation แทน dedent(f-string)
+      เพื่อหลีกเลี่ยง IndentationError
+    • Fix: models.py ใช้ server_default="{{}}" (escape braces)
+    • Fix: f-string {} escape ใน _models_content และ create_migration
+
+  EXAMPLES
+    python create_module_bigo.py all bigo 6 bigo --force
+    python create_module_bigo.py verify bigo
+
+  RESULT
+    Swagger:  http://localhost:8000/docs
+    Postman:  Import docs/postman/bigo.json
+    Tables:   {len(TABLE_NAMES)} tables in public (prefix bigo_)
+═══════════════════════════════════════════════════════════════
+"""
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument("action", nargs="?", default="help")
+    parser.add_argument("module", nargs="?", default="bigo")
+    parser.add_argument("layer", nargs="?", default="6")
+    parser.add_argument("prefix", nargs="?", default="bigo")
+    parser.add_argument("--force", action="store_true")
+    parser.add_argument("--project-root", default=".")
+    parser.add_argument("--help", action="store_true")
+
+    args, _ = parser.parse_known_args()
+
+    if args.help or args.action == "help":
+        print(HELP)
+        return 0
+
+    root = Path(args.project_root).resolve()
+    if not root.exists():
+        err(f"Project root not found: {root}")
+        return 1
+
+    gen = BigOModuleGenerator(
+        project_root=root, module=args.module,
+        layer=args.layer, prefix=args.prefix, force=args.force,
+    )
+
+    print()
+    info("═" * 60)
+    info(f"  MODULE  : {gen.module}")
+    info(f"  LAYER   : {gen.layer} ({gen.layer_name})")
+    info(f"  SCHEMA  : {SCHEMA}")
+    info(f"  PREFIX  : {gen.prefix}_")
+    info(f"  ACTION  : {args.action}")
+    info(f"  VERSION : {VERSION}")
+    info("═" * 60)
+
+    action_map = {
+        "create": gen.create_module,
+        "activate": gen.activate_module,
+        "sql": gen.create_sql,
+        "alembic": gen.create_migration,
+        "swagger": gen.create_swagger,
+        "postman": gen.create_postman,
+        "test": gen.create_tests,
+        "update": gen.update_app,
+        "update-env": gen.update_env,
+        "verify": gen.verify,
+        "all": gen.run_all,
+    }
+
+    if args.action not in action_map:
+        err(f"Unknown action: {args.action}")
+        print(HELP)
+        return 1
+
+    try:
+        action_map[args.action]()
+    except Exception as e:
+        err(f"Aborted: {e}")
+        import traceback
+        traceback.print_exc()
+        return 1
+
+    if args.action != "verify":
+        gen.summary()
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

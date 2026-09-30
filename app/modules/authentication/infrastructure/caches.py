@@ -139,17 +139,54 @@ class RedisAuthenticationCache(IAuthenticationCache):
             if not hashed_jti:
                 return None
 
-            logger.debug("Getting authentication by access token from cache.")
+            logger.debug(
+                f"Getting authentication by access token from cache "
+                f"(hashed_jti={hashed_jti})."
+            )
 
             raw = await self.cache.get(self._key(f"access_token:{hashed_jti}"))
 
             logger.debug(
-                f"Authentication {'found' if raw else 'not found'} by access token in cache."
+                f"Authentication {'found' if raw else 'not found'} "
+                f"by access token in cache."
             )
             return cache_entity_mapper(raw) if raw else None
         except Exception as e:
             logger.opt(exception=e).error(
-                "An error occurred in the get authentication by access token cache. Falling back to the database."
+                "An error occurred in the get authentication by access token "
+                "cache. Falling back to the database."
+            )
+            return None
+
+    async def get_by_refresh_token(
+        self, authentication: Authentication
+    ) -> Authentication | None:
+        try:
+            hashed_jti = (
+                authentication.refresh_token.hashed_jti
+                if authentication.refresh_token
+                else None
+            )
+
+            if not hashed_jti:
+                return None
+
+            logger.debug(
+                f"Getting authentication by refresh token from cache "
+                f"(hashed_jti={hashed_jti})."
+            )
+
+            raw = await self.cache.get(self._key(f"refresh_token:{hashed_jti}"))
+
+            logger.debug(
+                f"Authentication {'found' if not raw is None else 'not found'} "
+                f"by refresh token in cache."
+            )
+            return cache_entity_mapper(raw) if raw else None
+        except Exception as e:
+            logger.opt(exception=e).error(
+                "An error occurred in the get authentication by refresh token "
+                "cache. Falling back to the database."
             )
             return None
 

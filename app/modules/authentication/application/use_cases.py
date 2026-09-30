@@ -13,6 +13,7 @@ from app.modules.authentication.application.exceptions import (
     InvalidCredentialsException2,
     InvalidOtpCodeException,
     PasswordMismatchException,
+    RefreshTokenException,
 )
 from app.modules.authentication.application.interfaces import (
     IAuthenticationCache,
@@ -85,10 +86,6 @@ class AuthenticationUseCases:
                 raise InvalidCredentialsException2()
 
             # ---- 3. Attach the persisted user BEFORE any repository call ----
-            # authentication.user.id MUST be set here so the next lookup
-            # filters by the real user id. Otherwise the query binds
-            # user_id = NULL and returns None, then the create path collides
-            # on the unique (user_id, user_agent, device) constraint.
             authentication.user = db_user
 
             # ---- 4. Look up existing auth for (user, agent, device) --------
@@ -113,7 +110,6 @@ class AuthenticationUseCases:
                 await self.cache.delete_by_access_token(authentication_from_db)
                 await self.cache.delete_by_refresh_token(authentication_from_db)
 
-                # Swap in fresh user so token claims reflect any changes.
                 authentication_from_db.user = db_user
 
                 authentication = authentication_from_db.renew_tokens(
@@ -124,13 +120,10 @@ class AuthenticationUseCases:
                     f"No existing authentication found for user: {db_user.id}. "
                     f"Creating new authentication."
                 )
-                # NOTE: authentication.user was already set to db_user in step 3.
                 authentication = authentication.create_tokens(
                     now, refresh_expires_at, access_expires_at
                 )
 
-            # Set permission BEFORE generate/hash so JWT `scope` claim and
-            # `access_token.permission` stay consistent.
             authentication.refresh_token.access_token.permission = db_user.role
 
             authentication = await self.token_service.generate(authentication)
@@ -215,6 +208,16 @@ class AuthenticationUseCases:
                 f"{authentication.user.id}."
             )
 
+            if (
+                authentication.refresh_token is None
+                or authentication.refresh_token.access_token is None
+            ):
+                logger.warning(
+                    f"Refresh aborted: user {authentication.user.id} "
+                    f"has incomplete token pair."
+                )
+                raise RefreshTokenException()
+
             await self.cache.delete_by_access_token(authentication)
             await self.cache.delete_by_refresh_token(authentication)
 
@@ -241,6 +244,9 @@ class AuthenticationUseCases:
         except StandardException:
             raise
         except DomainError as e:
+            logger.opt(exception=e).warning(
+                "Domain error during refresh — re-raising as DomainException."
+            )
             raise DomainException(e)
         except Exception as e:
             logger.opt(exception=e).error(

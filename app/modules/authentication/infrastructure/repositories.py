@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from loguru import logger
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
@@ -33,7 +33,8 @@ class PostgresAuthenticationRepository(IAuthenticationRepository):
     async def create(self, authentication: Authentication) -> Authentication:
         try:
             logger.info(
-                f"Creating authentication for user {authentication.user.id} with device {authentication.device} in database."
+                f"Creating authentication for user {authentication.user.id} "
+                f"with device {authentication.device} in database."
             )
 
             db_authentication: AuthenticationModel = entity_model_mapper(authentication)
@@ -41,12 +42,12 @@ class PostgresAuthenticationRepository(IAuthenticationRepository):
             self.session.add(db_authentication)
             await self.session.flush()
 
-            authentication: Authentication = sync_entity_from_model(
-                authentication, db_authentication
-            )
+            authentication = sync_entity_from_model(authentication, db_authentication)
 
             logger.info(
-                f"Authentication created successfully for user {authentication.user.id} with device {authentication.device} in database. Authentication identifier: {authentication.id}."
+                f"Authentication created successfully for user "
+                f"{authentication.user.id} with device {authentication.device} "
+                f"in database. Authentication identifier: {authentication.id}."
             )
             return authentication
         except StandardException:
@@ -65,7 +66,8 @@ class PostgresAuthenticationRepository(IAuthenticationRepository):
     ) -> Authentication | None:
         try:
             logger.info(
-                f"Getting authentication by user id, agent and device for user {authentication.user.id}."
+                f"Getting authentication by user id, agent and device for user "
+                f"{authentication.user.id}."
             )
 
             statement = (
@@ -91,21 +93,25 @@ class PostgresAuthenticationRepository(IAuthenticationRepository):
 
             if authentication_model is None:
                 logger.info(
-                    f"No authentication found for user {authentication.user.id} with device {authentication.device}."
+                    f"No authentication found for user {authentication.user.id} "
+                    f"with device {authentication.device}."
                 )
                 return None
 
-            authentication: Authentication = model_entity_mapper(authentication_model)
+            authentication = model_entity_mapper(authentication_model)
 
             logger.info(
-                f"Authentication retrieved successfully for user {authentication.user.id}. Authentication identifier: {authentication.id}."
+                f"Authentication retrieved successfully for user "
+                f"{authentication.user.id}. Authentication identifier: "
+                f"{authentication.id}."
             )
             return authentication
         except StandardException:
             raise
         except Exception as e:
             logger.opt(exception=e).error(
-                "An error occurred in the get authentication by user agent and device repository."
+                "An error occurred in the get authentication by user agent "
+                "and device repository."
             )
             raise AuthenticationException()
 
@@ -114,13 +120,17 @@ class PostgresAuthenticationRepository(IAuthenticationRepository):
         authentication: Authentication,
     ) -> Authentication | None:
         try:
+            hashed_jti = authentication.refresh_token.access_token.hashed_jti
+
             logger.info(
-                f"Getting authentication by access token hashed_jti {authentication.refresh_token.access_token.hashed_jti}."
+                f"Getting authentication by access token hashed_jti {hashed_jti} "
+                f"(user_id={authentication.user.id}, "
+                f"device={authentication.device!r}, "
+                f"user_agent={authentication.user_agent!r})."
             )
 
             conditions = [
-                AccessTokenModel.hashed_jti
-                == authentication.refresh_token.access_token.hashed_jti,
+                AccessTokenModel.hashed_jti == hashed_jti,
                 AuthenticationModel.user_agent == authentication.user_agent,
                 AuthenticationModel.user_id == authentication.user.id,
                 AccessTokenModel.revoked.is_(False),
@@ -150,15 +160,17 @@ class PostgresAuthenticationRepository(IAuthenticationRepository):
             )
 
             if authentication_model is None:
-                logger.info(
-                    f"No authentication found for access token hashed_jti {authentication.refresh_token.access_token.hashed_jti}."
+                logger.warning(
+                    f"No authentication found for access token hashed_jti "
+                    f"{hashed_jti}."
                 )
                 return None
 
-            authentication: Authentication = model_entity_mapper(authentication_model)
+            authentication = model_entity_mapper(authentication_model)
 
             logger.info(
-                f"Authentication retrieved successfully for access token. Authentication identifier: {authentication.id}."
+                f"Authentication retrieved successfully for access token. "
+                f"Authentication identifier: {authentication.id}."
             )
             return authentication
         except StandardException:
@@ -173,13 +185,28 @@ class PostgresAuthenticationRepository(IAuthenticationRepository):
         self,
         authentication: Authentication,
     ) -> Authentication | None:
+        """
+        TH: ดึง authentication ด้วย refresh token — รองรับ token rotation
+            (match ทั้ง hashed_jti ปัจจุบัน + previous_hashed_jti)
+        EN: retrieve by refresh token — supports rotation
+            (match current hashed_jti OR previous_hashed_jti)
+        """
         try:
+            hashed = authentication.refresh_token.hashed_jti
+
             logger.info(
-                f"Getting authentication by refresh token hashed_jti {authentication.refresh_token.hashed_jti}."
+                f"Getting authentication by refresh token hashed_jti {hashed} "
+                f"(user_id={authentication.user.id}, "
+                f"user_agent={authentication.user_agent!r}, "
+                f"device={authentication.device!r})."
             )
 
+            # ── Token rotation: match hashed_jti OR previous_hashed_jti ──
             conditions = [
-                RefreshTokenModel.hashed_jti == authentication.refresh_token.hashed_jti,
+                or_(
+                    RefreshTokenModel.hashed_jti == hashed,
+                    RefreshTokenModel.previous_hashed_jti == hashed,
+                ),
                 AuthenticationModel.user_agent == authentication.user_agent,
                 AuthenticationModel.user_id == authentication.user.id,
                 RefreshTokenModel.revoked.is_(False),
@@ -207,15 +234,18 @@ class PostgresAuthenticationRepository(IAuthenticationRepository):
             )
 
             if authentication_model is None:
-                logger.info(
-                    f"No authentication found for refresh token hashed_jti {authentication.refresh_token.hashed_jti}."
+                logger.warning(
+                    f"No authentication found for refresh token hashed_jti "
+                    f"{hashed} (device={authentication.device!r}, "
+                    f"user_agent={authentication.user_agent!r})."
                 )
                 return None
 
-            authentication: Authentication = model_entity_mapper(authentication_model)
+            authentication = model_entity_mapper(authentication_model)
 
             logger.info(
-                f"Authentication retrieved successfully for refresh token. Authentication identifier: {authentication.id}."
+                f"Authentication retrieved successfully for refresh token. "
+                f"Authentication identifier: {authentication.id}."
             )
             return authentication
         except StandardException:
@@ -232,7 +262,8 @@ class PostgresAuthenticationRepository(IAuthenticationRepository):
     async def update(self, authentication: Authentication) -> Authentication:
         try:
             logger.info(
-                f"Updating authentication {authentication.id} for user {authentication.user.id}."
+                f"Updating authentication {authentication.id} for user "
+                f"{authentication.user.id}."
             )
 
             db_authentication: AuthenticationModel = entity_model_mapper(authentication)
@@ -240,9 +271,7 @@ class PostgresAuthenticationRepository(IAuthenticationRepository):
             merged: AuthenticationModel = await self.session.merge(db_authentication)
             await self.session.flush()
 
-            authentication: Authentication = sync_entity_from_model(
-                authentication, merged
-            )
+            authentication = sync_entity_from_model(authentication, merged)
 
             logger.info(f"Authentication {authentication.id} updated successfully.")
             return authentication
@@ -260,7 +289,8 @@ class PostgresAuthenticationRepository(IAuthenticationRepository):
     async def delete(self, authentication: Authentication) -> Authentication:
         try:
             logger.info(
-                f"Persisting revoked authentication {authentication.id} for user {authentication.user.id}."
+                f"Persisting revoked authentication {authentication.id} for user "
+                f"{authentication.user.id}."
             )
 
             db_authentication: AuthenticationModel = entity_model_mapper(authentication)
@@ -268,9 +298,7 @@ class PostgresAuthenticationRepository(IAuthenticationRepository):
             merged: AuthenticationModel = await self.session.merge(db_authentication)
             await self.session.flush()
 
-            authentication: Authentication = sync_entity_from_model(
-                authentication, merged
-            )
+            authentication = sync_entity_from_model(authentication, merged)
 
             logger.info(f"Authentication {authentication.id} revoked successfully.")
             return authentication

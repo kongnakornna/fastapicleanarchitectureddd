@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from http import HTTPStatus
 
 from app.modules.shared.application.exceptions import StandardException
@@ -33,7 +34,10 @@ class AuthenticationTokenException(StandardException):
             status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
             message=ResponseMessages.INTERNAL_ERROR.value,
             data={
-                "errors": "An error occurred while processing the authentication token. Please login again or contact support."
+                "errors": (
+                    "An error occurred while processing the authentication "
+                    "token. Please login again or contact support."
+                )
             },
         )
 
@@ -46,7 +50,10 @@ class HashingException(StandardException):
             status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
             message=ResponseMessages.INTERNAL_ERROR.value,
             data={
-                "errors": "An error occurred while hashing the password. Please try again."
+                "errors": (
+                    "An error occurred while hashing the password. "
+                    "Please try again."
+                )
             },
         )
 
@@ -54,13 +61,21 @@ class HashingException(StandardException):
 class RefreshTokenException(StandardException):
     """Exception for refresh token errors."""
 
-    def __init__(self) -> None:
+    def __init__(self, cause: str | None = None) -> None:
+        data: dict = {
+            "errors": (
+                "An error occurred while processing the refresh token. "
+                "Please login again or contact support."
+            ),
+        }
+        env = os.getenv("APP_ENV", os.getenv("ENV", "development")).lower()
+        if cause and env not in ("production", "prod"):
+            data["cause"] = cause
+
         super().__init__(
             status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
             message=ResponseMessages.INTERNAL_ERROR.value,
-            data={
-                "errors": "An error occurred while processing the refresh token. Please login again or contact support."
-            },
+            data=data,
         )
 
 
@@ -83,7 +98,7 @@ class InvalidCredentialsException(StandardException):
 
 
 class InvalidCredentialsException2(StandardException):
-    """Exception when credentials are invalid."""
+    """Exception when credentials are invalid (Case 2)."""
 
     def __init__(self) -> None:
         super().__init__(
@@ -105,8 +120,14 @@ class AuthenticationCookiesNotProvidedException(StandardException):
             status_code=HTTPStatus.UNAUTHORIZED,
             message=ResponseMessages.UNAUTHORIZED_ERROR.value,
             data={
-                "errors": "Authentication cookies doest not exist. Please login again or contact support.",
-                "errors_th": "ไม่พบคุกกี้สำหรับการยืนยันตัวตน กรุณาเข้าสู่ระบบใหม่หรือติดต่อฝ่ายสนับสนุน",
+                "errors": (
+                    "Authentication cookies doest not exist. "
+                    "Please login again or contact support."
+                ),
+                "errors_th": (
+                    "ไม่พบคุกกี้สำหรับการยืนยันตัวตน "
+                    "กรุณาเข้าสู่ระบบใหม่หรือติดต่อฝ่ายสนับสนุน"
+                ),
             },
         )
 
@@ -119,8 +140,13 @@ class AuthenticationTokenExpiredException(StandardException):
             status_code=HTTPStatus.UNAUTHORIZED,
             message=ResponseMessages.UNAUTHORIZED_ERROR.value,
             data={
-                "errors": "Token has expired. Please login again or contact support.",
-                "errors_th": "โทเค็นหมดอายุแล้ว กรุณาเข้าสู่ระบบใหม่หรือติดต่อฝ่ายสนับสนุน",
+                "errors": (
+                    "Token has expired. Please login again or contact support."
+                ),
+                "errors_th": (
+                    "โทเค็นหมดอายุแล้ว "
+                    "กรุณาเข้าสู่ระบบใหม่หรือติดต่อฝ่ายสนับสนุน"
+                ),
             },
         )
 
@@ -133,8 +159,14 @@ class AuthenticationTokenNotYetValidException(StandardException):
             status_code=HTTPStatus.UNAUTHORIZED,
             message=ResponseMessages.UNAUTHORIZED_ERROR.value,
             data={
-                "errors": "Token is not yet valid. Please login again or contact support.",
-                "errors_th": "โทเค็นยังไม่พร้อมใช้งาน กรุณาเข้าสู่ระบบใหม่หรือติดต่อฝ่ายสนับสนุน",
+                "errors": (
+                    "Token is not yet valid. "
+                    "Please login again or contact support."
+                ),
+                "errors_th": (
+                    "โทเค็นยังไม่พร้อมใช้งาน "
+                    "กรุณาเข้าสู่ระบบใหม่หรือติดต่อฝ่ายสนับสนุน"
+                ),
             },
         )
 
@@ -142,14 +174,25 @@ class AuthenticationTokenNotYetValidException(StandardException):
 class AuthenticationTokenMalformedError(StandardException):
     """Exception when token format is malformed."""
 
-    def __init__(self) -> None:
+    def __init__(self, cause: str | None = None) -> None:
+        data: dict = {
+            "errors": (
+                "Malformed authentication token. "
+                "Please login again or contact support."
+            ),
+            "errors_th": (
+                "โทเค็นการยืนยันตัวตนมีรูปแบบไม่ถูกต้อง "
+                "กรุณาเข้าสู่ระบบใหม่หรือติดต่อฝ่ายสนับสนุน"
+            ),
+        }
+        env = os.getenv("APP_ENV", os.getenv("ENV", "development")).lower()
+        if cause and env not in ("production", "prod"):
+            data["cause"] = cause
+
         super().__init__(
             status_code=HTTPStatus.UNAUTHORIZED,
             message=ResponseMessages.UNAUTHORIZED_ERROR.value,
-            data={
-                "errors": "Malformed authentication token. Please login again or contact support.",
-                "errors_th": "โทเค็นการยืนยันตัวตนมีรูปแบบไม่ถูกต้อง กรุณาเข้าสู่ระบบใหม่หรือติดต่อฝ่ายสนับสนุน",
-            },
+            data=data,
         )
 
 
@@ -161,8 +204,16 @@ class AuthenticationTokenInvalidException(StandardException):
             status_code=HTTPStatus.UNAUTHORIZED,
             message=ResponseMessages.UNAUTHORIZED_ERROR.value,
             data={
-                "errors": "Invalid authentication token. The provided token is not valid or has been revoked. Please login again or contact support.",
-                "errors_th": "โทเค็นการยืนยันตัวตนไม่ถูกต้อง โทเค็นที่ให้มาไม่ถูกต้องหรือถูกเพิกถอนแล้ว กรุณาเข้าสู่ระบบใหม่หรือติดต่อฝ่ายสนับสนุน",
+                "errors": (
+                    "Invalid authentication token. The provided token is not "
+                    "valid or has been revoked. "
+                    "Please login again or contact support."
+                ),
+                "errors_th": (
+                    "โทเค็นการยืนยันตัวตนไม่ถูกต้อง "
+                    "โทเค็นที่ให้มาไม่ถูกต้องหรือถูกเพิกถอนแล้ว "
+                    "กรุณาเข้าสู่ระบบใหม่หรือติดต่อฝ่ายสนับสนุน"
+                ),
             },
         )
 
@@ -175,8 +226,14 @@ class ModifiedTokenException(StandardException):
             status_code=HTTPStatus.UNAUTHORIZED,
             message=ResponseMessages.UNAUTHORIZED_ERROR.value,
             data={
-                "errors": "The authentication token has been modified. Please login again or contact support.",
-                "errors_th": "โทเค็นการยืนยันตัวตนถูกแก้ไขเปลี่ยนแปลง กรุณาเข้าสู่ระบบใหม่หรือติดต่อฝ่ายสนับสนุน",
+                "errors": (
+                    "The authentication token has been modified. "
+                    "Please login again or contact support."
+                ),
+                "errors_th": (
+                    "โทเค็นการยืนยันตัวตนถูกแก้ไขเปลี่ยนแปลง "
+                    "กรุณาเข้าสู่ระบบใหม่หรือติดต่อฝ่ายสนับสนุน"
+                ),
             },
         )
 
@@ -189,7 +246,9 @@ class UserHasNotPermissionException(StandardException):
             status_code=HTTPStatus.FORBIDDEN,
             message=ResponseMessages.UNAUTHORIZED_ERROR.value,
             data={
-                "errors": "User does not have permission to perform this action.",
+                "errors": (
+                    "User does not have permission to perform this action."
+                ),
                 "errors_th": "ผู้ใช้ไม่มีสิทธิ์ดำเนินการนี้",
             },
         )
@@ -203,8 +262,14 @@ class RefreshTokenNotProvidedException(StandardException):
             status_code=HTTPStatus.UNAUTHORIZED,
             message=ResponseMessages.UNAUTHORIZED_ERROR.value,
             data={
-                "errors": "Refresh token not provided. Please login again or contact support.",
-                "errors_th": "ไม่ได้ระบุรีเฟรชโทเค็น กรุณาเข้าสู่ระบบใหม่หรือติดต่อฝ่ายสนับสนุน",
+                "errors": (
+                    "Refresh token not provided. "
+                    "Please login again or contact support."
+                ),
+                "errors_th": (
+                    "ไม่ได้ระบุรีเฟรชโทเค็น "
+                    "กรุณาเข้าสู่ระบบใหม่หรือติดต่อฝ่ายสนับสนุน"
+                ),
             },
         )
 
@@ -217,8 +282,14 @@ class RefreshTokenExpiredException(StandardException):
             status_code=HTTPStatus.UNAUTHORIZED,
             message=ResponseMessages.UNAUTHORIZED_ERROR.value,
             data={
-                "errors": "Refresh token has expired. Please login again or contact support.",
-                "errors_th": "รีเฟรชโทเค็นหมดอายุแล้ว กรุณาเข้าสู่ระบบใหม่หรือติดต่อฝ่ายสนับสนุน",
+                "errors": (
+                    "Refresh token has expired. "
+                    "Please login again or contact support."
+                ),
+                "errors_th": (
+                    "รีเฟรชโทเค็นหมดอายุแล้ว "
+                    "กรุณาเข้าสู่ระบบใหม่หรือติดต่อฝ่ายสนับสนุน"
+                ),
             },
         )
 
@@ -231,8 +302,14 @@ class RefreshTokenNotYetValidException(StandardException):
             status_code=HTTPStatus.UNAUTHORIZED,
             message=ResponseMessages.UNAUTHORIZED_ERROR.value,
             data={
-                "errors": "Refresh token is not yet valid. Please login again or contact support.",
-                "errors_th": "รีเฟรชโทเค็นยังไม่พร้อมใช้งาน กรุณาเข้าสู่ระบบใหม่หรือติดต่อฝ่ายสนับสนุน",
+                "errors": (
+                    "Refresh token is not yet valid. "
+                    "Please login again or contact support."
+                ),
+                "errors_th": (
+                    "รีเฟรชโทเค็นยังไม่พร้อมใช้งาน "
+                    "กรุณาเข้าสู่ระบบใหม่หรือติดต่อฝ่ายสนับสนุน"
+                ),
             },
         )
 
@@ -240,14 +317,25 @@ class RefreshTokenNotYetValidException(StandardException):
 class RefreshTokenMalformedError(StandardException):
     """Exception when refresh token format is malformed."""
 
-    def __init__(self) -> None:
+    def __init__(self, cause: str | None = None) -> None:
+        data: dict = {
+            "errors": (
+                "Malformed refresh token. "
+                "Please login again or contact support."
+            ),
+            "errors_th": (
+                "รีเฟรชโทเค็นมีรูปแบบไม่ถูกต้อง "
+                "กรุณาเข้าสู่ระบบใหม่หรือติดต่อฝ่ายสนับสนุน"
+            ),
+        }
+        env = os.getenv("APP_ENV", os.getenv("ENV", "development")).lower()
+        if cause and env not in ("production", "prod"):
+            data["cause"] = cause
+
         super().__init__(
             status_code=HTTPStatus.UNAUTHORIZED,
             message=ResponseMessages.UNAUTHORIZED_ERROR.value,
-            data={
-                "errors": "Malformed refresh token. Please login again or contact support.",
-                "errors_th": "รีเฟรชโทเค็นมีรูปแบบไม่ถูกต้อง กรุณาเข้าสู่ระบบใหม่หรือติดต่อฝ่ายสนับสนุน",
-            },
+            data=data,
         )
 
 
@@ -259,8 +347,14 @@ class RefreshTokenInvalidEndpoint(StandardException):
             status_code=HTTPStatus.UNAUTHORIZED,
             message=ResponseMessages.UNAUTHORIZED_ERROR.value,
             data={
-                "errors": "Invalid endpoint for refresh token. Please login again or contact support.",
-                "errors_th": "ปลายทางสำหรับรีเฟรชโทเค็นไม่ถูกต้อง กรุณาเข้าสู่ระบบใหม่หรือติดต่อฝ่ายสนับสนุน",
+                "errors": (
+                    "Invalid endpoint for refresh token. "
+                    "Please login again or contact support."
+                ),
+                "errors_th": (
+                    "ปลายทางสำหรับรีเฟรชโทเค็นไม่ถูกต้อง "
+                    "กรุณาเข้าสู่ระบบใหม่หรือติดต่อฝ่ายสนับสนุน"
+                ),
             },
         )
 
@@ -273,8 +367,16 @@ class RefreshTokenInvalidException(StandardException):
             status_code=HTTPStatus.UNAUTHORIZED,
             message=ResponseMessages.UNAUTHORIZED_ERROR.value,
             data={
-                "errors": "Invalid refresh token. The provided token is not valid or has been revoked. Please login again or contact support.",
-                "errors_th": "รีเฟรชโทเค็นไม่ถูกต้อง โทเค็นที่ให้มาไม่ถูกต้องหรือถูกเพิกถอนแล้ว กรุณาเข้าสู่ระบบใหม่หรือติดต่อฝ่ายสนับสนุน",
+                "errors": (
+                    "Invalid refresh token. The provided token is not valid "
+                    "or has been revoked. "
+                    "Please login again or contact support."
+                ),
+                "errors_th": (
+                    "รีเฟรชโทเค็นไม่ถูกต้อง "
+                    "โทเค็นที่ให้มาไม่ถูกต้องหรือถูกเพิกถอนแล้ว "
+                    "กรุณาเข้าสู่ระบบใหม่หรือติดต่อฝ่ายสนับสนุน"
+                ),
             },
         )
 
@@ -287,8 +389,16 @@ class RefreshTokenInvalidDeviceException(StandardException):
             status_code=HTTPStatus.UNAUTHORIZED,
             message=ResponseMessages.UNAUTHORIZED_ERROR.value,
             data={
-                "errors": "Invalid refresh token data. The provided token is not valid or has been revoked. Please login again or contact support.",
-                "errors_th": "ข้อมูลรีเฟรชโทเค็นไม่ถูกต้อง โทเค็นที่ให้มาไม่ถูกต้องหรือถูกเพิกถอนแล้ว กรุณาเข้าสู่ระบบใหม่หรือติดต่อฝ่ายสนับสนุน",
+                "errors": (
+                    "Invalid refresh token data. The provided token is not "
+                    "valid or has been revoked. "
+                    "Please login again or contact support."
+                ),
+                "errors_th": (
+                    "ข้อมูลรีเฟรชโทเค็นไม่ถูกต้อง "
+                    "โทเค็นที่ให้มาไม่ถูกต้องหรือถูกเพิกถอนแล้ว "
+                    "กรุณาเข้าสู่ระบบใหม่หรือติดต่อฝ่ายสนับสนุน"
+                ),
             },
         )
 
@@ -301,8 +411,16 @@ class AuthenticationInvalidDeviceException(StandardException):
             status_code=HTTPStatus.UNAUTHORIZED,
             message=ResponseMessages.UNAUTHORIZED_ERROR.value,
             data={
-                "errors": "Invalid authentication data. The provided token is not valid or has been revoked. Please login again or contact support.",
-                "errors_th": "ข้อมูลการยืนยันตัวตนไม่ถูกต้อง โทเค็นที่ให้มาไม่ถูกต้องหรือถูกเพิกถอนแล้ว กรุณาเข้าสู่ระบบใหม่หรือติดต่อฝ่ายสนับสนุน",
+                "errors": (
+                    "Invalid authentication data. The provided token is not "
+                    "valid or has been revoked. "
+                    "Please login again or contact support."
+                ),
+                "errors_th": (
+                    "ข้อมูลการยืนยันตัวตนไม่ถูกต้อง "
+                    "โทเค็นที่ให้มาไม่ถูกต้องหรือถูกเพิกถอนแล้ว "
+                    "กรุณาเข้าสู่ระบบใหม่หรือติดต่อฝ่ายสนับสนุน"
+                ),
             },
         )
 
@@ -315,8 +433,14 @@ class LogoutInvalidEndpoint(StandardException):
             status_code=HTTPStatus.UNAUTHORIZED,
             message=ResponseMessages.UNAUTHORIZED_ERROR.value,
             data={
-                "errors": "Invalid endpoint for logout. Please login again or contact support.",
-                "errors_th": "ปลายทางสำหรับออกจากระบบไม่ถูกต้อง กรุณาเข้าสู่ระบบใหม่หรือติดต่อฝ่ายสนับสนุน",
+                "errors": (
+                    "Invalid endpoint for logout. "
+                    "Please login again or contact support."
+                ),
+                "errors_th": (
+                    "ปลายทางสำหรับออกจากระบบไม่ถูกต้อง "
+                    "กรุณาเข้าสู่ระบบใหม่หรือติดต่อฝ่ายสนับสนุน"
+                ),
             },
         )
 

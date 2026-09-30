@@ -5,6 +5,7 @@ from datetime import datetime
 from uuid import UUID
 
 from app.modules.authentication.domain.value_objects import Claims, RefreshClaims
+from app.modules.shared.domain.entities import DomainError
 from app.modules.shared.domain.enums import Role
 from app.modules.user.domain.entities import User
 
@@ -75,6 +76,10 @@ class Authentication:
         access_expires_at: datetime,
     ) -> Authentication:
         """Renew tokens for an existing authentication."""
+        if self.refresh_token is None or self.refresh_token.access_token is None:
+            raise DomainError(
+                "Cannot renew tokens: refresh_token/access_token is missing."
+            )
         self.update_last_updated_at(now)
         self.refresh_token.expires_at = refresh_expires_at
         self.refresh_token.generate_updated_at(now)
@@ -90,6 +95,10 @@ class Authentication:
         self, now: datetime, access_expires_at: datetime
     ) -> Authentication:
         """Refresh only the access token."""
+        if self.refresh_token is None or self.refresh_token.access_token is None:
+            raise DomainError(
+                "Cannot refresh access token: refresh_token/access_token is missing."
+            )
         self.refresh_token.generate_updated_at(now)
         self.refresh_token.update_previous_hashed_jti()
         self.refresh_token.access_token.expires_at = access_expires_at
@@ -99,6 +108,8 @@ class Authentication:
 
     def revoke(self, now: datetime) -> Authentication:
         """Revoke the authentication (logout)."""
+        if self.refresh_token is None:
+            raise DomainError("Cannot revoke: refresh_token is missing.")
         self.refresh_token.generate_updated_at(now)
         self.refresh_token.revoke(now)
         return self
