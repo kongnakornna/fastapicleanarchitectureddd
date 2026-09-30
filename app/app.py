@@ -19,15 +19,24 @@ from app.core.middleware import (
 )
 from app.core.resources import lifespan as _base_lifespan
 from app.core.settings import settings
-from app.modules.authentication.presentation.routers import (
+
+# ═════════════════════════════════════════════════════════════════
+#  ROUTERS — Module imports
+#  NOTE: `routers.py` (plural) has been removed. Always import from
+#  `router.py` (singular) unless the module explicitly ships a
+#  `routers.py`.
+# ═════════════════════════════════════════════════════════════════
+
+# ── Core modules ─────────────────────────────────────────────────
+from app.modules.authentication.presentation.router import (   # ✅ FIXED (was .routers)
     router as authentication_router,
+)
+from app.modules.authentication.presentation.swagger import (
+    register_authentication_openapi,
 )
 from app.modules.example.presentation.routers import router as example_router
 from app.modules.health.presentation.routers import router as health_router
 from app.modules.iot.presentation.routers import router as iot_router
-from app.modules.llm.presentation.router import router as llm_router
-from app.modules.llm.presentation.swagger import register_llm_openapi
-
 from app.modules.key.presentation.routers import router as key_router
 from app.modules.knowledge.presentation.routers import router as knowledge_router
 from app.modules.money.presentation.routers import router as money_router
@@ -38,14 +47,24 @@ from app.modules.pdpa.presentation.routers import router as pdpa_router
 from app.modules.shared.domain.enums import ApplicationEnvironment
 from app.modules.user.presentation.routers import router as user_router
 from app.modules.websocket.presentation.routers import router as websocket_router
+
+# ── LLM / AI modules ────────────────────────────────────────────
+from app.modules.llm.presentation.router import router as llm_router
+from app.modules.llm.presentation.swagger import register_llm_openapi
 from app.modules.vector_db.presentation.router import router as vdb_router
 from app.modules.vector_db.presentation.swagger import register_vector_db_openapi
 from app.modules.tool_calling.presentation.router import router as tools_router
-from app.modules.tool_calling.presentation.swagger import register_tool_calling_openapi
+from app.modules.tool_calling.presentation.swagger import (
+    register_tool_calling_openapi,
+)
 from app.modules.structured_outputs.presentation.router import router as so_router
-from app.modules.structured_outputs.presentation.swagger import register_structured_outputs_openapi
+from app.modules.structured_outputs.presentation.swagger import (
+    register_structured_outputs_openapi,
+)
 from app.modules.hybrid_search.presentation.router import router as hs_router
-from app.modules.hybrid_search.presentation.swagger import register_hybrid_search_openapi
+from app.modules.hybrid_search.presentation.swagger import (
+    register_hybrid_search_openapi,
+)
 from app.modules.langchain.presentation.router import router as lc_router
 from app.modules.langchain.presentation.swagger import register_langchain_openapi
 from app.modules.llamaindex.presentation.router import router as li_router
@@ -53,7 +72,17 @@ from app.modules.llamaindex.presentation.swagger import register_llamaindex_open
 from app.modules.rag.presentation.router import router as rag_router
 from app.modules.rag.presentation.swagger import register_rag_openapi
 from app.modules.ai_evaluation.presentation.router import router as eval_router
-from app.modules.ai_evaluation.presentation.swagger import register_ai_evaluation_openapi
+from app.modules.ai_evaluation.presentation.swagger import (
+    register_ai_evaluation_openapi,
+)
+
+# ── Bigo module (multi-file: router + ws + admin) ───────────────
+from app.modules.bigo.presentation.router import router as bigo_router
+from app.modules.bigo.presentation.ws_router import ws_router as bigo_ws_router
+from app.modules.bigo.presentation.management_router import (
+    admin_router as bigo_admin_router,
+)
+from app.modules.bigo.presentation.swagger import register_bigo_openapi
 
 
 # ═════════════════════════════════════════════════════════════════
@@ -91,6 +120,7 @@ async def app_lifespan(app: FastAPI):
         from app.modules.iot.infrastructure.alerting.dispatcher import (
             alert_dispatcher,
         )
+
         status = alert_dispatcher.get_channels_status()
         logger.info(f"✅ alerting channels: {list(status.keys())}")
     except Exception as exc:
@@ -124,22 +154,29 @@ app = FastAPI(
     lifespan=app_lifespan,  # ← ใช้ wrapper ที่ integrate Parts 8-14
 )
 
-app.include_router(li_router, prefix='/api/v1')
+
+# ═════════════════════════════════════════════════════════════════
+#  EARLY-INCLUDED ROUTERS (with custom prefix / sub-routers)
+# ═════════════════════════════════════════════════════════════════
+app.include_router(li_router, prefix="/api/v1")
+app.include_router(bigo_router, prefix="/api/v1")
+app.include_router(bigo_ws_router)
+app.include_router(bigo_admin_router, prefix="/api/v1")
 register_llamaindex_openapi(app)
 
-app.include_router(lc_router, prefix='/api/v1')
+app.include_router(lc_router, prefix="/api/v1")
 register_langchain_openapi(app)
 
-app.include_router(hs_router, prefix='/api/v1')
+app.include_router(hs_router, prefix="/api/v1")
 register_hybrid_search_openapi(app)
 
-app.include_router(so_router, prefix='/api/v1')
+app.include_router(so_router, prefix="/api/v1")
 register_structured_outputs_openapi(app)
-
-
 
 # Register LLM OpenAPI metadata
 register_llm_openapi(app)
+
+
 # ═════════════════════════════════════════════════════════════════
 #  CORS — ต้อง add เป็น middleware ตัวสุดท้าย → รันก่อนสุด (outermost)
 # ═════════════════════════════════════════════════════════════════
@@ -204,9 +241,11 @@ app.add_exception_handler(Exception, internal_exception_handler)
 # ─── Part 12: TenantMiddleware (innermost) ───────
 try:
     from app.middleware.tenant import TenantMiddleware
+
     app.add_middleware(TenantMiddleware)
 except Exception as exc:
     import logging
+
     logging.getLogger(__name__).warning(
         f"⚠️ TenantMiddleware failed to load: {exc}"
     )
@@ -233,7 +272,7 @@ routers = [
     example_router,
     health_router,
     iot_router,
-    llm_router,    # llm module (Layer 5-Intel)    # iot module (Layer 6-Monitor) — includes Parts 8-14 endpoints
+    llm_router,     # llm module (Layer 5-Intel)
     key_router,
     knowledge_router,
     notification_router,
@@ -241,11 +280,10 @@ routers = [
     websocket_router,
     money_router,
     pdpa_router,
-    vdb_router,  # vector_db module
-    tools_router,  # tool_calling module (Layer 5-Intel)
-    rag_router,  # rag module
-    eval_router,  # ai_evaluation module
-
+    vdb_router,     # vector_db module
+    tools_router,   # tool_calling module (Layer 5-Intel)
+    rag_router,     # rag module
+    eval_router,    # ai_evaluation module
 ]
 
 for router in routers:
@@ -274,19 +312,59 @@ def custom_openapi():
         description=settings.APPLICATION_DESCRIPTION,
         version=settings.APPLICATION_VERSION,
         tags=[
-            {"name": "Authentication", "description": "Endpoints for user authentication and authorization."},
-            {"name": "Example", "description": "Example module for demonstrating application features."},
-            {"name": "Health", "description": "Endpoints for monitoring the health of the application."},
-            {"name": "Tools", "description": "Tool Calling — registry + invoke + permissions."},
-            {"name": "LLM", "description": "LLM Module — Unified LLM Gateway (OpenAI / Anthropic / Local)."},
-            {"name": "iot", "description": "iot Module — Real-time Sensor & Alarm Monitoring (MQTT / InfluxDB / WebSocket). Includes batch ops, alerting, scheduler, idempotency."},
+            {
+                "name": "Authentication",
+                "description": "Endpoints for user authentication and authorization.",
+            },
+            {
+                "name": "Example",
+                "description": "Example module for demonstrating application features.",
+            },
+            {
+                "name": "Health",
+                "description": "Endpoints for monitoring the health of the application.",
+            },
+            {
+                "name": "Tools",
+                "description": "Tool Calling — registry + invoke + permissions.",
+            },
+            {
+                "name": "LLM",
+                "description": "LLM Module — Unified LLM Gateway (OpenAI / Anthropic / Local).",
+            },
+            {
+                "name": "iot",
+                "description": (
+                    "iot Module — Real-time Sensor & Alarm Monitoring "
+                    "(MQTT / InfluxDB / WebSocket). Includes batch ops, "
+                    "alerting, scheduler, idempotency."
+                ),
+            },
             {"name": "Key", "description": "Endpoints for managing API keys."},
-            {"name": "Knowledge", "description": "Endpoints for managing knowledge base resources."},
-            {"name": "Notification", "description": "Endpoints for managing user notifications."},
-            {"name": "User", "description": "Endpoints for managing user resources."},
-            {"name": "WebSocket", "description": "WebSocket endpoints for real-time notifications."},
-            {"name": "Money", "description": "Endpoints for money / currency operations."},
-            {"name": "PDPA", "description": "PDPA endpoints — Consent / DSAR / Privacy Policy / Cookie Consent."},
+            {
+                "name": "Knowledge",
+                "description": "Endpoints for managing knowledge base resources.",
+            },
+            {
+                "name": "Notification",
+                "description": "Endpoints for managing user notifications.",
+            },
+            {
+                "name": "User",
+                "description": "Endpoints for managing user resources.",
+            },
+            {
+                "name": "WebSocket",
+                "description": "WebSocket endpoints for real-time notifications.",
+            },
+            {
+                "name": "Money",
+                "description": "Endpoints for money / currency operations.",
+            },
+            {
+                "name": "PDPA",
+                "description": "PDPA endpoints — Consent / DSAR / Privacy Policy / Cookie Consent.",
+            },
         ],
         contact={
             "name": settings.APPLICATION_CONTACT_NAME,
@@ -317,5 +395,12 @@ def custom_openapi():
 
 app.openapi = custom_openapi
 
-# Register Tool Calling OpenAPI metadata
+
+# ═════════════════════════════════════════════════════════════════
+#  OPENAPI METADATA REGISTRATION — per-module
+#  (called AFTER app.openapi is overridden, so each module can
+#   hook into the final schema)
+# ═════════════════════════════════════════════════════════════════
+register_authentication_openapi(app)   # ✅ ADDED (was imported but never called)
 register_tool_calling_openapi(app)
+register_bigo_openapi(app)

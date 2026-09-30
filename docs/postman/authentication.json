@@ -1,0 +1,104 @@
+{
+  "info": {
+    "name": "authentication API",
+    "_postman_id": "c3394825-b889-4729-9bd0-5193d655956f",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:8000" }
+  ],
+  "item": [
+    {
+      "name": "Login (email)",
+      "request": {
+        "method": "POST",
+        "body": {
+          "mode": "urlencoded",
+          "urlencoded": [
+            { "key": "username", "value": "admin@example.com" },
+            { "key": "password", "value": "MyP@ssword123" },
+            { "key": "grant_type", "value": "password" }
+          ]
+        },
+        "url": "{{base_url}}/api/v1/authentication/login/"
+      }
+    },
+    {
+      "name": "Login (username)",
+      "request": {
+        "method": "POST",
+        "body": {
+          "mode": "urlencoded",
+          "urlencoded": [
+            { "key": "username", "value": "admin" },
+            { "key": "password", "value": "MyP@ssword123" },
+            { "key": "grant_type", "value": "password" }
+          ]
+        },
+        "url": "{{base_url}}/api/v1/authentication/login/"
+      }
+    },
+    {
+      "name": "Sign Up",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"first_name\": \"John\",\n  \"last_name\": \"Doe\",\n  \"nickname\": \"Johnny\",\n  \"username\": \"johndoe\",\n  \"email\": \"john@example.com\",\n  \"phone_number\": \"+66812345678\",\n  \"password\": \"MyP@ssword123\",\n  \"confirm_password\": \"MyP@ssword123\",\n  \"agree_terms\": true\n}"
+        },
+        "url": "{{base_url}}/api/v1/authentication/sign-up/"
+      }
+    },
+    {
+      "name": "Refresh",
+      "request": {
+        "method": "PATCH",
+        "url": "{{base_url}}/api/v1/authentication/refresh/"
+      }
+    },
+    {
+      "name": "Logout",
+      "request": {
+        "method": "DELETE",
+        "url": "{{base_url}}/api/v1/authentication/logout/"
+      }
+    },
+    {
+      "name": "Lock Screen",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"password\": \"MyP@ssword123\"\n}"
+        },
+        "url": "{{base_url}}/api/v1/authentication/lock-screen/"
+      }
+    },
+    {
+      "name": "Forgot Password",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"john@example.com\"\n}"
+        },
+        "url": "{{base_url}}/api/v1/authentication/forgot-password/"
+      }
+    },
+    {
+      "name": "Reset Password",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"code\": \"ABC123\",\n  \"password\": \"NewP@ssword123\",\n  \"confirm_password\": \"NewP@ssword123\"\n}"
+        },
+        "url": "{{base_url}}/api/v1/authentication/reset-password/"
+      }
+    }
+  ]
+}

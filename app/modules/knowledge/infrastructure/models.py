@@ -1,10 +1,9 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
-from uuid import UUID
 
-from sqlalchemy import UUID as SQUID
-from sqlalchemy import ForeignKey, Index, String, Text
+from sqlalchemy import UUID as SQUID  # noqa: F401  (re-exported for symmetry; unused here)
+from sqlalchemy import BigInteger, ForeignKey, Index, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.settings import settings
@@ -38,8 +37,15 @@ class KnowledgeModel(BaseModel):
         default=None,
     )
 
-    created_by: Mapped[UUID] = mapped_column(
-        SQUID(as_uuid=True),
+    # ⚠️ FIX: FK → erp_users.id (BIGINT 11+ digits) must be BigInteger.
+    # Previously declared as SQUID(as_uuid=True), which caused the migration
+    # to fail with:
+    #   DatatypeMismatch: foreign key constraint "erp_knowledges_created_by_fkey"
+    #   cannot be implemented
+    #   DETAIL: Key columns "created_by" and "id" are of incompatible types:
+    #           uuid and bigint.
+    created_by: Mapped[int] = mapped_column(
+        BigInteger,
         ForeignKey(
             f"{settings.APPLICATION_TABLE_PREFIX}_users.id",
             ondelete="RESTRICT",
@@ -49,8 +55,8 @@ class KnowledgeModel(BaseModel):
         nullable=False,
     )
 
-    updated_by: Mapped[UUID] = mapped_column(
-        SQUID(as_uuid=True),
+    updated_by: Mapped[int] = mapped_column(
+        BigInteger,
         ForeignKey(
             f"{settings.APPLICATION_TABLE_PREFIX}_users.id",
             ondelete="RESTRICT",

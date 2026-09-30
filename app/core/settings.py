@@ -16,7 +16,6 @@ from sqlalchemy import URL
 from app.modules.shared.domain.enums import ApplicationEnvironment, CookieSameSite
 
 
-# PathRule คือ mapping แบบ read-only ที่เก็บ "endpoint" กับ "method"
 PathRule = Mapping[str, str]
 
 
@@ -52,6 +51,13 @@ class Settings(BaseSettings):
     APPLICATION_CONNECT_TIMEOUT_SECONDS: int
     APPLICATION_URL: AnyHttpUrl
     APPLICATION_TABLE_PREFIX: str
+
+    # ------------------------------------------------------------------
+    # MIGRATIONS
+    # ------------------------------------------------------------------
+    # true  → run `alembic upgrade head` on startup
+    # false → run `make migrate` manually (recommended in production)
+    AUTO_MIGRATE_ON_STARTUP: bool = False
 
     # API KEY
     API_KEY_PREFIX: str
@@ -277,31 +283,17 @@ class Settings(BaseSettings):
     # ==================================================================
     # SECURITY PATH RULES
     # ==================================================================
-    #
-    #  ⚠️  กติกาสำคัญ:
-    #  1. ชื่อ property ต้องเป็น UPPERCASE เป๊ะ ๆ เพราะ security.py เรียก
-    #     settings.SECURITY_USER_ALLOWED_PATHS / SECURITY_MANAGER_ALLOWED_PATHS /
-    #     SECURITY_ADMIN_ALLOWED_PATHS / SECURITY_NO_AUTH_PATHS
-    #  2. endpoint ที่ใช้ Depends(no_authentication) ต้องอยู่ใน SECURITY_NO_AUTH_PATHS
-    #  3. endpoint ที่ใช้ Depends(authenticate_user) ต้องอยู่ใน SECURITY_USER_ALLOWED_PATHS
-    #     (manager/admin inherit ผ่าน * อยู่แล้ว)
-    #  4. endpoint ที่ใช้ Depends(authenticate_manager) ต้องอยู่ใน SECURITY_MANAGER_ALLOWED_PATHS
-    #  5. endpoint ที่ใช้ Depends(authenticate_admin) ต้องอยู่ใน SECURITY_ADMIN_ALLOWED_PATHS
-    #  6. WebSocket / endpoint ที่ไม่มี dependency → ไม่ต้องใส่
-    #
-
     @computed_field
     @cached_property
     def SECURITY_NO_AUTH_PATHS(self) -> tuple[PathRule, ...]:
-        """
-        Path ที่ไม่ต้อง authenticate — ใช้โดย no_authentication
-        ต้องมีทุก endpoint ที่ประกาศ `Depends(no_authentication)`
-        """
+        """Path ที่ไม่ต้อง authenticate — ใช้โดย no_authentication"""
         return (
             # ═══ AUTHENTICATION ═══
             _path_rule("/api/v1/authentication/sign-up", "POST"),
             _path_rule("/api/v1/authentication/login", "POST"),
             _path_rule("/api/v1/authentication/logout", "DELETE"),
+            _path_rule("/api/v1/authentication/forgot-password", "POST"),
+            _path_rule("/api/v1/authentication/reset-password", "POST"),
             # ═══ EXAMPLE ═══
             _path_rule("/api/v1/example", "POST"),
             # ═══ HEALTH ═══
@@ -310,7 +302,7 @@ class Settings(BaseSettings):
             _path_rule("/api/v1/user", "POST"),
             # ═══ WEBSOCKET handshake ═══
             _path_rule("/api/v1/websocket/connect", "GET"),
-            # ═══ IOT — PUBLIC (Depends(no_authentication)) ═══
+            # ═══ IOT — PUBLIC ═══
             _path_rule("/iot/status", "GET"),
             _path_rule("/iot/ws/stats", "GET"),
             _path_rule("/iot/topic", "GET"),
@@ -337,20 +329,20 @@ class Settings(BaseSettings):
     @computed_field
     @cached_property
     def SECURITY_USER_ALLOWED_PATHS(self) -> tuple[PathRule, ...]:
-        """
-        Path ที่ user role ทั่วไปเข้าถึงได้ (authenticate_user)
-        เริ่มจาก NO_AUTH_PATHS แล้วเพิ่ม endpoint ที่ต้อง login
-        """
+        """Path ที่ user role ทั่วไปเข้าถึงได้ (authenticate_user)"""
         return (
             *self.SECURITY_NO_AUTH_PATHS,
             # ═══ AUTHENTICATION ═══
             _path_rule("/api/v1/authentication/refresh", "PATCH"),
+            _path_rule("/api/v1/authentication/lock-screen", "POST"),
+            _path_rule("/api/v1/authentication/two-step-verification", "POST"),
+            _path_rule("/api/v1/authentication/two-step-code", "POST"),
             # ═══ USER ═══
             _path_rule("/api/v1/user/me", "GET"),
             # ═══ NOTIFICATION ═══
             _path_rule("/api/v1/notification", "GET"),
             _path_rule("/api/v1/notification/{id}", "PATCH"),
-            # ═══ IOT — PROTECTED (Depends(authenticate_user)) ═══
+            # ═══ IOT — PROTECTED ═══
             _path_rule("/iot/controls", "GET"),
             _path_rule("/iot/control", "POST"),
             _path_rule("/iot/devicestatus", "PUT"),
@@ -365,13 +357,9 @@ class Settings(BaseSettings):
     @computed_field
     @cached_property
     def SECURITY_MANAGER_ALLOWED_PATHS(self) -> tuple[PathRule, ...]:
-        """
-        Path ที่ manager เข้าถึงได้ (authenticate_manager)
-        inherit มาจาก USER_ALLOWED_PATHS แล้วเพิ่มสิทธิ์ manager
-        """
+        """Path ที่ manager เข้าถึงได้ (authenticate_manager)"""
         return (
             *self.SECURITY_USER_ALLOWED_PATHS,
-            # ═══ KNOWLEDGE ═══
             _path_rule("/api/v1/knowledge", "POST"),
             _path_rule("/api/v1/knowledge", "GET"),
             _path_rule("/api/v1/knowledge/{id}", "PATCH"),
@@ -381,15 +369,10 @@ class Settings(BaseSettings):
     @computed_field
     @cached_property
     def SECURITY_ADMIN_ALLOWED_PATHS(self) -> tuple[PathRule, ...]:
-        """
-        Path ที่ admin เข้าถึงได้ (authenticate_admin)
-        inherit มาจาก MANAGER_ALLOWED_PATHS แล้วเพิ่มสิทธิ์ admin
-        """
+        """Path ที่ admin เข้าถึงได้ (authenticate_admin)"""
         return (
             *self.SECURITY_MANAGER_ALLOWED_PATHS,
-            # ═══ HEALTH ═══
             _path_rule("/api/v1/alembic-version", "GET"),
-            # ═══ KEY ═══
             _path_rule("/api/v1/key", "POST"),
             _path_rule("/api/v1/key", "GET"),
             _path_rule("/api/v1/key/{id}", "GET"),

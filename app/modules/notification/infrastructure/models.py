@@ -8,6 +8,7 @@ from sqlalchemy import (
     UUID as SQUID,
 )
 from sqlalchemy import (
+    BigInteger,
     Boolean,
     DateTime,
     ForeignKey,
@@ -36,8 +37,16 @@ class NotificationModel(BaseModel):
         Index("ix_notifications_user_id_is_read", "user_id", "is_read"),
     )
 
-    user_id: Mapped[UUID] = mapped_column(
-        SQUID(as_uuid=True),
+    # ⚠️ FIX: FK → erp_users.id (BIGINT 11+ digits) must be BigInteger.
+    # Previously declared as SQUID(as_uuid=True), which caused the migration
+    # to fail with:
+    #   DatatypeMismatch: foreign key constraint "erp_notifications_user_id_fkey"
+    #   cannot be implemented
+    #   DETAIL: Key columns "user_id" and "id" are of incompatible types:
+    #           uuid and bigint.
+    # The notification's own `id` (inherited from BaseModel) stays UUID.
+    user_id: Mapped[int] = mapped_column(
+        BigInteger,
         ForeignKey(
             f"{settings.APPLICATION_TABLE_PREFIX}_users.id",
             ondelete="CASCADE",

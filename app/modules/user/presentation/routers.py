@@ -12,6 +12,7 @@ from app.modules.shared.application.exceptions import (
     StandardException,
 )
 from app.modules.shared.domain.entities import DomainError
+from app.modules.shared.presentation.schemas import CreateResponse   # ← ย้ายมา shared
 from app.modules.user.application.exceptions import UserException
 from app.modules.user.application.mappers import (
     create_entity_mapper,
@@ -24,9 +25,8 @@ from app.modules.user.presentation.dependencies import get_user_use_cases
 from app.modules.user.presentation.docs import create_docs, me_docs, router_docs
 from app.modules.user.presentation.schemas import (
     CreateRequest,
-    CreateResponse,
     MeResponse,
-)
+)   # ← ตัด CreateResponse ออก
 
 router = APIRouter(**router_docs)
 

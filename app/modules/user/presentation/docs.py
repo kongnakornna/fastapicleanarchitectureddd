@@ -3,9 +3,12 @@ from __future__ import annotations
 from http import HTTPStatus
 
 from app.modules.shared.domain.enums import ResponseMessages, Role
-from app.modules.shared.presentation.schemas import StandardResponse
+from app.modules.shared.presentation.schemas import (
+    CreateResponse,                 # ← ย้ายมาจาก user.presentation.schemas
+    StandardResponse,
+)
 from app.modules.user.domain.enums import Gender
-from app.modules.user.presentation.schemas import CreateResponse, MeResponse
+from app.modules.user.presentation.schemas import MeResponse   # ← ตัด CreateResponse ออก
 
 # MODULE DOCS
 router_docs = {
@@ -304,8 +307,8 @@ me_docs = {
                                         "first_name": "Jane",
                                         "last_name": "Doe",
                                         "preferred_name": "Jane",
-                                        "gender": None,           # ← แสดงให้เห็นว่า null ได้
-                                        "birthdate": None,        # ←
+                                        "gender": None,
+                                        "birthdate": None,
                                         "email": "jane@domain.com",
                                         "phone": None,
                                         "role": Role.USER.value,

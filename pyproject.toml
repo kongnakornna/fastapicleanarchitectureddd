@@ -9,7 +9,7 @@ CI-friendly setup and best practices, modular scaffolding to jump-start
 new projects and ensure long-term maintainability.
 """
 readme = "README.md"
-requires-python = ">=3.13,<3.14"
+requires-python = ">=3.12,<3.14"
 
 dependencies = [
     # ─── Web Framework ─────────────────────────────────────
@@ -101,12 +101,12 @@ test = [
 # ═══════════════════════════════════════════════════════════════
 [tool.uv]
 default-groups = ["dev", "test"]
-
+python-preference = "only-system"
 # ═══════════════════════════════════════════════════════════════
 # RUFF — LINT + FORMAT
 # ═══════════════════════════════════════════════════════════════
 [tool.ruff]
-target-version = "py313"
+python_version = "3.13"
 line-length = 88
 src = ["app", "tests"]
 

@@ -3,13 +3,18 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator, Iterator
 
+from fastapi.exceptions import RequestValidationError
 from loguru import logger
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import (
-    AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine,
+    AsyncEngine,
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
 )
 from sqlalchemy.orm import Session, sessionmaker
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.core.settings import settings
 from app.modules.shared.application.exceptions import StandardException
@@ -83,20 +88,35 @@ PGAsyncSession = async_sessionmaker(
 
 
 async def get_async_session() -> AsyncIterator[AsyncSession]:
-    """TH: async session (FastAPI) | EN: async session (FastAPI)"""
+    """
+    TH: async session (FastAPI)
+    EN: async session (FastAPI)
+
+    Client-side errors (RequestValidationError / StarletteHTTPException) are
+    re-raised WITHOUT logging as internal errors, so that 4xx responses don't
+    pollute the error log. Server-side failures are logged + rolled back.
+    """
     async with PGAsyncSession() as session:
         try:
             yield session
             await session.commit()
+
+        # ✅ Client-side errors: don't log as internal errors
+        except (RequestValidationError, StarletteHTTPException):
+            await session.rollback()
+            raise
+
         except StandardException:
             await session.rollback()
             raise
+
         except SQLAlchemyError as e:
             logger.opt(exception=e).error(
                 "An asynchronous database error occurred during the session."
             )
             await session.rollback()
             raise
+
         except Exception as e:
             logger.opt(exception=e).error(
                 "An unexpected error occurred during the asynchronous database session."

@@ -5,7 +5,6 @@ from datetime import date, datetime
 from uuid import UUID
 
 from fastapi import Request
-from fastapi.security import OAuth2PasswordRequestForm
 
 from app.modules.authentication.domain.entities import (
     AccessToken,
@@ -22,6 +21,7 @@ from app.modules.authentication.presentation.schemas import (
     AccessTokenInfo,
     ForgotPasswordResponse,
     LockScreenResponse,
+    LoginForm,
     LoginResponse,
     LogoutResponse,
     RefreshResponse,
@@ -45,12 +45,15 @@ from app.modules.user.domain.enums import Gender
 # ENTITY / DTOS
 # ============================================================================
 def login_entity_mapper(
-    authentication: OAuth2PasswordRequestForm,
+    authentication: LoginForm,
     request: Request,
 ) -> Authentication:
     """Transform HTTP request → Authentication entity."""
     return Authentication(
-        user=User(email=authentication.username, password=authentication.password),
+        user=User(
+            email=authentication.identifier,
+            password=authentication.password,
+        ),
         ip_address=resolve_client_ip(
             x_forwarded_for=request.headers.get("x-forwarded-for"),
             x_real_ip=request.headers.get("x-real-ip"),
@@ -129,6 +132,8 @@ def entity_sign_up_mapper(user: User) -> SignUpResponse:
         )
 
     name = user.name
+    now = datetime.now(tz=BRASILIA_TZ)
+
     return SignUpResponse(
         message=ResponseMessages.SUCCESS.value,
         id=user.id,
@@ -139,9 +144,10 @@ def entity_sign_up_mapper(user: User) -> SignUpResponse:
         phone=str(user.phone) if user.phone else None,
         role=user.role if user.role else Role.USER,
         is_active=user.is_active if user.is_active is not None else True,
-        created_at=user.created_at,
-        updated_at=user.updated_at,
+        created_at=user.created_at or now,
+        updated_at=user.updated_at or now,
     )
+
 
 def entity_forgot_password_mapper(
     _user: User | None = None,
@@ -185,7 +191,7 @@ def access_token_entity_mapper(claims: dict) -> Authentication:
 
     return Authentication(
         user=User(
-            id=UUID(claims["sub"]) if isinstance(claims["sub"], str) else claims["sub"],
+            id=int(claims["sub"]),
             role=Role(claims["scope"]),
             email=claims["grant_id"],
         ),
@@ -206,7 +212,7 @@ def refresh_token_entity_mapper(claims: dict) -> Authentication:
 
     return Authentication(
         user=User(
-            id=UUID(claims["sub"]) if isinstance(claims["sub"], str) else claims["sub"],
+            id=int(claims["sub"]),
             role=Role(claims["scope"]),
             email=claims["grant_id"],
         ),
@@ -460,7 +466,7 @@ def entity_cache_mapper(authentication: Authentication) -> str:
 
 def _user_cache_to_entity(data: dict) -> User:
     user = User(
-        id=UUID(data["id"]) if data["id"] else None,
+        id=int(data["id"]) if data["id"] is not None else None,
         name=Name(
             first_name=data["first_name"],
             last_name=data["last_name"],
@@ -486,7 +492,7 @@ def _user_cache_to_entity(data: dict) -> User:
 
 def _access_token_cache_to_entity(data: dict) -> AccessToken:
     access = AccessToken(
-        id=UUID(data["id"]) if data["id"] else None,
+        id=int(data["id"]) if data["id"] is not None else None,
         hashed_jti=data["hashed_jti"],
         previous_hashed_jti=data["previous_hashed_jti"],
         permission=Role(data["permission"]) if data["permission"] else Role.USER,
@@ -506,7 +512,7 @@ def _access_token_cache_to_entity(data: dict) -> AccessToken:
 
 def _refresh_token_cache_to_entity(data: dict) -> RefreshToken:
     refresh = RefreshToken(
-        id=UUID(data["id"]) if data["id"] else None,
+        id=int(data["id"]) if data["id"] is not None else None,
         hashed_jti=data["hashed_jti"],
         previous_hashed_jti=data["previous_hashed_jti"],
         created_at=datetime.fromisoformat(data["created_at"])
@@ -534,7 +540,7 @@ def cache_entity_mapper(raw: str) -> Authentication:
     data = json.loads(raw)
 
     authentication = Authentication(
-        id=UUID(data["id"]) if data["id"] else None,
+        id=int(data["id"]) if data["id"] is not None else None,
         ip_address=data["ip_address"],
         user_agent=data["user_agent"],
         device=data["device"],

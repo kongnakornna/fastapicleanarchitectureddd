@@ -2,12 +2,9 @@ from __future__ import annotations
 
 from datetime import datetime
 from typing import TYPE_CHECKING
-from uuid import UUID
 
 from sqlalchemy import (
-    UUID as SQUID,
-)
-from sqlalchemy import (
+    BigInteger,
     DateTime,
     ForeignKey,
     Index,
@@ -85,25 +82,26 @@ class KeyModel(BaseModel):
         default=None,
     )
 
-    created_by: Mapped[UUID] = mapped_column(
-        SQUID(as_uuid=True),
+    # ⚠️ CHANGED: UUID → BIGINT (FK → erp_users.id BIGINT 11+ หลัก)
+    created_by: Mapped[int] = mapped_column(
+        BigInteger,
         ForeignKey(
             f"{settings.APPLICATION_TABLE_PREFIX}_users.id",
             ondelete="RESTRICT",
         ),
         name="created_by",
-        comment="Identifier of the user who created the key",
+        comment="Identifier of the user (BIGINT) who created the key",
         nullable=False,
     )
 
-    updated_by: Mapped[UUID] = mapped_column(
-        SQUID(as_uuid=True),
+    updated_by: Mapped[int] = mapped_column(
+        BigInteger,
         ForeignKey(
             f"{settings.APPLICATION_TABLE_PREFIX}_users.id",
             ondelete="RESTRICT",
         ),
         name="updated_by",
-        comment="Identifier of the user who last updated the key",
+        comment="Identifier of the user (BIGINT) who last updated the key",
         nullable=False,
     )
 

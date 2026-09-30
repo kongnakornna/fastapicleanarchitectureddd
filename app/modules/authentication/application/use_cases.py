@@ -10,6 +10,7 @@ from app.modules.authentication.application.exceptions import (
     AuthenticationException,
     EmailAlreadyExistsException,
     InvalidCredentialsException,
+    InvalidCredentialsException2,
     InvalidOtpCodeException,
     PasswordMismatchException,
 )
@@ -52,28 +53,45 @@ class AuthenticationUseCases:
         """Login use case."""
         try:
             logger.debug(
-                f"Initializing user login use case for user: {authentication.user.censored_email} in device: {authentication.device}."
+                f"Initializing user login use case for user: "
+                f"{authentication.user.censored_email} in device: "
+                f"{authentication.device}."
             )
 
+            # ---- 1. Look up user by email ----------------------------------
             db_user: User | None = await self.shared_service.get_user_by_email(
                 authentication.user
             )
 
-            if not db_user:
+            if db_user is None:
                 logger.info(
-                    f"User with email {authentication.user.censored_email} not found, raising exception."
+                    f"Case 1: user with email "
+                    f"{authentication.user.censored_email} not found, "
+                    f"raising InvalidCredentialsException."
                 )
                 raise InvalidCredentialsException()
 
-            if not await self.token_service.verify_password(
-                authentication.user.password, db_user.hashed_password
+            # ---- 2. Verify password ----------------------------------------
+            if (
+                not authentication.user.password
+                or not await self.token_service.verify_password(
+                    authentication.user.password, db_user.hashed_password
+                )
             ):
                 logger.info(
-                    f"Invalid password for user {authentication.user.id}, raising exception."
+                    f"Case 2: invalid password for user {db_user.id}, "
+                    f"raising InvalidCredentialsException2."
                 )
-                raise InvalidCredentialsException()
+                raise InvalidCredentialsException2()
 
+            # ---- 3. Attach the persisted user BEFORE any repository call ----
+            # authentication.user.id MUST be set here so the next lookup
+            # filters by the real user id. Otherwise the query binds
+            # user_id = NULL and returns None, then the create path collides
+            # on the unique (user_id, user_agent, device) constraint.
             authentication.user = db_user
+
+            # ---- 4. Look up existing auth for (user, agent, device) --------
             authentication_from_db = (
                 await self.repository.get_by_user_id_agent_and_device(authentication)
             )
@@ -88,26 +106,35 @@ class AuthenticationUseCases:
 
             if authentication_from_db:
                 logger.debug(
-                    f"Existing authentication found for user: {authentication.user.id}. Renewing tokens."
+                    f"Existing authentication found for user: {db_user.id}. "
+                    f"Renewing tokens."
                 )
+
                 await self.cache.delete_by_access_token(authentication_from_db)
                 await self.cache.delete_by_refresh_token(authentication_from_db)
+
+                # Swap in fresh user so token claims reflect any changes.
+                authentication_from_db.user = db_user
+
                 authentication = authentication_from_db.renew_tokens(
                     now, refresh_expires_at, access_expires_at
                 )
             else:
                 logger.debug(
-                    f"No existing authentication found for user: {authentication.user.id}. Creating new authentication."
+                    f"No existing authentication found for user: {db_user.id}. "
+                    f"Creating new authentication."
                 )
+                # NOTE: authentication.user was already set to db_user in step 3.
                 authentication = authentication.create_tokens(
                     now, refresh_expires_at, access_expires_at
                 )
 
+            # Set permission BEFORE generate/hash so JWT `scope` claim and
+            # `access_token.permission` stay consistent.
+            authentication.refresh_token.access_token.permission = db_user.role
+
             authentication = await self.token_service.generate(authentication)
             authentication = await self.token_service.hash_tokens(authentication)
-            authentication.refresh_token.access_token.permission = (
-                authentication.user.role
-            )
 
             if authentication_from_db:
                 await self.repository.update(authentication)
@@ -115,7 +142,8 @@ class AuthenticationUseCases:
                 await self.repository.create(authentication)
 
             logger.debug(
-                f"User {authentication.user.id} logged in successfully in device: {authentication.device}."
+                f"User {db_user.id} logged in successfully in device: "
+                f"{authentication.device}."
             )
             return authentication
         except StandardException:
@@ -132,51 +160,36 @@ class AuthenticationUseCases:
     # SIGN UP
     # ========================================================================
     async def sign_up(self, user: User) -> User:
-        """
-        Sign up use case.
-
-        ขั้นตอน:
-            1. ตรวจว่า email ซ้ำหรือไม่
-            2. Hash password — ต้องทำที่นี้ เพราะ SharedUseCases.create_user
-               bypass ไป UserRepository.create โดยตรง (ไม่ผ่าน UserUseCases.create)
-            3. สร้าง user ผ่าน shared_service
-            4. (TODO) ส่งอีเมลต้อนรับ
-        """
+        """Sign up use case."""
         try:
             logger.debug(
                 f"Initializing sign up use case for user: {user.censored_email}."
             )
 
-            # TH: ตรวจ email ซ้ำก่อน — ถ้าซ้ำให้ตอบ error ทันที ไม่ต้อง hash ให้เสียเวลา
-            # EN: check duplicate email first
             existing_user = await self.shared_service.get_user_by_email(user)
-            if existing_user:
-                logger.info(f"User with email {user.censored_email} already exists.")
+
+            if existing_user is not None:
+                logger.info(
+                    f"User with email {user.censored_email} already exists."
+                )
                 raise EmailAlreadyExistsException(email=str(user.email))
 
-            # TH: ต้อง hash ที่นี่ — SharedUseCases.create_user ไม่ผ่าน UserUseCases.create
-            #     ถ้ามี hashed_password อยู่แล้ว (เช่นสร้างจาก flow อื่น) → skip
-            # EN: hash here — SharedUseCases.create_user bypasses UserUseCases.create.
-            #     Skip if already hashed (e.g. created via another flow).
             if not user.hashed_password:
                 if not user.password:
                     logger.warning(
                         f"User {user.censored_email} has no password to hash."
                     )
                     raise AuthenticationException()
-                user.hashed_password = self.token_service.hash_password(user.password)
+                user.hashed_password = self.token_service.hash_password(
+                    user.password
+                )
 
-            # TH: persist ผ่าน shared service
-            # EN: persist via shared service
             user = await self.shared_service.create_user(user)
 
-            # TH: ส่งอีเมลต้อนรับ — ยังไม่ implement
-            # EN: welcome email — not yet implemented
             logger.debug(
                 f"User created with id {user.id}. "
                 f"Welcome email will be sent later (not yet implemented)."
             )
-
             logger.debug(
                 f"User {user.censored_email} signed up successfully with id {user.id}."
             )
@@ -190,6 +203,7 @@ class AuthenticationUseCases:
                 "An unexpected error occurred during the sign up use case."
             )
             raise AuthenticationException()
+
     # ========================================================================
     # UPDATE: REFRESH
     # ========================================================================
@@ -197,7 +211,8 @@ class AuthenticationUseCases:
         """Refresh tokens use case."""
         try:
             logger.debug(
-                f"Initializing user refresh tokens use case for user: {authentication.user.id}."
+                f"Initializing user refresh tokens use case for user: "
+                f"{authentication.user.id}."
             )
 
             await self.cache.delete_by_access_token(authentication)
@@ -208,12 +223,14 @@ class AuthenticationUseCases:
                 minutes=settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES
             )
 
-            authentication = authentication.refresh_access_token(now, access_expires_at)
-            authentication = await self.token_service.generate(authentication)
-            authentication = await self.token_service.hash_tokens(authentication)
+            authentication = authentication.refresh_access_token(
+                now, access_expires_at
+            )
             authentication.refresh_token.access_token.permission = (
                 authentication.user.role
             )
+            authentication = await self.token_service.generate(authentication)
+            authentication = await self.token_service.hash_tokens(authentication)
 
             await self.repository.update(authentication)
 
@@ -238,7 +255,8 @@ class AuthenticationUseCases:
         """Logout use case."""
         try:
             logger.debug(
-                f"Initializing user logout use case for user: {authentication.user.id}."
+                f"Initializing user logout use case for user: "
+                f"{authentication.user.id}."
             )
 
             authentication.revoke(datetime.now(BRASILIA_TZ))
@@ -265,24 +283,23 @@ class AuthenticationUseCases:
     async def forgot_password(self, email: str) -> None:
         """Forgot password use case."""
         try:
-            logger.debug(f"Initializing forgot password use case for email: {email}.")
+            logger.debug(
+                f"Initializing forgot password use case for email: {email}."
+            )
 
             user = await self.shared_service.get_user_by_email(User(email=email))
 
-            if not user:
-                # TH: ตอบ success เสมอ เพื่อไม่ให้ attacker เดาได้ว่า email มีในระบบ
-                # EN: always return success to avoid user enumeration
+            if user is None:
                 logger.info(
                     f"User with email {email} not found, but returning success."
                 )
                 return
 
-            # TH: generate reset code (TODO: persist + send)
-            # EN: generate reset code (TODO: persist + send)
             _reset_code = str(uuid4())[:6].upper()
 
-            logger.debug(f"Reset code generated for {email} (email not yet sent).")
-
+            logger.debug(
+                f"Reset code generated for {email} (email not yet sent)."
+            )
             logger.debug(f"Forgot password processed for {email}.")
         except StandardException:
             raise
@@ -307,8 +324,6 @@ class AuthenticationUseCases:
             if password != confirm_password:
                 raise PasswordMismatchException()
 
-            # TH: validate code (TODO)
-            # EN: validate code (TODO)
             logger.debug("Reset password processed successfully.")
         except StandardException:
             raise
@@ -323,11 +338,14 @@ class AuthenticationUseCases:
     # ========================================================================
     # LOCK SCREEN
     # ========================================================================
-    async def lock_screen(self, authentication: Authentication, password: str) -> None:
+    async def lock_screen(
+        self, authentication: Authentication, password: str
+    ) -> None:
         """Lock screen use case."""
         try:
             logger.debug(
-                f"Initializing lock screen use case for user: {authentication.user.id}."
+                f"Initializing lock screen use case for user: "
+                f"{authentication.user.id}."
             )
 
             if not await self.token_service.verify_password(
@@ -335,7 +353,9 @@ class AuthenticationUseCases:
             ):
                 raise InvalidCredentialsException()
 
-            logger.debug(f"Lock screen unlocked for user {authentication.user.id}.")
+            logger.debug(
+                f"Lock screen unlocked for user {authentication.user.id}."
+            )
         except StandardException:
             raise
         except DomainError as e:
@@ -355,13 +375,11 @@ class AuthenticationUseCases:
         """Two-step verification use case."""
         try:
             logger.debug(
-                f"Initializing two-step verification for user: {authentication.user.id}."
+                f"Initializing two-step verification for user: "
+                f"{authentication.user.id}."
             )
 
             full_phone = f"{country_code}{phone_number}"
-
-            # TH: send OTP (TODO)
-            # EN: send OTP (TODO)
             _otp_code = str(uuid4())[:6]
             logger.debug(f"OTP generated for {full_phone} (SMS not yet sent).")
         except StandardException:
@@ -383,10 +401,11 @@ class AuthenticationUseCases:
         """Two-step code use case."""
         try:
             logger.debug(
-                f"Initializing two-step code verification for user: {authentication.user.id}."
+                f"Initializing two-step code verification for user: "
+                f"{authentication.user.id}."
             )
 
-            if code != "123456":  # TH: placeholder | EN: placeholder
+            if code != "123456":
                 raise InvalidOtpCodeException()
 
             now = datetime.now(BRASILIA_TZ)
@@ -400,15 +419,17 @@ class AuthenticationUseCases:
             authentication = authentication.create_tokens(
                 now, refresh_expires_at, access_expires_at
             )
-            authentication = await self.token_service.generate(authentication)
-            authentication = await self.token_service.hash_tokens(authentication)
             authentication.refresh_token.access_token.permission = (
                 authentication.user.role
             )
+            authentication = await self.token_service.generate(authentication)
+            authentication = await self.token_service.hash_tokens(authentication)
 
             await self.repository.create(authentication)
 
-            logger.debug(f"Two-step code verified for user {authentication.user.id}.")
+            logger.debug(
+                f"Two-step code verified for user {authentication.user.id}."
+            )
             return authentication
         except StandardException:
             raise

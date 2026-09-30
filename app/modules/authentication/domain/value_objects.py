@@ -9,7 +9,7 @@ class BaseClaims:
     """Base class for JWT Claims - immutable."""
 
     iss: str  # issuer
-    sub: UUID  # subject
+    sub: str  # subject (user id as string)
     aud: str  # audience
     iat: int  # issued at
     nbf: int  # not before
@@ -23,7 +23,7 @@ class BaseClaims:
     def __init__(
         self,
         iss: str | None = None,
-        sub: UUID | None = None,
+        sub: str | None = None,
         aud: str | None = None,
         iat: int | None = None,
         nbf: int | None = None,
@@ -31,7 +31,7 @@ class BaseClaims:
         jti: UUID | None = None,
     ) -> None:
         object.__setattr__(self, "iss", iss.strip() if iss else iss)
-        object.__setattr__(self, "sub", sub)
+        object.__setattr__(self, "sub", str(sub) if sub is not None else sub)
         object.__setattr__(self, "aud", aud.strip() if aud else aud)
         object.__setattr__(self, "iat", iat)
         object.__setattr__(self, "nbf", nbf)
@@ -98,7 +98,7 @@ class BaseClaims:
         """Build kwargs from dict."""
         return {
             "iss": data["iss"],
-            "sub": UUID(data["sub"]) if isinstance(data["sub"], str) else data["sub"],
+            "sub": str(data["sub"]),
             "aud": data["aud"],
             "iat": data["iat"],
             "nbf": data["nbf"],
@@ -116,7 +116,7 @@ class Claims(BaseClaims):
     def __init__(
         self,
         iss: str | None = None,
-        sub: UUID | None = None,
+        sub: str | None = None,
         aud: str | None = None,
         iat: int | None = None,
         nbf: int | None = None,
@@ -184,7 +184,7 @@ class RefreshClaims(BaseClaims):
     def __init__(
         self,
         iss: str | None = None,
-        sub: UUID | None = None,
+        sub: str | None = None,
         aud: str | None = None,
         iat: int | None = None,
         nbf: int | None = None,

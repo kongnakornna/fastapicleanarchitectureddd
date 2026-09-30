@@ -23,14 +23,20 @@ from app.modules.websocket.domain.entities import WebSocketMessage
 
 class SharedUseCases:
     """
-    Use cases ที่ใช้ร่วมกันหลายโมดูล (user, notification, websocket)
+    Use cases shared across modules (user, notification, websocket).
 
-    คุณสมบัติพิเศษ: flag `_raise_exceptions`
-        - True (default) → method lookup จะ raise เมื่อไม่เจอข้อมูล
-        - False (ผ่าน disable_exceptions) → method lookup จะคืน None แทน
+    Special flag `_raise_exceptions`:
+        - True (default)  -> lookup methods raise when the row is missing
+        - False           -> lookup methods return None when the row is missing
 
-    หมายเหตุ: mutation methods (create/update/delete) จะ raise เสมอ
-    ไม่สนใจ flag นี้ เพราะถ้าล้มเหลวแล้วเงียบ ๆ ผู้เรียกจะเข้าใจผิด
+    IMPORTANT CONTRACT:
+        The flag ONLY governs the "row not found" outcome (a business result).
+        Infrastructure failures (DB down, mapping error, unexpected exception)
+        ALWAYS raise, regardless of the flag. This prevents a real 500 from
+        being silently reported to clients as "user not found".
+
+    Note: mutation methods (create/update/delete) always raise — they never
+    honor this flag.
     """
 
     def __init__(
@@ -48,11 +54,15 @@ class SharedUseCases:
     def raise_exceptions(self) -> bool:
         return self._raise_exceptions
 
-    def enable_exceptions(self) -> None:
+    def enable_exceptions(self) -> "SharedUseCases":
+        """Enable raise-on-not-found. Returns self so it can be chained."""
         self._raise_exceptions = True
+        return self
 
-    def disable_exceptions(self) -> None:
+    def disable_exceptions(self) -> "SharedUseCases":
+        """Disable raise-on-not-found. Returns self so it can be chained."""
         self._raise_exceptions = False
+        return self
 
     # ========================================================================
     # NOTIFICATION
@@ -60,14 +70,16 @@ class SharedUseCases:
     async def create_notification(self, notification: Notification) -> Notification:
         try:
             logger.debug(
-                f"Initializing create notification use case for user {notification.user.id}."
+                f"Initializing create notification use case for user "
+                f"{notification.user.id}."
             )
 
             result = await self.notification_repository.create(notification)
             await self._dispatch_user_notification_message(result)
 
             logger.debug(
-                f"Create notification use case completed successfully for user {notification.user.id}."
+                f"Create notification use case completed successfully for user "
+                f"{notification.user.id}."
             )
             return result
         except StandardException:
@@ -94,7 +106,8 @@ class SharedUseCases:
                 await self._dispatch_broadcast_notification_message(result[0])
 
             logger.debug(
-                f"Broadcast notification use case completed. Created {len(result)} notification(s)."
+                f"Broadcast notification use case completed. "
+                f"Created {len(result)} notification(s)."
             )
             return result
         except StandardException:
@@ -103,7 +116,8 @@ class SharedUseCases:
             raise DomainException(e)
         except Exception as e:
             logger.opt(exception=e).error(
-                "An unexpected error occurred during the create broadcast notification use case."
+                "An unexpected error occurred during the create broadcast "
+                "notification use case."
             )
             raise NotificationException()
 
@@ -143,24 +157,14 @@ class SharedUseCases:
     # ========================================================================
     async def create_user(self, user: User) -> User:
         """
-        สร้าง user ใหม่ลงฐานข้อมูล
+        Create a new user in the database.
 
-        ขั้นตอน:
-            1. persist ผ่าน user repository
-            2. return user ที่มี id แล้ว (จาก DB)
-
-        หมายเหตุ: method นี้ **raise เสมอ** เมื่อล้มเหลว
-        ไม่สนใจ flag `_raise_exceptions` เพราะเป็น mutation ที่ critical —
-        ถ้าล้มเหลวแล้วคืน None เงียบ ๆ ผู้เรียกจะเข้าใจผิด
-
-        Args:
-            user: User domain entity ที่ hash password แล้ว
-
-        Returns:
-            User ที่มี id หลังบันทึกสำเร็จ
+        This method ALWAYS raises on failure — it never honors the
+        `_raise_exceptions` flag because a silent `None` here would let the
+        caller believe the create succeeded.
 
         Raises:
-            UserException: เมื่อเกิดข้อผิดพลาดระหว่างบันทึก
+            UserException: on any unexpected error during persistence.
         """
         try:
             logger.debug(
@@ -170,17 +174,15 @@ class SharedUseCases:
             created: User = await self.user_repository.create(user)
 
             logger.debug(
-                f"Create user use case completed successfully for user: {created.censored_email} with id {created.id}."
+                f"Create user use case completed successfully for user: "
+                f"{created.censored_email} with id {created.id}."
             )
             return created
         except StandardException:
-            # domain/standard exception ผ่านไปเลย — ผู้เรียกจัดการเอง
             raise
         except DomainError as e:
-            # ห่อ domain error ให้เป็น DomainException เพื่อให้ presentation layer จัดการได้
             raise DomainException(e)
         except Exception as e:
-            # error ที่ไม่คาดคิด → log แล้ว raise UserException แบบ generic
             logger.opt(exception=e).error(
                 "An unexpected error occurred during the create user use case."
             )
@@ -191,81 +193,104 @@ class SharedUseCases:
     # ========================================================================
     async def get_user_by_id(self, user: User) -> User | None:
         """
-        ดึง user ด้วย id
+        Fetch a user by id.
 
-        ถ้าไม่เจอ:
-            - `raise_exceptions=True`  → raise UserIdNotFoundException
-            - `raise_exceptions=False` → return None
+        Contract:
+            - found                              -> User
+            - not found & raise_exceptions=True  -> raise UserIdNotFoundException
+            - not found & raise_exceptions=False -> None
+            - infra / mapping / unexpected error -> ALWAYS raise UserException
+              (never silently becomes "not found")
         """
         try:
-            logger.debug(
-                f"Initializing get user by identifier use case for user: {user.id}."
-            )
+            logger.debug(f"-get_user_by_id- querying id={user.id}.")
 
             db_user: User | None = await self.user_repository.get_by_id(user)
+            logger.debug(f"-get_user_by_id- db_user={db_user!r}")
 
-            if db_user is None and self._raise_exceptions:
-                logger.info(
-                    f"User with identifier {user.id} not found. Raising exception."
+            if db_user is None:
+                if self._raise_exceptions:
+                    logger.info(
+                        f"User with identifier {user.id} not found. "
+                        f"Raising UserIdNotFoundException."
+                    )
+                    raise UserIdNotFoundException(str(user.id))
+                logger.debug(
+                    f"User with identifier {user.id} not found. Returning None."
                 )
-                raise UserIdNotFoundException(str(user.id))
+                return None
 
             logger.debug(f"User with identifier {user.id} retrieved successfully.")
             return db_user
+
         except StandardException:
-            if self._raise_exceptions:
-                raise
-            return None
+            # Business exceptions (incl. UserIdNotFoundException) bubble up.
+            raise
         except DomainError as e:
-            if self._raise_exceptions:
-                raise DomainException(e)
-            return None
+            logger.opt(exception=e).error("Domain error during get_user_by_id.")
+            raise DomainException(e)
         except Exception as e:
+            # Infra / unexpected errors are NEVER masked as "not found".
             logger.opt(exception=e).error(
-                "An unexpected error occurred during the get user by identifier use case."
+                "An unexpected error occurred during the get user by identifier "
+                "use case."
             )
-            if self._raise_exceptions:
-                raise UserException()
-            return None
+            raise UserException()
 
     async def get_user_by_email(self, user: User) -> User | None:
         """
-        ดึง user ด้วย email
+        Fetch a user by email.
 
-        ถ้าไม่เจอ:
-            - `raise_exceptions=True`  → raise UserEmailNotFoundException
-            - `raise_exceptions=False` → return None
+        Contract:
+            - found                              -> User
+            - not found & raise_exceptions=True  -> raise UserEmailNotFoundException
+            - not found & raise_exceptions=False -> None
+            - infra / mapping / unexpected error -> ALWAYS raise UserException
+              (never silently becomes "not found")
 
-        ใช้ `disable_exceptions()` เมื่อต้องการเช็ค email ซ้ำแบบไม่ให้ throw
-        (เช่นใน sign_up flow)
+        Use `disable_exceptions()` when you need a duplicate-email check that
+        returns `None` instead of raising — e.g. in the sign-up or login flow.
         """
         try:
+            # Force string coercion at the boundary so any downstream binding
+            # sees a plain str, never an `Email` value object.
+            email_str = str(user.email)
+
             logger.debug(
-                f"Initializing get user by email for user {user.censored_email}."
+                f"-get_user_by_email- querying email={email_str} "
+                f"(censored={user.censored_email})."
             )
 
             db_user: User | None = await self.user_repository.get_by_email(user)
+            logger.debug(f"-get_user_by_email- db_user={db_user!r}")
 
-            if db_user is None and self._raise_exceptions:
-                logger.info(
-                    f"User with email {user.email} not found. Raising exception."
+            if db_user is None:
+                if self._raise_exceptions:
+                    logger.info(
+                        f"User with email {email_str} not found. "
+                        f"Raising UserEmailNotFoundException."
+                    )
+                    raise UserEmailNotFoundException(email=email_str)
+                logger.debug(
+                    f"User with email {email_str} not found. Returning None."
                 )
-                raise UserEmailNotFoundException(email=str(user.email))
+                return None
 
-            logger.debug(f"User {user.email} retrieved from database successfully.")
-            return db_user
-        except StandardException:
-            if self._raise_exceptions:
-                raise
-            return None
-        except DomainError as e:
-            if self._raise_exceptions:
-                raise DomainException(e)
-            return None
-        except Exception as e:
-            logger.opt(exception=e).error(
-                "An unexpected error occurred during the get user by email use case."
+            logger.debug(
+                f"User with email {email_str} retrieved from database successfully."
             )
-            if self._raise_exceptions:
-                raise UserException()
-            return None
+            return db_user
+
+        except StandardException:
+            # Business exceptions (incl. UserEmailNotFoundException) bubble up.
+            raise
+        except DomainError as e:
+            logger.opt(exception=e).error("Domain error during get_user_by_email.")
+            raise DomainException(e)
+        except Exception as e:
+            # Infra / unexpected errors are NEVER masked as "not found".
+            logger.opt(exception=e).error(
+                "An unexpected error occurred during the get user by email "
+                "use case."
+            )
+            raise UserException()

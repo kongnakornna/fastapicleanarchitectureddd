@@ -78,8 +78,14 @@ class Email:
     def __str__(self) -> str:
         return self.email
 
+    def __repr__(self) -> str:
+        return f"Email({self.email!r})"
+
     def __eq__(self, other) -> bool:
         return str(self) == str(other)
+
+    def __hash__(self) -> int:
+        return hash(self.email)
 
 
 class Name:
@@ -127,6 +133,12 @@ class Name:
     def __str__(self) -> str:
         return f"{self.first_name} {self.last_name} ({self.preferred_name})"
 
+    def __repr__(self) -> str:
+        return (
+            f"Name({self.first_name!r}, {self.last_name!r}, "
+            f"{self.preferred_name!r})"
+        )
+
     def __eq__(self, other):
         return str(self) == str(other)
 
@@ -162,6 +174,9 @@ class Phone:
 
     def __str__(self) -> str:
         return self.phone
+
+    def __repr__(self) -> str:
+        return f"Phone({self.phone!r})"
 
     def __eq__(self, other) -> bool:
         return str(self) == str(other)

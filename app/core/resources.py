@@ -43,16 +43,13 @@ async def startup(app: FastAPI) -> None:
                 "Running in development mode, this is not recommended for production!"
             )
 
-            # ─────────────────────────────────────────────────────────────
-            # Ngrok is OPTIONAL — only start when a token is actually set.
-            # ─────────────────────────────────────────────────────────────
+            # ─── ngrok ──────────────────────────────────────────────────
             if settings.NGROK_AUTH_TOKEN:
                 try:
                     import ngrok
 
                     logger.info("Initializing ngrok")
                     ngrok.set_auth_token(settings.NGROK_AUTH_TOKEN)
-
                     listener = await ngrok.forward(addr=settings.APPLICATION_PORT)
                     logger.info(
                         f"Ngrok initialized successfully, public URL: {listener.url()}"
@@ -64,9 +61,7 @@ async def startup(app: FastAPI) -> None:
             else:
                 logger.info("NGROK_AUTH_TOKEN is empty — skipping ngrok tunnel.")
 
-            # ─────────────────────────────────────────────────────────────
-            # Dev tools are OPTIONAL — mount only if the directory exists.
-            # ─────────────────────────────────────────────────────────────
+            # ─── dev tools ──────────────────────────────────────────────
             devtools_dir = Path("scripts")
             if devtools_dir.is_dir():
                 app.mount(
@@ -80,6 +75,7 @@ async def startup(app: FastAPI) -> None:
                     f"Dev tools directory '{devtools_dir}' not found — skipping mount."
                 )
 
+        # ─── infrastructure ─────────────────────────────────────────────
         await init_database_client()
         logger.info("Database client initialized successfully.")
 
@@ -90,9 +86,28 @@ async def startup(app: FastAPI) -> None:
             await flush_cache_namespace()
             logger.info("Cache namespace cleared on startup.")
 
-        init_alembic_management()
-        logger.info("Migration management initialized successfully.")
+        # ─── migrations ─────────────────────────────────────────────────
+        # AUTO_MIGRATE_ON_STARTUP is opt-in via .env. When disabled (default),
+        # you must run `make migrate` manually. When enabled, migration
+        # failures are logged but do NOT crash the app, so you can still
+        # boot and inspect /docs while debugging DB state.
+        if settings.AUTO_MIGRATE_ON_STARTUP:
+            try:
+                init_alembic_management()
+                logger.info("Migration management initialized successfully.")
+            except Exception as e:
+                logger.opt(exception=e).error(
+                    "Migration management failed — the application will "
+                    "continue to start, but the database schema may be out "
+                    "of date. Fix the migrations and restart."
+                )
+        else:
+            logger.info(
+                "AUTO_MIGRATE_ON_STARTUP is disabled — skipping automatic "
+                "migrations. Run `make migrate` manually."
+            )
 
+        # ─── websocket ──────────────────────────────────────────────────
         app.state.connection_manager = ConnectionManager()
         logger.info("WebSocket connection manager initialized successfully.")
 

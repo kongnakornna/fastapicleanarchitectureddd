@@ -1,11 +1,54 @@
 from __future__ import annotations
 
 from datetime import date, datetime
+from typing import Annotated
 from uuid import UUID
 
+from fastapi import Form
 from pydantic import BaseModel, ConfigDict, EmailStr, model_validator
 
 from app.modules.shared.domain.enums import ResponseMessages, Role
+
+
+# ============================================================================
+# LOGIN FORM (accepts either `username` OR `email`)
+# ============================================================================
+class LoginForm:
+    """
+    OAuth2-compatible login form.
+
+    Accepts EITHER `username` OR `email` (email takes priority when both are sent).
+    Keeps compatibility with the standard OAuth2 password flow
+    (`grant_type=password&username=...&password=...`) while also allowing
+    clients to send `email` instead.
+
+    Identifier validation happens downstream in the login use case so that a
+    missing identifier surfaces as `InvalidCredentialsException` (401) rather
+    than a 422 schema error.
+    """
+
+    def __init__(
+        self,
+        grant_type: Annotated[str | None, Form()] = None,
+        username: Annotated[str | None, Form()] = None,
+        email: Annotated[str | None, Form()] = None,
+        password: Annotated[str, Form()] = "",
+        scope: Annotated[str, Form()] = "",
+        client_id: Annotated[str | None, Form()] = None,
+        client_secret: Annotated[str | None, Form()] = None,
+    ) -> None:
+        self.grant_type = grant_type
+        self.username = username
+        self.email = email
+        self.password = password
+        self.scope = scope
+        self.client_id = client_id
+        self.client_secret = client_secret
+
+    @property
+    def identifier(self) -> str:
+        """Return whichever identifier was provided (email wins if both)."""
+        return (self.email or self.username or "").strip()
 
 
 # ============================================================================
@@ -239,19 +282,8 @@ class SignUpRequest(BaseModel):
         },
     )
 
-    # ------------------------------------------------------------------
-    # VALIDATORS
-    # ------------------------------------------------------------------
     @model_validator(mode="after")
     def normalize_name(self) -> SignUpRequest:
-        """
-        Normalize ชื่อให้ครบทั้ง 3 field
-
-        ลำดับความสำคัญ:
-            1. ถ้าส่ง first_name และ/หรือ last_name มา → ใช้ค่านั้นเป็นหลัก
-            2. ถ้าส่งแค่ full_name → split ที่ช่องว่างแรกเป็น first/last
-            3. ถ้าไม่ส่งชื่อมาเลย → raise error
-        """
         has_explicit_name = bool(self.first_name or self.last_name)
 
         if not has_explicit_name and self.full_name:
@@ -260,7 +292,9 @@ class SignUpRequest(BaseModel):
             self.last_name = parts[1] if len(parts) > 1 else ""
 
         if not (self.first_name or self.last_name):
-            raise ValueError("ต้องระบุ full_name หรือ first_name/last_name อย่างน้อยหนึ่งอย่าง")
+            raise ValueError(
+                "ต้องระบุ full_name หรือ first_name/last_name อย่างน้อยหนึ่งอย่าง"
+            )
 
         if not self.full_name:
             self.full_name = f"{self.first_name or ''} {self.last_name or ''}".strip()
@@ -274,14 +308,12 @@ class SignUpRequest(BaseModel):
 
     @model_validator(mode="after")
     def passwords_match(self) -> SignUpRequest:
-        """ตรวจว่า password กับ confirm_password ตรงกัน"""
         if self.password != self.confirm_password:
             raise ValueError("password และ confirm_password ไม่ตรงกัน")
         return self
 
     @model_validator(mode="after")
     def terms_accepted(self) -> SignUpRequest:
-        """บังคับให้ยอมรับเงื่อนไขก่อนสมัคร"""
         if not self.agree_terms:
             raise ValueError("ต้องยอมรับเงื่อนไขการใช้งาน (agree_terms)")
         return self
@@ -292,11 +324,10 @@ class SignUpResponse(BaseModel):
     Response model for sign up.
 
     คืนข้อมูลผู้ใช้ที่สมัครสำเร็จ — ไม่คืน password หรือ hashed_password
-    ใช้ extra="ignore" เพื่อทน field เกินที่ mapper อาจส่งมา
     """
 
     message: str = ResponseMessages.SUCCESS.value
-    id: UUID
+    id: int
     first_name: str
     last_name: str
     preferred_name: str
@@ -315,7 +346,7 @@ class SignUpResponse(BaseModel):
             "description": "Response model for successful user sign up.",
             "example": {
                 "message": ResponseMessages.SUCCESS.value,
-                "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                "id": 10000000000,                # ← ตัวเลข ไม่ใช่ string/UUID
                 "first_name": "John",
                 "last_name": "Doe",
                 "preferred_name": "John",
@@ -328,7 +359,6 @@ class SignUpResponse(BaseModel):
             },
         },
     )
-
 
 # ============================================================================
 # FORGOT PASSWORD
@@ -355,9 +385,7 @@ class ForgotPasswordResponse(BaseModel):
         title="ForgotPasswordResponse",
         str_strip_whitespace=True,
         extra="forbid",
-        json_schema_extra={
-            "example": {"message": ResponseMessages.SUCCESS.value},
-        },
+        json_schema_extra={"example": {"message": ResponseMessages.SUCCESS.value}},
     )
 
 
@@ -394,9 +422,7 @@ class ResetPasswordResponse(BaseModel):
         title="ResetPasswordResponse",
         str_strip_whitespace=True,
         extra="forbid",
-        json_schema_extra={
-            "example": {"message": ResponseMessages.SUCCESS.value},
-        },
+        json_schema_extra={"example": {"message": ResponseMessages.SUCCESS.value}},
     )
 
 
@@ -425,9 +451,7 @@ class LockScreenResponse(BaseModel):
         title="LockScreenResponse",
         str_strip_whitespace=True,
         extra="forbid",
-        json_schema_extra={
-            "example": {"message": ResponseMessages.SUCCESS.value},
-        },
+        json_schema_extra={"example": {"message": ResponseMessages.SUCCESS.value}},
     )
 
 
@@ -459,9 +483,7 @@ class TwoStepVerificationResponse(BaseModel):
         title="TwoStepVerificationResponse",
         str_strip_whitespace=True,
         extra="forbid",
-        json_schema_extra={
-            "example": {"message": ResponseMessages.SUCCESS.value},
-        },
+        json_schema_extra={"example": {"message": ResponseMessages.SUCCESS.value}},
     )
 
 
@@ -478,9 +500,7 @@ class TwoStepCodeRequest(BaseModel):
         title="TwoStepCodeRequest",
         str_strip_whitespace=True,
         extra="forbid",
-        json_schema_extra={
-            "example": {"code": "123456", "dont_ask_again": False},
-        },
+        json_schema_extra={"example": {"code": "123456", "dont_ask_again": False}},
     )
 
 

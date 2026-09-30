@@ -42,6 +42,7 @@ login_docs = {
     "summary": "Endpoint to login a user.",
     "description": (
         "Authenticate a user and initiate a login session. "
+        "Accepts **either** `username` **or** `email` (email wins when both are sent). "
         "Authentication tokens are returned via HttpOnly cookies."
     ),
     "response_description": (

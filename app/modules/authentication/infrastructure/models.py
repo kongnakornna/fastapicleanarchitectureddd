@@ -4,9 +4,8 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 from uuid import UUID
 
-from sqlalchemy import (
-    UUID as SQUID,
-)
+from sqlalchemy import UUID as SQUID
+from sqlalchemy import BigInteger
 from sqlalchemy import (
     Boolean,
     DateTime,
@@ -58,13 +57,15 @@ class AuthenticationModel(Base):
         server_default=func.gen_random_uuid(),
     )
 
-    user_id: Mapped[UUID] = mapped_column(
+    # ⚠️ CHANGED: UUID → BIGINT (FK → erp_users.id BIGINT 11+ หลัก)
+    user_id: Mapped[int] = mapped_column(
+        BigInteger,
         ForeignKey(
             f"{settings.APPLICATION_TABLE_PREFIX}_users.id",
             ondelete="CASCADE",
         ),
         name="user_id",
-        comment="Identifier of the user who owns the authentication",
+        comment="Identifier of the user who owns the authentication (BIGINT 11+ digits)",
         nullable=False,
     )
 

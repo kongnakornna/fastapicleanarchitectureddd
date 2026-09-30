@@ -2,9 +2,11 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator
 
+from fastapi.exceptions import RequestValidationError
 from loguru import logger
 from redis.asyncio import ConnectionPool, Redis
 from redis.exceptions import RedisError
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.core.settings import settings
 from app.modules.shared.application.exceptions import StandardException
@@ -22,13 +24,28 @@ redis_client = Redis(connection_pool=redis_pool)
 
 
 async def get_cache_session() -> AsyncIterator[Redis]:
+    """
+    TH: cache session (FastAPI)
+    EN: cache session (FastAPI)
+
+    Client-side errors (RequestValidationError / StarletteHTTPException) are
+    re-raised WITHOUT logging as cache failures, so that 4xx responses don't
+    pollute the error log. Actual cache failures are logged.
+    """
     try:
         yield redis_client
+
+        # ✅ Client-side errors: don't log as cache failures
+    except (RequestValidationError, StarletteHTTPException):
+        raise
+
     except StandardException:
         raise
+
     except RedisError as e:
         logger.opt(exception=e).error("A cache error occurred during the operation.")
         raise
+
     except Exception as e:
         logger.opt(exception=e).error(
             "An unexpected error occurred during the cache operation."

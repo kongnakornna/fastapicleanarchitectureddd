@@ -1,4 +1,3 @@
-```bash
 app/
 ├── modules/
 │   ├── shared/
@@ -77,7 +76,7 @@ app/
 │
 ├── app.py                                  🔧 ADD router
 └── migrations/env.py                       🔧 ADD models
-```
+
 
 # 🚀 iot Module — Complete Rebuild (Fresh Start)
 

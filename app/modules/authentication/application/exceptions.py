@@ -17,7 +17,10 @@ class AuthenticationException(StandardException):
             status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
             message=ResponseMessages.INTERNAL_ERROR.value,
             data={
-                "errors": "Case 1 An unexpected error occurred while processing the request at the authentication module."
+                "errors": (
+                    "An unexpected error occurred while processing the "
+                    "request at the authentication module."
+                )
             },
         )
 
@@ -74,6 +77,22 @@ class InvalidCredentialsException(StandardException):
             data={
                 "errors": "Invalid credentials for login.",
                 "errors_th": "ข้อมูลเข้าสู่ระบบไม่ถูกต้อง",
+                "code": "Case 1",
+            },
+        )
+
+
+class InvalidCredentialsException2(StandardException):
+    """Exception when credentials are invalid."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            status_code=HTTPStatus.UNAUTHORIZED,
+            message=ResponseMessages.UNAUTHORIZED_ERROR.value,
+            data={
+                "errors": "Invalid credentials for login.",
+                "errors_th": "ข้อมูลเข้าสู่ระบบไม่ถูกต้อง",
+                "code": "Case 2",
             },
         )
 
