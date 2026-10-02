@@ -11,6 +11,9 @@ class KeyExpiration(str, Enum):
     SIXTY_DAYS = "60_days"
     NINETY_DAYS = "90_days"
     SIX_MONTHS = "6_months"
+    ONE_YEAR = "1_year"
+    TEN_YEAR = "10_year"
+    HUNDRED_YEAR = "100_year"
     NEVER = "never"
 
     @property
@@ -23,6 +26,9 @@ class KeyExpiration(str, Enum):
             KeyExpiration.SIXTY_DAYS: timedelta(days=60),
             KeyExpiration.NINETY_DAYS: timedelta(days=90),
             KeyExpiration.SIX_MONTHS: timedelta(days=180),
+            KeyExpiration.ONE_YEAR: timedelta(days=365),
+            KeyExpiration.TEN_YEAR: timedelta(days=3650),
+            KeyExpiration.HUNDRED_YEAR: timedelta(days=36500),
         }.get(self)
 
 

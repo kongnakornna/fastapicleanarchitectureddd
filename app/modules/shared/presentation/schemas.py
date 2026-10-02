@@ -106,6 +106,7 @@ class StandardResponse[T](BaseModel):
         description="Detailed information payload for success or error responses.",
         default_factory=lambda: StandardDetailsResponse[T](
             message="Request processed successfully.",
+            message_th="ดำเนินการตามคำขอเรียบร้อยแล้ว.",
             data={},
         ),
         examples=[
@@ -121,6 +122,7 @@ class StandardResponse[T](BaseModel):
         json_schema_extra={
             "example": {
                 "message": "Request processed successfully.",
+                "message_th": "ดำเนินการตามคำขอเรียบร้อยแล้ว.",
                 "data": {"key": "value"},
             },
             "writeOnly": True,
@@ -144,6 +146,7 @@ class StandardResponse[T](BaseModel):
                 "timestamp": "2024-05-01T12:00:00Z",
                 "details": {
                     "message": ResponseMessages.SUCCESS.value,
+                    "message_th": ResponseMessages.SUCCESS_TH.value,
                     "data": {"key": "value"},
                 },
             },

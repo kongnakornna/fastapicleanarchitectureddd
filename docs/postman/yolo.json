@@ -1,0 +1,404 @@
+{
+  "info": {
+    "name": "YOLO Base API",
+    "_postman_id": "18288b55-221d-4abf-b467-13b1f6514ed8",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000"
+    },
+    {
+      "key": "dataset_id",
+      "value": ""
+    },
+    {
+      "key": "model_id",
+      "value": ""
+    },
+    {
+      "key": "training_id",
+      "value": ""
+    },
+    {
+      "key": "category_id",
+      "value": ""
+    },
+    {
+      "key": "field_id",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Create Dataset",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/yolo/datasets",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "yolo",
+            "datasets"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"name\":\"my-dataset\",\"format\":\"yolo\"}"
+        }
+      }
+    },
+    {
+      "name": "List Datasets",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/yolo/datasets?page=1&size=50",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "yolo",
+            "datasets?page=1&size=50"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get Dataset",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/yolo/datasets/{{dataset_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "yolo",
+            "datasets",
+            "{{dataset_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Define Classes",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/yolo/datasets/{{dataset_id}}/classes",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "yolo",
+            "datasets",
+            "{{dataset_id}}",
+            "classes"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"classes\":[{\"name\":\"person\",\"class_index\":0}]}"
+        }
+      }
+    },
+    {
+      "name": "Upload Image",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/yolo/images",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "yolo",
+            "images"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Create Annotation",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/yolo/annotations",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "yolo",
+            "annotations"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Start Training",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/yolo/train",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "yolo",
+            "train"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"dataset_id\":\"{{dataset_id}}\",\"model_type\":\"yolov8n\",\"epochs\":100}"
+        }
+      }
+    },
+    {
+      "name": "Training Status",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/yolo/train/{{training_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "yolo",
+            "train",
+            "{{training_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "List Models",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/yolo/models",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "yolo",
+            "models"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Export ONNX",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/yolo/models/{{model_id}}/export",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "yolo",
+            "models",
+            "{{model_id}}",
+            "export"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"format\":\"onnx\",\"imgsz\":640,\"opset\":17}"
+        }
+      }
+    },
+    {
+      "name": "Detect",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/yolo/detect",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "yolo",
+            "detect"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Detect Batch",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/yolo/detect/batch",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "yolo",
+            "detect",
+            "batch"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"model_id\":\"{{model_id}}\",\"images_base64\":[\"...\"]}"
+        }
+      }
+    },
+    {
+      "name": "Detect Stream",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/yolo/detect/stream",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "yolo",
+            "detect",
+            "stream"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"model_id\":\"{{model_id}}\",\"video_uri\":\"rtsp://...\"}"
+        }
+      }
+    },
+    {
+      "name": "Get Metrics",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/yolo/metrics/{{model_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "yolo",
+            "metrics",
+            "{{model_id}}"
+          ]
+        }
+      }
+    }
+  ]
+}

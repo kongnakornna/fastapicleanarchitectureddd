@@ -18,6 +18,7 @@ class CookieSameSite(str, Enum):
 class ResponseMessages(Enum):
     # SUCCESS MESSAGES
     SUCCESS = "Request processed successfully"
+    SUCCESS_TH = "ดำเนินการตามคำขอเรียบร้อยแล้ว"
     CREATED = "Resource created successfully"
     UPDATED = "Resource updated successfully"
     DELETED = "Resource deleted successfully"

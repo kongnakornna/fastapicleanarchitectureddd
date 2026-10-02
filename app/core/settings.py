@@ -19,6 +19,15 @@ from app.modules.shared.domain.enums import ApplicationEnvironment, CookieSameSi
 
 PathRule = Mapping[str, str]
 
+# ─── fields whose literal content must NEVER be touched by quote-stripping ───
+_SENSITIVE_FIELDS: frozenset[str] = frozenset({
+    "POSTGRESQL_PASSWORD",
+    "REDIS_PASSWORD",
+    "SECURITY_ADMIN_PASSWORD",
+    "JWT_SIGNING_KEY_PASSWORD",
+    "JWT_ENCRYPTION_KEY_PASSWORD",
+})
+
 
 def _path_rule(endpoint: str, method: str) -> PathRule:
     """Helper สร้าง PathRule แบบ read-only"""
@@ -145,7 +154,16 @@ class Settings(BaseSettings):
     # ==================================================================
     @field_validator("*", mode="before")
     @classmethod
-    def strip_quotes(cls, v):
+    def strip_quotes(cls, v, info):
+        """
+        Strip a single layer of matching quotes from string fields.
+
+        ⚠️  NEVER apply to password fields — a password may legitimately
+        start and end with the same quote character, and stripping it
+        would silently change the credential (→ 28P01 on Postgres).
+        """
+        if info.field_name in _SENSITIVE_FIELDS:
+            return v
         if (
             isinstance(v, str)
             and len(v) >= 2
@@ -297,6 +315,10 @@ class Settings(BaseSettings):
             pem_data = key_file.read()
         return jwk.JWK.from_pem(pem_data)
 
+    # ─── Postgres ─────────────────────────────────────────────────
+    # Pass these URL OBJECTS to SQLAlchemy engines — never `str()` them:
+    #   create_engine(settings.POSTGRESQL_DATABASE_URL)       ✅
+    #   create_engine(str(settings.POSTGRESQL_DATABASE_URL))  ❌  (password → "***")
     @computed_field
     @cached_property
     def POSTGRESQL_ASYNC_DATABASE_URL(self) -> URL:
@@ -313,13 +335,27 @@ class Settings(BaseSettings):
     @cached_property
     def POSTGRESQL_DATABASE_URL(self) -> URL:
         return URL.create(
-            drivername="postgresql+psycopg2",
+            drivername="postgresql+pg8000",
             username=self.POSTGRESQL_USERNAME,
             password=self.POSTGRESQL_PASSWORD,
             host=self.POSTGRESQL_HOST,
             port=int(self.POSTGRESQL_PORT),
             database=self.POSTGRESQL_DATABASE,
         )
+
+    # ─── String forms WITH the real password ──────────────────────
+    # Use ONLY when a third-party lib refuses a URL object. Do NOT log these.
+    @computed_field
+    @cached_property
+    def POSTGRESQL_DATABASE_URL_STRING(self) -> str:
+        """String form of the sync URL, password included (hide_password=False)."""
+        return self.POSTGRESQL_DATABASE_URL.render_as_string(hide_password=False)
+
+    @computed_field
+    @cached_property
+    def POSTGRESQL_ASYNC_DATABASE_URL_STRING(self) -> str:
+        """String form of the async URL, password included (hide_password=False)."""
+        return self.POSTGRESQL_ASYNC_DATABASE_URL.render_as_string(hide_password=False)
 
     @computed_field
     @cached_property
@@ -495,23 +531,17 @@ class Settings(BaseSettings):
 
         self.generate_authentication_keys()
 
+        # Allow POSTGRESQL_HOST to carry an inline port: "127.0.0.1:5437"
         if ":" in self.POSTGRESQL_HOST:
             host_parts = self.POSTGRESQL_HOST.split(":")
             self.POSTGRESQL_HOST = host_parts[0]
             if len(host_parts) > 1 and not self.POSTGRESQL_PORT:
                 self.POSTGRESQL_PORT = host_parts[1]
 
-        for field_name in self.model_fields:
-            value = getattr(self, field_name)
-            if (
-                isinstance(value, str)
-                and len(value) >= 2
-                and (
-                    (value.startswith('"') and value.endswith('"'))
-                    or (value.startswith("'") and value.endswith("'"))
-                )
-            ):
-                setattr(self, field_name, value[1:-1])
+        # NOTE: The double quote-stripping loop that used to live here has
+        # been removed. `field_validator("*", mode="before")` already handles
+        # non-sensitive fields, and re-stripping would corrupt password
+        # values that legitimately start/end with a quote character.
 
 
 settings = Settings()

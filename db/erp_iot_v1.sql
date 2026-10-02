@@ -12,7 +12,7 @@
  Target Server Version : 170011 (170011)
  File Encoding         : 65001
 
- Date: 30/09/2026 22:07:36
+ Date: 01/10/2026 00:18:22
 */
 
 
@@ -74,7 +74,7 @@ CREATE TYPE "public"."user_status_enum" AS ENUM (
 -- Sequence structure for activity_log_id_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "public"."activity_log_id_seq";
-CREATE SEQUENCE "public"."activity_log_id_seq" 
+CREATE SEQUENCE "public"."activity_log_id_seq"
 INCREMENT 1
 MINVALUE  1
 MAXVALUE 2147483647
@@ -85,7 +85,7 @@ CACHE 1;
 -- Sequence structure for command_log_id_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "public"."command_log_id_seq";
-CREATE SEQUENCE "public"."command_log_id_seq" 
+CREATE SEQUENCE "public"."command_log_id_seq"
 INCREMENT 1
 MINVALUE  1
 MAXVALUE 2147483647
@@ -96,7 +96,7 @@ CACHE 1;
 -- Sequence structure for device_alert_id_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "public"."device_alert_id_seq";
-CREATE SEQUENCE "public"."device_alert_id_seq" 
+CREATE SEQUENCE "public"."device_alert_id_seq"
 INCREMENT 1
 MINVALUE  1
 MAXVALUE 2147483647
@@ -107,7 +107,7 @@ CACHE 1;
 -- Sequence structure for device_config_id_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "public"."device_config_id_seq";
-CREATE SEQUENCE "public"."device_config_id_seq" 
+CREATE SEQUENCE "public"."device_config_id_seq"
 INCREMENT 1
 MINVALUE  1
 MAXVALUE 2147483647
@@ -118,7 +118,7 @@ CACHE 1;
 -- Sequence structure for device_status_id_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "public"."device_status_id_seq";
-CREATE SEQUENCE "public"."device_status_id_seq" 
+CREATE SEQUENCE "public"."device_status_id_seq"
 INCREMENT 1
 MINVALUE  1
 MAXVALUE 2147483647
@@ -129,7 +129,7 @@ CACHE 1;
 -- Sequence structure for erp_users_id_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "public"."erp_users_id_seq";
-CREATE SEQUENCE "public"."erp_users_id_seq" 
+CREATE SEQUENCE "public"."erp_users_id_seq"
 INCREMENT 1
 MINVALUE  1
 MAXVALUE 9223372036854775807
@@ -140,7 +140,7 @@ CACHE 1;
 -- Sequence structure for erp_users_id_seq1
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "public"."erp_users_id_seq1";
-CREATE SEQUENCE "public"."erp_users_id_seq1" 
+CREATE SEQUENCE "public"."erp_users_id_seq1"
 INCREMENT 1
 MINVALUE  1
 MAXVALUE 9223372036854775807
@@ -151,7 +151,7 @@ CACHE 1;
 -- Sequence structure for iot_data_id_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "public"."iot_data_id_seq";
-CREATE SEQUENCE "public"."iot_data_id_seq" 
+CREATE SEQUENCE "public"."iot_data_id_seq"
 INCREMENT 1
 MINVALUE  1
 MAXVALUE 2147483647
@@ -162,7 +162,7 @@ CACHE 1;
 -- Sequence structure for sd_air_control_air_control_id_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "public"."sd_air_control_air_control_id_seq";
-CREATE SEQUENCE "public"."sd_air_control_air_control_id_seq" 
+CREATE SEQUENCE "public"."sd_air_control_air_control_id_seq"
 INCREMENT 1
 MINVALUE  1
 MAXVALUE 2147483647
@@ -173,7 +173,7 @@ CACHE 1;
 -- Sequence structure for sd_air_mod_air_mod_id_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "public"."sd_air_mod_air_mod_id_seq";
-CREATE SEQUENCE "public"."sd_air_mod_air_mod_id_seq" 
+CREATE SEQUENCE "public"."sd_air_mod_air_mod_id_seq"
 INCREMENT 1
 MINVALUE  1
 MAXVALUE 2147483647
@@ -184,7 +184,7 @@ CACHE 1;
 -- Sequence structure for sd_air_period_air_period_id_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "public"."sd_air_period_air_period_id_seq";
-CREATE SEQUENCE "public"."sd_air_period_air_period_id_seq" 
+CREATE SEQUENCE "public"."sd_air_period_air_period_id_seq"
 INCREMENT 1
 MINVALUE  1
 MAXVALUE 2147483647
@@ -195,7 +195,7 @@ CACHE 1;
 -- Sequence structure for sd_air_setting_warning_air_setting_warning_id_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "public"."sd_air_setting_warning_air_setting_warning_id_seq";
-CREATE SEQUENCE "public"."sd_air_setting_warning_air_setting_warning_id_seq" 
+CREATE SEQUENCE "public"."sd_air_setting_warning_air_setting_warning_id_seq"
 INCREMENT 1
 MINVALUE  1
 MAXVALUE 2147483647
@@ -206,7 +206,7 @@ CACHE 1;
 -- Sequence structure for sd_air_warning_air_warning_id_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "public"."sd_air_warning_air_warning_id_seq";
-CREATE SEQUENCE "public"."sd_air_warning_air_warning_id_seq" 
+CREATE SEQUENCE "public"."sd_air_warning_air_warning_id_seq"
 INCREMENT 1
 MINVALUE  1
 MAXVALUE 2147483647
@@ -217,7 +217,7 @@ CACHE 1;
 -- Sequence structure for sd_api_key_id_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "public"."sd_api_key_id_seq";
-CREATE SEQUENCE "public"."sd_api_key_id_seq" 
+CREATE SEQUENCE "public"."sd_api_key_id_seq"
 INCREMENT 1
 MINVALUE  1
 MAXVALUE 2147483647
@@ -228,7 +228,7 @@ CACHE 1;
 -- Sequence structure for sd_audit_log_audit_id_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "public"."sd_audit_log_audit_id_seq";
-CREATE SEQUENCE "public"."sd_audit_log_audit_id_seq" 
+CREATE SEQUENCE "public"."sd_audit_log_audit_id_seq"
 INCREMENT 1
 MINVALUE  1
 MAXVALUE 2147483647
@@ -239,7 +239,7 @@ CACHE 1;
 -- Sequence structure for sd_channel_template_id_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "public"."sd_channel_template_id_seq";
-CREATE SEQUENCE "public"."sd_channel_template_id_seq" 
+CREATE SEQUENCE "public"."sd_channel_template_id_seq"
 INCREMENT 1
 MINVALUE  1
 MAXVALUE 2147483647
@@ -250,7 +250,7 @@ CACHE 1;
 -- Sequence structure for sd_device_category_id_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "public"."sd_device_category_id_seq";
-CREATE SEQUENCE "public"."sd_device_category_id_seq" 
+CREATE SEQUENCE "public"."sd_device_category_id_seq"
 INCREMENT 1
 MINVALUE  1
 MAXVALUE 2147483647
@@ -261,7 +261,7 @@ CACHE 1;
 -- Sequence structure for sd_device_group_id_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "public"."sd_device_group_id_seq";
-CREATE SEQUENCE "public"."sd_device_group_id_seq" 
+CREATE SEQUENCE "public"."sd_device_group_id_seq"
 INCREMENT 1
 MINVALUE  1
 MAXVALUE 2147483647
@@ -272,7 +272,7 @@ CACHE 1;
 -- Sequence structure for sd_device_member_id_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "public"."sd_device_member_id_seq";
-CREATE SEQUENCE "public"."sd_device_member_id_seq" 
+CREATE SEQUENCE "public"."sd_device_member_id_seq"
 INCREMENT 1
 MINVALUE  1
 MAXVALUE 2147483647
@@ -283,7 +283,7 @@ CACHE 1;
 -- Sequence structure for sd_device_notification_config_id_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "public"."sd_device_notification_config_id_seq";
-CREATE SEQUENCE "public"."sd_device_notification_config_id_seq" 
+CREATE SEQUENCE "public"."sd_device_notification_config_id_seq"
 INCREMENT 1
 MINVALUE  1
 MAXVALUE 2147483647
@@ -294,7 +294,7 @@ CACHE 1;
 -- Sequence structure for sd_device_schedule_id_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "public"."sd_device_schedule_id_seq";
-CREATE SEQUENCE "public"."sd_device_schedule_id_seq" 
+CREATE SEQUENCE "public"."sd_device_schedule_id_seq"
 INCREMENT 1
 MINVALUE  1
 MAXVALUE 2147483647
@@ -305,7 +305,7 @@ CACHE 1;
 -- Sequence structure for sd_device_status_history_id_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "public"."sd_device_status_history_id_seq";
-CREATE SEQUENCE "public"."sd_device_status_history_id_seq" 
+CREATE SEQUENCE "public"."sd_device_status_history_id_seq"
 INCREMENT 1
 MINVALUE  1
 MAXVALUE 2147483647
@@ -316,7 +316,7 @@ CACHE 1;
 -- Sequence structure for sd_group_notification_config_id_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "public"."sd_group_notification_config_id_seq";
-CREATE SEQUENCE "public"."sd_group_notification_config_id_seq" 
+CREATE SEQUENCE "public"."sd_group_notification_config_id_seq"
 INCREMENT 1
 MINVALUE  1
 MAXVALUE 2147483647
@@ -327,7 +327,7 @@ CACHE 1;
 -- Sequence structure for sd_iot_device_alarm_action_alarm_action_id_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "public"."sd_iot_device_alarm_action_alarm_action_id_seq";
-CREATE SEQUENCE "public"."sd_iot_device_alarm_action_alarm_action_id_seq" 
+CREATE SEQUENCE "public"."sd_iot_device_alarm_action_alarm_action_id_seq"
 INCREMENT 1
 MINVALUE  1
 MAXVALUE 2147483647
@@ -338,7 +338,7 @@ CACHE 1;
 -- Sequence structure for sd_iot_device_device_id_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "public"."sd_iot_device_device_id_seq";
-CREATE SEQUENCE "public"."sd_iot_device_device_id_seq" 
+CREATE SEQUENCE "public"."sd_iot_device_device_id_seq"
 INCREMENT 1
 MINVALUE  1
 MAXVALUE 2147483647
@@ -349,7 +349,7 @@ CACHE 1;
 -- Sequence structure for sd_iot_device_type_type_id_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "public"."sd_iot_device_type_type_id_seq";
-CREATE SEQUENCE "public"."sd_iot_device_type_type_id_seq" 
+CREATE SEQUENCE "public"."sd_iot_device_type_type_id_seq"
 INCREMENT 1
 MINVALUE  1
 MAXVALUE 2147483647
@@ -360,7 +360,7 @@ CACHE 1;
 -- Sequence structure for sd_iot_location_location_id_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "public"."sd_iot_location_location_id_seq";
-CREATE SEQUENCE "public"."sd_iot_location_location_id_seq" 
+CREATE SEQUENCE "public"."sd_iot_location_location_id_seq"
 INCREMENT 1
 MINVALUE  1
 MAXVALUE 2147483647
@@ -371,7 +371,7 @@ CACHE 1;
 -- Sequence structure for sd_iot_mqtt_mqtt_id_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "public"."sd_iot_mqtt_mqtt_id_seq";
-CREATE SEQUENCE "public"."sd_iot_mqtt_mqtt_id_seq" 
+CREATE SEQUENCE "public"."sd_iot_mqtt_mqtt_id_seq"
 INCREMENT 1
 MINVALUE  1
 MAXVALUE 2147483647
@@ -382,7 +382,7 @@ CACHE 1;
 -- Sequence structure for sd_iot_schedule_schedule_id_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "public"."sd_iot_schedule_schedule_id_seq";
-CREATE SEQUENCE "public"."sd_iot_schedule_schedule_id_seq" 
+CREATE SEQUENCE "public"."sd_iot_schedule_schedule_id_seq"
 INCREMENT 1
 MINVALUE  1
 MAXVALUE 2147483647
@@ -393,7 +393,7 @@ CACHE 1;
 -- Sequence structure for sd_notification_channel_id_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "public"."sd_notification_channel_id_seq";
-CREATE SEQUENCE "public"."sd_notification_channel_id_seq" 
+CREATE SEQUENCE "public"."sd_notification_channel_id_seq"
 INCREMENT 1
 MINVALUE  1
 MAXVALUE 2147483647
@@ -404,7 +404,7 @@ CACHE 1;
 -- Sequence structure for sd_notification_condition_id_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "public"."sd_notification_condition_id_seq";
-CREATE SEQUENCE "public"."sd_notification_condition_id_seq" 
+CREATE SEQUENCE "public"."sd_notification_condition_id_seq"
 INCREMENT 1
 MINVALUE  1
 MAXVALUE 2147483647
@@ -415,7 +415,7 @@ CACHE 1;
 -- Sequence structure for sd_notification_log_id_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "public"."sd_notification_log_id_seq";
-CREATE SEQUENCE "public"."sd_notification_log_id_seq" 
+CREATE SEQUENCE "public"."sd_notification_log_id_seq"
 INCREMENT 1
 MINVALUE  1
 MAXVALUE 2147483647
@@ -426,7 +426,7 @@ CACHE 1;
 -- Sequence structure for sd_notification_type_id_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "public"."sd_notification_type_id_seq";
-CREATE SEQUENCE "public"."sd_notification_type_id_seq" 
+CREATE SEQUENCE "public"."sd_notification_type_id_seq"
 INCREMENT 1
 MINVALUE  1
 MAXVALUE 2147483647
@@ -437,7 +437,7 @@ CACHE 1;
 -- Sequence structure for sd_report_data_id_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "public"."sd_report_data_id_seq";
-CREATE SEQUENCE "public"."sd_report_data_id_seq" 
+CREATE SEQUENCE "public"."sd_report_data_id_seq"
 INCREMENT 1
 MINVALUE  1
 MAXVALUE 2147483647
@@ -448,7 +448,7 @@ CACHE 1;
 -- Sequence structure for sd_sensor_data_id_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "public"."sd_sensor_data_id_seq";
-CREATE SEQUENCE "public"."sd_sensor_data_id_seq" 
+CREATE SEQUENCE "public"."sd_sensor_data_id_seq"
 INCREMENT 1
 MINVALUE  1
 MAXVALUE 2147483647
@@ -459,7 +459,7 @@ CACHE 1;
 -- Sequence structure for sd_system_setting_id_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "public"."sd_system_setting_id_seq";
-CREATE SEQUENCE "public"."sd_system_setting_id_seq" 
+CREATE SEQUENCE "public"."sd_system_setting_id_seq"
 INCREMENT 1
 MINVALUE  1
 MAXVALUE 2147483647
@@ -1460,7 +1460,9 @@ COMMENT ON COLUMN "public"."erp_access_tokens"."revoked_at" IS 'Timestamp when t
 -- ----------------------------
 -- Records of erp_access_tokens
 -- ----------------------------
-INSERT INTO "public"."erp_access_tokens" VALUES ('62a65827-70c4-4e7d-914c-917651c18432', 'a2160472-ef20-411d-87e4-568f34ab8d8b', '290413c4a7eadb61a9cc15484aac2841341662ec9297ef82ba65823d24bae086', '170202e199b8ecf1463bc8426e7197af47d7076da2bfe9c2a2ba05b14f0a352a', 'USER', '2026-09-30 15:03:56.221214+00', '2026-09-30 15:18:56.221214+00', 'f', NULL);
+INSERT INTO "public"."erp_access_tokens" VALUES ('a1bc9edc-949e-46a4-b7e1-24da3dcd12a7', 'add80c27-79bc-43b1-8b39-86a6567261d2', '8bef7399ee7b4f649b811bc1f310ac9ac0daa2052f2141e42b003449f8806907', '9a0f4b95e83e380cd8356d78e3a76b707f7b9b2e4555363999cf42dea02c4780', 'USER', '2026-09-30 15:13:35.889488+00', '2026-09-30 15:28:35.889488+00', 'f', NULL);
+INSERT INTO "public"."erp_access_tokens" VALUES ('62a65827-70c4-4e7d-914c-917651c18432', 'a2160472-ef20-411d-87e4-568f34ab8d8b', '1657d2e600ea6d231768595d665f0a7147a3c7c5508b9a7912cfa84359a7786b', '22935414960b5706f4ad661d17f0201ce4b72d2fe98ac7f99903e4c5833ca273', 'USER', '2026-09-30 17:17:12.411281+00', '2026-09-30 17:32:12.411281+00', 'f', NULL);
+INSERT INTO "public"."erp_access_tokens" VALUES ('4c5d7e3a-4197-4407-a5c8-28bedc2c26e2', 'cff5f11b-dea7-41d7-8e2a-b5d57b89fb65', '31fc7b98aebbf83f6a3c713814710525c62ce37ab2cbf8479ccb7f761e067206', '3aed3837233abde5e65ef67a05f680bfa7206213d4c602f590585d5a2b3c38fd', 'USER', '2026-09-30 17:17:21.143016+00', '2026-09-30 17:32:21.143016+00', 'f', NULL);
 
 -- ----------------------------
 -- Table structure for erp_authentications
@@ -1499,7 +1501,9 @@ COMMENT ON COLUMN "public"."erp_authentications"."blacklisted" IS 'Indicates whe
 -- ----------------------------
 -- Records of erp_authentications
 -- ----------------------------
-INSERT INTO "public"."erp_authentications" VALUES ('76fdde86-f439-48c1-8428-ecf9f3563d9f', 10000000004, '127.0.0.1', '77238c79e91e4ef28859f2e92a7aa6df', 'postmanruntime/2.10.0', NULL, 'gzip, deflate, br', '', NULL, NULL, '2026-09-30 14:57:24.669509+00', '2026-09-30 15:03:56.221214+00', 'f');
+INSERT INTO "public"."erp_authentications" VALUES ('466503cf-91eb-4771-ad66-2bf3baa5547b', 10000000004, '127.0.0.1', 'b693d4695d474fa3baffd5bb117c11e4', 'mozilla/5.0 (windows nt 10.0; win64; x64) applewebkit/537.36 (khtml, like gecko) chrome/154.0.0.0 safari/537.36', 'en-us,en;q=0.9,th;q=0.8', 'gzip, deflate, br, zstd', 'http://localhost:8000', 'http://localhost:8000/docs', NULL, '2026-09-30 15:13:12.731332+00', '2026-09-30 15:13:35.889488+00', 'f');
+INSERT INTO "public"."erp_authentications" VALUES ('76fdde86-f439-48c1-8428-ecf9f3563d9f', 10000000004, '127.0.0.1', '77238c79e91e4ef28859f2e92a7aa6df', 'postmanruntime/2.10.0', NULL, 'gzip, deflate, br', '', NULL, NULL, '2026-09-30 14:57:24.669509+00', '2026-09-30 17:17:12.411281+00', 'f');
+INSERT INTO "public"."erp_authentications" VALUES ('9dbda9ed-d63c-45ca-8cdf-5c812357979a', 10000000002, '127.0.0.1', '77238c79e91e4ef28859f2e92a7aa6df', 'postmanruntime/2.10.0', NULL, 'gzip, deflate, br', '', NULL, NULL, '2026-09-30 15:16:10.734401+00', '2026-09-30 17:17:18.979309+00', 'f');
 
 -- ----------------------------
 -- Table structure for erp_keys
@@ -1622,7 +1626,9 @@ COMMENT ON COLUMN "public"."erp_refresh_tokens"."revoked_at" IS 'Timestamp when 
 -- ----------------------------
 -- Records of erp_refresh_tokens
 -- ----------------------------
-INSERT INTO "public"."erp_refresh_tokens" VALUES ('a2160472-ef20-411d-87e4-568f34ab8d8b', '76fdde86-f439-48c1-8428-ecf9f3563d9f', '48e4abc1cafad15961638db96ceceff6a262000a425a2232d2263ea7f6d10286', 'b852323bfd410be89478ac664d218412b86216351b9a9ca57da629e8ea4a7011', '2026-09-30 14:57:24.622387+00', '2026-09-30 15:03:56.221214+00', '2026-10-07 15:03:56.221214+00', 'f', NULL);
+INSERT INTO "public"."erp_refresh_tokens" VALUES ('add80c27-79bc-43b1-8b39-86a6567261d2', '466503cf-91eb-4771-ad66-2bf3baa5547b', '7255a9d635e92a096a5befc5bfff29ca4529a3201eb1c16aa74f5b214c17534e', 'd345395726186e8efa25578835aae15a762793819597b85bfa37e766a8cc7f2a', '2026-09-30 15:13:12.729831+00', '2026-09-30 15:13:35.889488+00', '2026-10-07 15:13:35.889488+00', 'f', NULL);
+INSERT INTO "public"."erp_refresh_tokens" VALUES ('a2160472-ef20-411d-87e4-568f34ab8d8b', '76fdde86-f439-48c1-8428-ecf9f3563d9f', '586caaf8149bac46513a4b590dfb03e1cf5e557a8ee5ecccfcfcf867db40cd3f', '588f1c24883482251807fbbc5889f86ae10468c4303d8a70d1b883093281e3e1', '2026-09-30 14:57:24.622387+00', '2026-09-30 17:17:12.411281+00', '2026-10-07 17:17:12.411281+00', 'f', NULL);
+INSERT INTO "public"."erp_refresh_tokens" VALUES ('cff5f11b-dea7-41d7-8e2a-b5d57b89fb65', '9dbda9ed-d63c-45ca-8cdf-5c812357979a', '0ee3e29d4d3bae763cfa0c3f71b3fce6a3930063b6e8f3f3bb165fa82954a729', '3ba3d587e7217c3954373a2a5dd850cc6918156f3568ee5d682dee2ab37ef0e3', '2026-09-30 15:16:10.733375+00', '2026-09-30 17:17:21.143016+00', '2026-10-07 17:17:18.979309+00', 'f', NULL);
 
 -- ----------------------------
 -- Table structure for erp_users
@@ -1688,9 +1694,10 @@ COMMENT ON COLUMN "public"."erp_users"."id" IS 'Auto-increment 11+ digit identif
 -- ----------------------------
 -- Records of erp_users
 -- ----------------------------
-INSERT INTO "public"."erp_users" VALUES (10000000004, 'admin', 'admin', 'admin', 'admin dev', NULL, 'admin', 'admin@example.com', '+555472664275', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '$argon2id$v=19$m=65536,t=3,p=4$MFryJna0AH2avV7Q19ABzg$szSHgxP/d78/v7/K9dENmMHZap1d1ChOAn2omHimrn0', 'MyP@ssword123', 'USER', 'ACTIVE', 'OFFLINE', 1, 1, 0, 0, '1', '1', NULL, 'f', 'f', NULL, NULL, NULL, 0, '2026-09-29 05:25:56.449029+00', 0, 0, 0, 0, 0, 0, 't', '2026-09-29 05:25:56.449029+00', '2026-09-29 05:25:56.449029+00');
 INSERT INTO "public"."erp_users" VALUES (10000000002, 'John', 'Doe', 'John', 'John Doe', NULL, 'johndoe', 'johndoe@example.com', '+555472664275', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '$argon2id$v=19$m=65536,t=3,p=4$HabOnWs+KFFN4ECiIpcOcA$5zjDJzdh3UMfJW6QDRApCN0lNBYVi/JKx0D7fmQdOHY', 'MyP@ssword123', 'USER', 'ACTIVE', 'OFFLINE', 1, 1, 0, 0, '1', '1', NULL, 'f', 'f', NULL, NULL, NULL, 0, '2026-09-29 05:24:53.309663+00', 0, 0, 0, 0, 0, 0, 't', '2026-09-29 05:24:53.309663+00', '2026-09-29 05:24:53.309663+00');
 INSERT INTO "public"."erp_users" VALUES (10000000007, 'system', 'admin', 'system', 'admin dev', NULL, 'system', 'system@example.com', '+555472664275', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '$argon2id$v=19$m=65536,t=3,p=4$WeNvqeZ+DKSA6vp7lljgcw$T13FChOj78CNKFMsXEdXUQUXtqRu3HqdnpELw0j+fMo', NULL, 'USER', 'ACTIVE', 'OFFLINE', 1, 1, 0, 0, '1', '1', NULL, 'f', 'f', NULL, NULL, NULL, 0, '2026-09-29 05:30:07.402279+00', 0, 0, 0, 0, 0, 0, 't', '2026-09-29 05:30:07.402279+00', '2026-09-29 05:30:07.402279+00');
+INSERT INTO "public"."erp_users" VALUES (10000000004, 'admin', 'admin', 'admin', 'admin dev', NULL, 'admin', 'admin@example.com', '+555472664275', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '$argon2id$v=19$m=65536,t=3,p=4$MFryJna0AH2avV7Q19ABzg$szSHgxP/d78/v7/K9dENmMHZap1d1ChOAn2omHimrn0', 'MyP@ssword123', 'USER', 'ACTIVE', 'OFFLINE', 1, 1, 0, 0, '1', '1', NULL, 't', 't', NULL, NULL, NULL, 0, '2026-09-29 05:25:56.449029+00', 0, 0, 0, 0, 0, 0, 't', '2026-09-29 05:25:56.449029+00', '2026-09-29 05:25:56.449029+00');
+INSERT INTO "public"."erp_users" VALUES (10000000000, 'demo', 'demo', 'demo', 'demo demo', 'demo', 'demo', 'demo@example.com', '+66896514753', '+66896514753', 'demo', NULL, 'MALE', '1991-09-30', NULL, NULL, NULL, NULL, '$argon2id$v=19$m=65536,t=3,p=4$JoO/qA/SWu06j2T66O1RPQ$i36wruFD1a2445GAQYkMk6IxWXKXnjgOAG7AhTQbyxY', NULL, 'USER', 'ACTIVE', 'OFFLINE', 1, 0, 0, 0, '1', '1', NULL, 'f', 'f', NULL, NULL, NULL, 0, '2026-09-30 15:20:21.751064+00', 0, 0, 0, 0, 0, 0, 't', '2026-09-30 15:20:21.751064+00', '2026-09-30 15:20:21.751064+00');
 
 -- ----------------------------
 -- Table structure for eval_datasets
@@ -5468,7 +5475,7 @@ SELECT setval('"public"."erp_users_id_seq"', 10000000007, true);
 -- ----------------------------
 ALTER SEQUENCE "public"."erp_users_id_seq1"
 OWNED BY "public"."erp_users"."id";
-SELECT setval('"public"."erp_users_id_seq1"', 10000000000, false);
+SELECT setval('"public"."erp_users_id_seq1"', 10000000000, true);
 
 -- ----------------------------
 -- Alter sequences owned by
@@ -6066,7 +6073,7 @@ ALTER TABLE "public"."erp_refresh_tokens" ADD CONSTRAINT "erp_refresh_tokens_pke
 -- ----------------------------
 -- Auto increment value for erp_users
 -- ----------------------------
-SELECT setval('"public"."erp_users_id_seq1"', 10000000000, false);
+SELECT setval('"public"."erp_users_id_seq1"', 10000000000, true);
 
 -- ----------------------------
 -- Indexes structure for table erp_users

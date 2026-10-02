@@ -7,10 +7,10 @@ from sqlalchemy import select, update
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.tool_calling.application.exceptions import (
+from tool_calling.application.exceptions import (
     ApplicationError,
 )
-from app.modules.tool_calling.infrastructure.models import (
+from tool_calling.infrastructure.models import (
     ToolDefinitionModel,
 )
 

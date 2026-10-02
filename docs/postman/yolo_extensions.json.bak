@@ -1,0 +1,824 @@
+{
+  "info": {
+    "name": "YOLO Extensions API",
+    "_postman_id": "7d6b70ec-91d3-41a0-9775-711d920082e8",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000"
+    },
+    {
+      "key": "dataset_id",
+      "value": ""
+    },
+    {
+      "key": "model_id",
+      "value": ""
+    },
+    {
+      "key": "training_id",
+      "value": ""
+    },
+    {
+      "key": "category_id",
+      "value": ""
+    },
+    {
+      "key": "field_id",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Get Settings",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/yolo/settings",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "yolo",
+            "settings"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Update Settings",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/yolo/settings",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "yolo",
+            "settings"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"conf_threshold\":0.3}"
+        }
+      }
+    },
+    {
+      "name": "Reset Settings",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/yolo/settings/reset",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "yolo",
+            "settings",
+            "reset"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Validate Settings",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/yolo/settings/validate",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "yolo",
+            "settings",
+            "validate"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"conf_threshold\":0.3}"
+        }
+      }
+    },
+    {
+      "name": "Training Report",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/yolo/reports/training/{{training_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "yolo",
+            "reports",
+            "training",
+            "{{training_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Model Report",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/yolo/reports/model/{{model_id}}?period_days=30",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "yolo",
+            "reports",
+            "model",
+            "{{model_id}}?period_days=30"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Dataset Report",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/yolo/reports/dataset/{{dataset_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "yolo",
+            "reports",
+            "dataset",
+            "{{dataset_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Tenant Summary",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/yolo/reports/summary",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "yolo",
+            "reports",
+            "summary"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Create Category",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/yolo/categories",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "yolo",
+            "categories"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"slug\":\"fresh-produce\",\"name_th\":\"ผักสด\",\"name_en\":\"Fresh\"}"
+        }
+      }
+    },
+    {
+      "name": "List Categories",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/yolo/categories",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "yolo",
+            "categories"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Category Tree",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/yolo/categories/tree",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "yolo",
+            "categories",
+            "tree"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get Category",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/yolo/categories/{{category_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "yolo",
+            "categories",
+            "{{category_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Update Category",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/yolo/categories/{{category_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "yolo",
+            "categories",
+            "{{category_id}}"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"name_th\":\"updated\"}"
+        }
+      }
+    },
+    {
+      "name": "Move Category",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/yolo/categories/{{category_id}}/move",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "yolo",
+            "categories",
+            "{{category_id}}",
+            "move"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"new_parent_id\":\"uuid\"}"
+        }
+      }
+    },
+    {
+      "name": "Delete Category",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/yolo/categories/{{category_id}}?cascade=false",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "yolo",
+            "categories",
+            "{{category_id}}?cascade=false"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Health",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/yolo/deployment/health",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "yolo",
+            "deployment",
+            "health"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Readyz",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/yolo/deployment/readyz",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "yolo",
+            "deployment",
+            "readyz"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Livez",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/yolo/deployment/livez",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "yolo",
+            "deployment",
+            "livez"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Registry",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/yolo/deployment/registry",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "yolo",
+            "deployment",
+            "registry"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Registry Load",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/yolo/deployment/registry/load",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "yolo",
+            "deployment",
+            "registry",
+            "load"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"model_id\":\"uuid\"}"
+        }
+      }
+    },
+    {
+      "name": "Registry Unload",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/yolo/deployment/registry/unload",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "yolo",
+            "deployment",
+            "registry",
+            "unload"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"model_id\":\"uuid\"}"
+        }
+      }
+    },
+    {
+      "name": "Deployment Metrics",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/yolo/deployment/metrics",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "yolo",
+            "deployment",
+            "metrics"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Count Image",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/yolo/counting/image",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "yolo",
+            "counting",
+            "image"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Count Batch",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/yolo/counting/batch",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "yolo",
+            "counting",
+            "batch"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"model_id\":\"uuid\",\"images_base64\":[\"...\"],\"config\":{\"mode\":\"shelf\"}}"
+        }
+      }
+    },
+    {
+      "name": "Diagnose Disease",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/yolo/plant-disease/diagnose",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "yolo",
+            "plant-disease",
+            "diagnose"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Disease Catalog",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/yolo/plant-disease/catalog",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "yolo",
+            "plant-disease",
+            "catalog"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Treatment Plan",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/yolo/plant-disease/treatment/rice-blast",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "yolo",
+            "plant-disease",
+            "treatment",
+            "rice-blast"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Assess Growth",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/yolo/plant-growth/assess",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "yolo",
+            "plant-growth",
+            "assess"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Field Timeline",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/yolo/plant-growth/fields/{{field_id}}/timeline?days=30",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "yolo",
+            "plant-growth",
+            "fields",
+            "{{field_id}}",
+            "timeline?days=30"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Predict Harvest",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/yolo/plant-growth/fields/{{field_id}}/predict-harvest",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "yolo",
+            "plant-growth",
+            "fields",
+            "{{field_id}}",
+            "predict-harvest"
+          ]
+        }
+      }
+    }
+  ]
+}

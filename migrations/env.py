@@ -79,6 +79,16 @@ for _module_path in _MODEL_MODULES:
 # ═════════════════════════════════════════════════════════════════
 # ALEMBIC CONFIG
 # ═════════════════════════════════════════════════════════════════
+# --- module yolo (Detection) ---
+try:
+    from app.modules.yolo.infrastructure.models import (  # noqa: F401
+        AnnotationModel, ClassModel, DatasetModel, ImageModel,
+        InferenceModel, ModelModel, TrainingModel,
+    )
+except ImportError:
+    pass
+
+
 config = context.config
 
 if config.config_file_name is not None:

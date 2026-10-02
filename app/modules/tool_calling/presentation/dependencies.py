@@ -6,19 +6,19 @@ from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_session
-from app.modules.tool_calling.application.use_case import (
+from tool_calling.application.use_case import (
     ToolCallingUseCase,
 )
-from app.modules.tool_calling.infrastructure.invocation_repository import (
+from tool_calling.infrastructure.invocation_repository import (
     InvocationRepository,
 )
-from app.modules.tool_calling.infrastructure.permission_repository import (
+from tool_calling.infrastructure.permission_repository import (
     PermissionRepository,
 )
-from app.modules.tool_calling.infrastructure.services import (
+from tool_calling.infrastructure.services import (
     DefaultToolClientRegistry, NoopEventBus, RedisRateLimiter,
 )
-from app.modules.tool_calling.infrastructure.tool_repository import (
+from tool_calling.infrastructure.tool_repository import (
     ToolRepository,
 )
 

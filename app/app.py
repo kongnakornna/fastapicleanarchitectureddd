@@ -22,13 +22,10 @@ from app.core.settings import settings
 
 # ═════════════════════════════════════════════════════════════════
 #  ROUTERS — Module imports
-#  NOTE: `routers.py` (plural) has been removed. Always import from
-#  `router.py` (singular) unless the module explicitly ships a
-#  `routers.py`.
 # ═════════════════════════════════════════════════════════════════
 
 # ── Core modules ─────────────────────────────────────────────────
-from app.modules.authentication.presentation.router import (   # ✅ FIXED (was .routers)
+from app.modules.authentication.presentation.router import (
     router as authentication_router,
 )
 from app.modules.authentication.presentation.swagger import (
@@ -53,8 +50,8 @@ from app.modules.llm.presentation.router import router as llm_router
 from app.modules.llm.presentation.swagger import register_llm_openapi
 from app.modules.vector_db.presentation.router import router as vdb_router
 from app.modules.vector_db.presentation.swagger import register_vector_db_openapi
-from app.modules.tool_calling.presentation.router import router as tools_router
-from app.modules.tool_calling.presentation.swagger import (
+from tool_calling.presentation.router import router as tools_router
+from tool_calling.presentation.swagger import (
     register_tool_calling_openapi,
 )
 from app.modules.structured_outputs.presentation.router import router as so_router
@@ -76,13 +73,38 @@ from app.modules.ai_evaluation.presentation.swagger import (
     register_ai_evaluation_openapi,
 )
 
-# ── Bigo module (multi-file: router + ws + admin) ───────────────
+# ── Bigo module ─────────────────────────────────────────────────
 from app.modules.bigo.presentation.router import router as bigo_router
 from app.modules.bigo.presentation.ws_router import ws_router as bigo_ws_router
 from app.modules.bigo.presentation.management_router import (
     admin_router as bigo_admin_router,
 )
 from app.modules.bigo.presentation.swagger import register_bigo_openapi
+
+# ── YOLO module ─────────────────────────────────────────────────
+from app.modules.yolo.presentation.router import router as yolo_router
+from app.modules.yolo.presentation.swagger import register_yolo_openapi
+from app.modules.yolo.presentation.router_settings import (
+    router as yolo_settings_router,
+)
+from app.modules.yolo.presentation.router_report import (
+    router as yolo_report_router,
+)
+from app.modules.yolo.presentation.router_category import (
+    router as yolo_category_router,
+)
+from app.modules.yolo.presentation.router_deployment import (
+    router as yolo_deployment_router,
+)
+from app.modules.yolo.presentation.router_counting import (
+    router as yolo_counting_router,
+)
+from app.modules.yolo.presentation.router_plant_disease import (
+    router as yolo_plant_disease_router,
+)
+from app.modules.yolo.presentation.router_plant_growth import (
+    router as yolo_plant_growth_router,
+)
 
 
 # ═════════════════════════════════════════════════════════════════
@@ -100,7 +122,6 @@ async def app_lifespan(app: FastAPI):
 
     # ─── Part 11: Start iot scheduler ────────────────
     try:
-        # ═══ ใช้ session factory จริงของโปรเจกต์ (PGAsyncSession) ═══
         from app.core.database import PGAsyncSession
         from app.modules.iot.infrastructure.scheduler import (
             IotScheduler,
@@ -131,7 +152,6 @@ async def app_lifespan(app: FastAPI):
         async with _base_lifespan(app) as _state:
             yield _state
     finally:
-        # ─── Part 11: Stop iot scheduler ─────────────
         try:
             if hasattr(app.state, "iot_scheduler"):
                 app.state.iot_scheduler.stop()
@@ -151,7 +171,7 @@ app = FastAPI(
         "displayRequestDuration": True,
         "filter": True,
     },
-    lifespan=app_lifespan,  # ← ใช้ wrapper ที่ integrate Parts 8-14
+    lifespan=app_lifespan,
 )
 
 
@@ -178,7 +198,7 @@ register_llm_openapi(app)
 
 
 # ═════════════════════════════════════════════════════════════════
-#  CORS — ต้อง add เป็น middleware ตัวสุดท้าย → รันก่อนสุด (outermost)
+#  CORS
 # ═════════════════════════════════════════════════════════════════
 def _build_cors_origins() -> list[str]:
     origins: list[str] = [str(o) for o in settings.SECURITY_ALLOW_ORIGINS]
@@ -226,19 +246,6 @@ app.add_exception_handler(Exception, internal_exception_handler)
 # ═════════════════════════════════════════════════════════════════
 #  MIDDLEWARES
 # ═════════════════════════════════════════════════════════════════
-# ⚠️ ลำดับสำคัญ: FastAPI/Starlette add หลังสุด = รันก่อนสุด (outermost)
-#
-# Request flow (outermost → innermost):
-#   1. CORSMiddleware
-#   2. ResponseFormattingMiddleware
-#   3. LogRequestMiddleware
-#   4. DeviceIdMiddleware
-#   5. TenantMiddleware           ← innermost (ก่อนเข้า router)
-#   6. router handler
-#
-# EN: order matters — last added = outermost.
-
-# ─── Part 12: TenantMiddleware (innermost) ───────
 try:
     from app.middleware.tenant import TenantMiddleware
 
@@ -272,7 +279,7 @@ routers = [
     example_router,
     health_router,
     iot_router,
-    llm_router,     # llm module (Layer 5-Intel)
+    llm_router,
     key_router,
     knowledge_router,
     notification_router,
@@ -280,10 +287,19 @@ routers = [
     websocket_router,
     money_router,
     pdpa_router,
-    vdb_router,     # vector_db module
-    tools_router,   # tool_calling module (Layer 5-Intel)
-    rag_router,     # rag module
-    eval_router,    # ai_evaluation module
+    vdb_router,
+    tools_router,
+    rag_router,
+    eval_router,
+    # ─── YOLO module ─────────────────────────────
+    yolo_router,
+    yolo_settings_router,
+    yolo_report_router,
+    yolo_category_router,
+    yolo_deployment_router,
+    yolo_counting_router,
+    yolo_plant_disease_router,
+    yolo_plant_growth_router,
 ]
 
 for router in routers:
@@ -312,59 +328,43 @@ def custom_openapi():
         description=settings.APPLICATION_DESCRIPTION,
         version=settings.APPLICATION_VERSION,
         tags=[
-            {
-                "name": "Authentication",
-                "description": "Endpoints for user authentication and authorization.",
-            },
-            {
-                "name": "Example",
-                "description": "Example module for demonstrating application features.",
-            },
-            {
-                "name": "Health",
-                "description": "Endpoints for monitoring the health of the application.",
-            },
-            {
-                "name": "Tools",
-                "description": "Tool Calling — registry + invoke + permissions.",
-            },
-            {
-                "name": "LLM",
-                "description": "LLM Module — Unified LLM Gateway (OpenAI / Anthropic / Local).",
-            },
-            {
-                "name": "iot",
-                "description": (
-                    "iot Module — Real-time Sensor & Alarm Monitoring "
-                    "(MQTT / InfluxDB / WebSocket). Includes batch ops, "
-                    "alerting, scheduler, idempotency."
-                ),
-            },
+            {"name": "Authentication",
+             "description": "Endpoints for user authentication and authorization."},
+            {"name": "Example",
+             "description": "Example module for demonstrating application features."},
+            {"name": "Health",
+             "description": "Endpoints for monitoring the health of the application."},
+            {"name": "Tools",
+             "description": "Tool Calling — registry + invoke + permissions."},
+            {"name": "LLM",
+             "description": "LLM Module — Unified LLM Gateway (OpenAI / Anthropic / Local)."},
+            {"name": "iot",
+             "description": (
+                 "iot Module — Real-time Sensor & Alarm Monitoring "
+                 "(MQTT / InfluxDB / WebSocket). Includes batch ops, "
+                 "alerting, scheduler, idempotency."
+             )},
             {"name": "Key", "description": "Endpoints for managing API keys."},
-            {
-                "name": "Knowledge",
-                "description": "Endpoints for managing knowledge base resources.",
-            },
-            {
-                "name": "Notification",
-                "description": "Endpoints for managing user notifications.",
-            },
-            {
-                "name": "User",
-                "description": "Endpoints for managing user resources.",
-            },
-            {
-                "name": "WebSocket",
-                "description": "WebSocket endpoints for real-time notifications.",
-            },
-            {
-                "name": "Money",
-                "description": "Endpoints for money / currency operations.",
-            },
-            {
-                "name": "PDPA",
-                "description": "PDPA endpoints — Consent / DSAR / Privacy Policy / Cookie Consent.",
-            },
+            {"name": "Knowledge",
+             "description": "Endpoints for managing knowledge base resources."},
+            {"name": "Notification",
+             "description": "Endpoints for managing user notifications."},
+            {"name": "User",
+             "description": "Endpoints for managing user resources."},
+            {"name": "WebSocket",
+             "description": "WebSocket endpoints for real-time notifications."},
+            {"name": "Money",
+             "description": "Endpoints for money / currency operations."},
+            {"name": "PDPA",
+             "description": "PDPA endpoints — Consent / DSAR / Privacy Policy / Cookie Consent."},
+            {"name": "yolo",
+             "description": (
+                 "YOLO Object Detection — Ultralytics YOLOv8/v11.\n\n"
+                 "• Dataset registry + training\n"
+                 "• Real-time + batch inference\n"
+                 "• Settings / Report / Category / Counting\n"
+                 "• Plant Disease / Plant Growth"
+             )},
         ],
         contact={
             "name": settings.APPLICATION_CONTACT_NAME,
@@ -398,9 +398,54 @@ app.openapi = custom_openapi
 
 # ═════════════════════════════════════════════════════════════════
 #  OPENAPI METADATA REGISTRATION — per-module
-#  (called AFTER app.openapi is overridden, so each module can
-#   hook into the final schema)
+#  ⚠️ ใช้ safe_call() เพื่อไม่ให้ server ล่มถ้า module ยังไม่มี
 # ═════════════════════════════════════════════════════════════════
-register_authentication_openapi(app)   # ✅ ADDED (was imported but never called)
-register_tool_calling_openapi(app)
-register_bigo_openapi(app)
+def _safe_register(label: str, fn, app_instance) -> None:
+    """เรียก register_*_openapi() แบบไม่ให้ server ล่ม"""
+    import logging
+    try:
+        fn(app_instance)
+    except Exception as exc:
+        logging.getLogger(__name__).warning(
+            f"⚠️ {label} OpenAPI registration failed: {exc}"
+        )
+
+
+# ── Confirmed imports (มี import ด้านบน) ────────
+_safe_register("authentication", register_authentication_openapi, app)
+_safe_register("tool_calling", register_tool_calling_openapi, app)
+_safe_register("bigo", register_bigo_openapi, app)
+_safe_register("yolo", register_yolo_openapi, app)
+_safe_register("llm", register_llm_openapi, app)
+_safe_register("vector_db", register_vector_db_openapi, app)
+_safe_register("llamaindex", register_llamaindex_openapi, app)
+_safe_register("langchain", register_langchain_openapi, app)
+_safe_register("hybrid_search", register_hybrid_search_openapi, app)
+_safe_register("structured_outputs", register_structured_outputs_openapi, app)
+_safe_register("rag", register_rag_openapi, app)
+_safe_register("ai_evaluation", register_ai_evaluation_openapi, app)
+
+# ── Optional — เรียกแบบ dynamic (ถ้ามี module ก็ register) ────
+for _mod_name, _fn_name in (
+    ("iot", "register_iot_openapi"),
+    ("knowledge", "register_knowledge_openapi"),
+    ("notification", "register_notification_openapi"),
+    ("user", "register_user_openapi"),
+    ("websocket", "register_websocket_openapi"),
+    ("key", "register_key_openapi"),
+    ("money", "register_money_openapi"),
+    ("pdpa", "register_pdpa_openapi"),
+    ("health", "register_health_openapi"),
+    ("example", "register_example_openapi"),
+):
+    try:
+        _mod = __import__(
+            f"app.modules.{_mod_name}.presentation.swagger",
+            fromlist=[_fn_name],
+        )
+        _fn = getattr(_mod, _fn_name, None)
+        if _fn is not None:
+            _safe_register(_mod_name, _fn, app)
+    except Exception:
+        # module นี้ยังไม่มี swagger.py — ข้ามไปเงียบๆ
+        pass

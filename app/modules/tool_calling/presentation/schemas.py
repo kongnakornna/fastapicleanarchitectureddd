@@ -4,7 +4,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.modules.tool_calling.domain.enums import (
+from tool_calling.domain.enums import (
     RiskLevel, ToolKind, ToolVisibility,
 )
 

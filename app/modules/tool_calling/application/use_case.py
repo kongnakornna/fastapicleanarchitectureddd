@@ -7,30 +7,30 @@ from typing import Any
 
 import structlog
 
-from app.modules.tool_calling.application.exceptions import (
+from tool_calling.application.exceptions import (
     ConflictAppError, ExecutionAppError, NotFoundAppError,
     PermissionAppError, RateLimitAppError, TimeoutAppError,
     ValidationAppError,
 )
-from app.modules.tool_calling.application.interfaces import (
+from tool_calling.application.interfaces import (
     EventBus, InvocationRepository, PermissionRepository,
     RateLimiter, RegistrationRepository, RequestContext,
     ToolClientRegistry, ToolRepository,
 )
-from app.modules.tool_calling.application.utils import (
+from tool_calling.application.utils import (
     json_dumps_safe, json_loads_safe, ms_now,
 )
-from app.modules.tool_calling.domain.enums import ToolStatus
-from app.modules.tool_calling.domain.events import (
+from tool_calling.domain.enums import ToolStatus
+from tool_calling.domain.events import (
     PermissionDenied, ToolFailed, ToolInvoked, ToolRegistered,
 )
-from app.modules.tool_calling.domain.helpers import (
+from tool_calling.domain.helpers import (
     redact_secrets, validate_arguments,
 )
-from app.modules.tool_calling.domain.value_objects import (
+from tool_calling.domain.value_objects import (
     InvocationResult, ToolSpec,
 )
-from app.modules.tool_calling.infrastructure.models import (
+from tool_calling.infrastructure.models import (
     ToolDefinitionModel, ToolInvocationModel,
 )
 

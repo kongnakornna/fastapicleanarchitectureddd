@@ -7,10 +7,10 @@ from typing import Any
 
 import structlog
 
-from app.modules.tool_calling.application.interfaces import (
+from tool_calling.application.interfaces import (
     EventBus, ToolClient, ToolClientRegistry,
 )
-from app.modules.tool_calling.domain.exceptions import (
+from tool_calling.domain.exceptions import (
     ToolExecutionError,
 )
 

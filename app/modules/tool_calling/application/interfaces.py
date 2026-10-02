@@ -4,7 +4,7 @@ import uuid
 from abc import ABC, abstractmethod
 from typing import Any, Protocol
 
-from app.modules.tool_calling.domain.value_objects import InvocationResult
+from tool_calling.domain.value_objects import InvocationResult
 
 
 class RequestContext(Protocol):

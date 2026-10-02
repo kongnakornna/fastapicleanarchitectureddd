@@ -59,7 +59,7 @@ class ToolInvokerAdapter:
         role: str = "user",
     ) -> Any:
         from app.shared.context import RequestContext as SharedCtx
-        from app.modules.tool_calling.domain.value_objects import (
+        from tool_calling.domain.value_objects import (
             InvocationRequest,
         )
         ctx = SharedCtx(tenant_id=tenant_id)

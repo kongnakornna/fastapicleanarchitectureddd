@@ -24,6 +24,7 @@ dependencies = [
     "psycopg[binary]>=3.3.3",
     "psycopg-binary>=3.3.3",
     "psycopg2-binary>=2.9.11",
+    "pg8000>=1.31.5",                # ← จำเป็น: app ใช้ postgresql+pg8000://
     # ─── Cache / Queue ─────────────────────────────────────
     "redis>=7.4.0",
     # ─── Validation / Settings ─────────────────────────────
@@ -51,21 +52,15 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# TH: event streaming (เปิดเมื่อใช้ Kafka)
-# EN: event streaming (enable when using Kafka)
 events = [
     "aiokafka>=0.12.0",
 ]
 
-# TH: security scanning (แยกออกเพื่อไม่ให้ prod image หนัก)
-# EN: security scanning (split out to keep prod image lean)
 security-scan = [
     "bandit[toml]>=1.8.0",
     "pip-audit>=2.7.0",
 ]
 
-# TH: alerting channels (LINE/Telegram/webhook) — ใช้ httpx ที่อยู่ใน core แล้ว
-# EN: alerting channels — httpx already in core
 alerting = [
     "httpx>=0.28.1",
 ]
@@ -102,11 +97,12 @@ test = [
 [tool.uv]
 default-groups = ["dev", "test"]
 python-preference = "only-system"
+
 # ═══════════════════════════════════════════════════════════════
 # RUFF — LINT + FORMAT
 # ═══════════════════════════════════════════════════════════════
 [tool.ruff]
-python_version = "3.13"
+python_version = "3.12"
 line-length = 88
 src = ["app", "tests"]
 
@@ -126,10 +122,10 @@ select = [
     "ASYNC",# flake8-async
 ]
 ignore = [
-    "BLE001",   # blind-except — intentional in infra layer (2-branch)
-    "PLR0913",  # too-many-arguments — use cases inject many ports
-    "PLR0912",  # too-many-branches — alerting dispatcher has many channels
-    "PLR0915",  # too-many-statements — use_case has large methods
+    "BLE001",
+    "PLR0913",
+    "PLR0912",
+    "PLR0915",
 ]
 
 [tool.ruff.lint.per-file-ignores]
@@ -165,7 +161,7 @@ skip-magic-trailing-comma = false
 # MYPY — STRICT TYPE CHECK
 # ═══════════════════════════════════════════════════════════════
 [tool.mypy]
-python_version = "3.13"
+python_version = "3.12"
 files = "app/"
 show_error_codes = true
 warn_unused_configs = true
@@ -178,10 +174,6 @@ disallow_untyped_defs = true
 disallow_any_generics = true
 pretty = true
 
-# TH: SQLAlchemy models + Pydantic/py-automapper ใช้ metaclass/dynamic attribute
-#     suppress เฉพาะ module ที่ noisy
-# EN: SQLAlchemy models + Pydantic/py-automapper rely on metaclass/dynamic
-#     suppress only the noisy modules
 [[tool.mypy.overrides]]
 module = [
     "app.modules.*.infrastructure.models",
@@ -191,8 +183,6 @@ module = [
 ]
 ignore_errors = true
 
-# TH: alerting handlers ใช้ HTTP client + exception handling ที่อาจไม่สมบูรณ์
-# EN: alerting handlers use HTTP clients with lenient exception handling
 [[tool.mypy.overrides]]
 module = [
     "app.modules.iot.infrastructure.alerting.*",
@@ -237,8 +227,6 @@ omit = [
     "*/__init__.py",
     "*/migrations/*",
     "tests/*",
-    # TH: alerting handlers เป็น HTTP-only — ไม่มี unit test ครอบคลุม
-    # EN: alerting handlers are HTTP-only — not covered by unit tests
     "app/modules/iot/infrastructure/alerting/email_handler.py",
     "app/modules/iot/infrastructure/alerting/line_handler.py",
     "app/modules/iot/infrastructure/alerting/telegram_handler.py",
@@ -269,9 +257,7 @@ verbosity = "normal"
 # ═══════════════════════════════════════════════════════════════
 [tool.bandit]
 exclude_dirs = ["tests", ".venv", "migrations"]
-skips = ["B101"]  # TH: assert ใน test | EN: assert in tests
+skips = ["B101"]
 
-# TH: ข้าม warning ของ use ของ random ใน demo/seed data
-# EN: skip random-use warnings for demo/seed data
 [tool.bandit.assert_used]
 skips = ["*_test.py", "test_*.py"]

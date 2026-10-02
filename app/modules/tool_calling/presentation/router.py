@@ -5,23 +5,23 @@ from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Header, status
 
-from app.modules.tool_calling.application.exceptions import (
+from tool_calling.application.exceptions import (
     ApplicationError,
 )
-from app.modules.tool_calling.application.use_case import (
+from tool_calling.application.use_case import (
     ToolCallingUseCase,
 )
-from app.modules.tool_calling.domain.exceptions import ToolError
-from app.modules.tool_calling.domain.value_objects import ToolSpec
-from app.modules.tool_calling.presentation.dependencies import (
+from tool_calling.domain.exceptions import ToolError
+from tool_calling.domain.value_objects import ToolSpec
+from tool_calling.presentation.dependencies import (
     get_tool_use_case,
 )
-from app.modules.tool_calling.presentation.docs import (
+from tool_calling.presentation.docs import (
     RESPONSE_ERROR_403, RESPONSE_ERROR_404, RESPONSE_ERROR_409,
     RESPONSE_ERROR_422, RESPONSE_ERROR_429, RESPONSE_ERROR_504,
     RESPONSE_INVOKE_200, RESPONSE_TOOL_200,
 )
-from app.modules.tool_calling.presentation.schemas import (
+from tool_calling.presentation.schemas import (
     InvocationResponse, InvokeRequest, InvokeResponse,
     ToolCreateRequest, ToolDetailResponse, ToolResponse,
 )
