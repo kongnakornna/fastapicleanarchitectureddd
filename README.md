@@ -28,6 +28,136 @@
 19. [Root Cause Analysis](#19-root-cause-analysis)
 
 ---
+
+
+## 1. Definitions
+
+| Term | Meaning |
+|---|---|
+| **Clean Architecture** | An architecture that separates code into Domain, Application, Infrastructure, and Presentation layers, with dependencies always pointing inward |
+| **DDD (Domain-Driven Design)** | Software design based on the real business domain, using Entities, Value Objects, Aggregates, and Domain Events |
+| **Multi-company (Multi-tenant)** | One system serving multiple legal entities, with data isolated via Schema-per-Tenant |
+| **Money Path** | The money trail: Order → Invoice → Ledger → Outbox → Cloud → Reconciliation |
+| **Goods Path** | The goods trail: PO → Receive → Lot → Store → Issue → Produce → Ship → Sell |
+| **Data Path** | The data trail: Sensor/RFID/GPS/POS → Kafka → Stream → OLAP → BI/KPI |
+| **Idempotency** | The property that repeated calls produce the same result, preventing double-charges |
+| **Outbox Pattern** | Write to the DB first, then sync with external systems via an outbox table |
+| **FEFO/FIFO** | First-Expired-First-Out / First-In-First-Out stock rotation |
+| **Traceability** | The ability to track products from farm → factory → store → customer |
+| **Reconciliation** | The process of matching money/goods with the accounting system |
+| **Saga Pattern** | Managing distributed transactions through a sequence of local transactions + compensating actions |
+| **Domain Event** | An event in the domain, e.g., InvoiceIssued, StockLow, BatchCompleted |
+| **Value Object** | An object without identity, e.g., Money, Email, Address |
+| **Aggregate** | A group of Entities managed as a single unit |
+| **MQTT** | A publish/subscribe messaging protocol suited to IoT |
+| **Digital Twin** | A virtual model of a factory/farm used for simulation before real-world deployment |
+| **KPI** | Key Performance Indicator, e.g., Gross margin, Waste %, NPS |
+| **RCA** | Root Cause Analysis |
+
+---
+
+## 2. Topics
+
+### 2.1 Operating Structure
+The system is divided into **8 Layers** per ERP-Part-1-2:
+
+| Layer | Name | Modules |
+|---|---|---|
+| **0** | Core (cross-cutting) | money, tenant_context, audit, idempotency, config, events |
+| **1** | Foundation | tenancy, authentication, user, employee, customer, supplier, product, pricing |
+| **2** | Money Path | order, invoice, ledger, payment, accounting_gateway, tax, reconciliation |
+| **3** | Goods Path | inventory, warehouse, lot, production, recipe, quality, waste, procurement, traceability |
+| **4** | Operations | transport, delivery, route, gps, retail, pos, shift, line_channel, promotion, loyalty |
+| **5** | Intelligence | reporting, analytics, forecast, kpi, satisfaction, recommendation |
+| **6** | Monitoring & Sensing | iot, cctv, monitoring, backup, alerting, audit_viewer |
+| **7** | Templates | health, example, blank |
+
+### 2.2 Objectives
+- Build a central ERP (Multi-company) for a food group
+- Support 3 main paths: Money Path, Goods Path, Data Path
+- Connect IoT + Automation + AI for processing plants and farms
+- Provide end-to-end Traceability (QR/RFID/GPS)
+- Deliver reports and KPIs at every level (Daily → 5Y)
+- Extend to affiliated companies (Multi-tenant)
+
+### 2.3 Target Groups
+- Owners of food group companies
+- Factory/store/transport managers
+- Accounting/finance teams
+- IT teams and developers
+- Data analysts
+- Frontline staff (POS, warehouse, production)
+
+### 2.4 Prerequisites
+- Python 3.14+, FastAPI, Pydantic v2
+- Clean Architecture + DDD
+- PostgreSQL, Redis, Kafka
+- MQTT, IoT protocols
+- Machine Learning (LSTM, YOLO, XGBoost)
+- Docker, CI/CD, Git Flow
+
+### 2.5 Content Overview
+This ERP system extends **ERPIoT**, which has 9 modules, 23 routes, and 7 tables, by adding **55 modules** per ERP-Part-1-2, covering every dimension of the food business — money, goods, production, transport, retail, traceability, analytics, people, customers, KPIs, config, and audit.
+
+---
+
+## 3. Operating Structure
+
+### 3.1 Four-Layer Architecture (from the Template)
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    PRESENTATION LAYER                        │
+│  routers · schemas · docs · dependencies                    │
+│  (payload → mapper → use case → mapper → return)           │
+└──────────────────────────┬──────────────────────────────────┘
+                           │
+┌──────────────────────────▼──────────────────────────────────┐
+│                    APPLICATION LAYER                         │
+│  use_cases · interfaces (Protocol) · mappers · exceptions   │
+│  (business rules live here)                                  │
+└──────────────────────────┬──────────────────────────────────┘
+                           │
+┌──────────────────────────▼──────────────────────────────────┐
+│                      DOMAIN LAYER                           │
+│  entities · value_objects · enums · domain events           │
+│  (imports shared only — NO framework)                       │
+└──────────────────────────┬──────────────────────────────────┘
+                           │
+┌──────────────────────────▼──────────────────────────────────┐
+│                  INFRASTRUCTURE LAYER                        │
+│  models (SQLAlchemy) · repositories · caches · services     │
+│  (flush() never commit())                                    │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 3.2 Module Structure (4 Layers × 4 Files)
+
+```
+app/modules/{module}/
+├── domain/
+│   ├── entities.py          # Dataclasses extending BaseEntity
+│   ├── value_objects.py     # Plain classes: _normalize → _validate
+│   └── enums.py             # (str, Enum)
+├── application/
+│   ├── interfaces.py        # Protocol contracts
+│   ├── use_cases.py         # One {Module}UseCases class
+│   ├── mappers.py           # ENTITY/DTOS · ENTITY/MODELS · ENTITY/CACHE
+│   ├── exceptions.py        # {Module}Exception + one per rule
+│   └── utils.py             # Module-local helpers
+├── infrastructure/
+│   ├── models.py            # SQLAlchemy extending BaseModel
+│   ├── repositories.py      # Postgres{Entity}Repository — flush()
+│   ├── caches.py            # Redis{Entity}Cache — never raises
+│   └── services.py          # External systems behind Protocol
+└── presentation/
+    ├── routers.py           # payload → mapper → use case → mapper
+    ├── schemas.py           # Pydantic v2 with full Field + ConfigDict
+    ├── docs.py              # router_docs + {action}_docs
+    └── dependencies.py      # Depends factories
+```
+
+
 ```bash   
     backend/
     │
@@ -168,133 +298,6 @@
     ├── requirements.txt
     ├── README.md
     └── README-PTBR.md
-```
-
-## 1. Definitions
-
-| Term | Meaning |
-|---|---|
-| **Clean Architecture** | An architecture that separates code into Domain, Application, Infrastructure, and Presentation layers, with dependencies always pointing inward |
-| **DDD (Domain-Driven Design)** | Software design based on the real business domain, using Entities, Value Objects, Aggregates, and Domain Events |
-| **Multi-company (Multi-tenant)** | One system serving multiple legal entities, with data isolated via Schema-per-Tenant |
-| **Money Path** | The money trail: Order → Invoice → Ledger → Outbox → Cloud → Reconciliation |
-| **Goods Path** | The goods trail: PO → Receive → Lot → Store → Issue → Produce → Ship → Sell |
-| **Data Path** | The data trail: Sensor/RFID/GPS/POS → Kafka → Stream → OLAP → BI/KPI |
-| **Idempotency** | The property that repeated calls produce the same result, preventing double-charges |
-| **Outbox Pattern** | Write to the DB first, then sync with external systems via an outbox table |
-| **FEFO/FIFO** | First-Expired-First-Out / First-In-First-Out stock rotation |
-| **Traceability** | The ability to track products from farm → factory → store → customer |
-| **Reconciliation** | The process of matching money/goods with the accounting system |
-| **Saga Pattern** | Managing distributed transactions through a sequence of local transactions + compensating actions |
-| **Domain Event** | An event in the domain, e.g., InvoiceIssued, StockLow, BatchCompleted |
-| **Value Object** | An object without identity, e.g., Money, Email, Address |
-| **Aggregate** | A group of Entities managed as a single unit |
-| **MQTT** | A publish/subscribe messaging protocol suited to IoT |
-| **Digital Twin** | A virtual model of a factory/farm used for simulation before real-world deployment |
-| **KPI** | Key Performance Indicator, e.g., Gross margin, Waste %, NPS |
-| **RCA** | Root Cause Analysis |
-
----
-
-## 2. Topics
-
-### 2.1 Operating Structure
-The system is divided into **8 Layers** per ERP-Part-1-2:
-
-| Layer | Name | Modules |
-|---|---|---|
-| **0** | Core (cross-cutting) | money, tenant_context, audit, idempotency, config, events |
-| **1** | Foundation | tenancy, authentication, user, employee, customer, supplier, product, pricing |
-| **2** | Money Path | order, invoice, ledger, payment, accounting_gateway, tax, reconciliation |
-| **3** | Goods Path | inventory, warehouse, lot, production, recipe, quality, waste, procurement, traceability |
-| **4** | Operations | transport, delivery, route, gps, retail, pos, shift, line_channel, promotion, loyalty |
-| **5** | Intelligence | reporting, analytics, forecast, kpi, satisfaction, recommendation |
-| **6** | Monitoring & Sensing | iot, cctv, monitoring, backup, alerting, audit_viewer |
-| **7** | Templates | health, example, blank |
-
-### 2.2 Objectives
-- Build a central ERP (Multi-company) for a food group
-- Support 3 main paths: Money Path, Goods Path, Data Path
-- Connect IoT + Automation + AI for processing plants and farms
-- Provide end-to-end Traceability (QR/RFID/GPS)
-- Deliver reports and KPIs at every level (Daily → 5Y)
-- Extend to affiliated companies (Multi-tenant)
-
-### 2.3 Target Groups
-- Owners of food group companies
-- Factory/store/transport managers
-- Accounting/finance teams
-- IT teams and developers
-- Data analysts
-- Frontline staff (POS, warehouse, production)
-
-### 2.4 Prerequisites
-- Python 3.14+, FastAPI, Pydantic v2
-- Clean Architecture + DDD
-- PostgreSQL, Redis, Kafka
-- MQTT, IoT protocols
-- Machine Learning (LSTM, YOLO, XGBoost)
-- Docker, CI/CD, Git Flow
-
-### 2.5 Content Overview
-This ERP system extends **ERPIoT**, which has 9 modules, 23 routes, and 7 tables, by adding **55 modules** per ERP-Part-1-2, covering every dimension of the food business — money, goods, production, transport, retail, traceability, analytics, people, customers, KPIs, config, and audit.
-
----
-
-## 3. Operating Structure
-
-### 3.1 Four-Layer Architecture (from the Template)
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    PRESENTATION LAYER                        │
-│  routers · schemas · docs · dependencies                    │
-│  (payload → mapper → use case → mapper → return)           │
-└──────────────────────────┬──────────────────────────────────┘
-                           │
-┌──────────────────────────▼──────────────────────────────────┐
-│                    APPLICATION LAYER                         │
-│  use_cases · interfaces (Protocol) · mappers · exceptions   │
-│  (business rules live here)                                  │
-└──────────────────────────┬──────────────────────────────────┘
-                           │
-┌──────────────────────────▼──────────────────────────────────┐
-│                      DOMAIN LAYER                           │
-│  entities · value_objects · enums · domain events           │
-│  (imports shared only — NO framework)                       │
-└──────────────────────────┬──────────────────────────────────┘
-                           │
-┌──────────────────────────▼──────────────────────────────────┐
-│                  INFRASTRUCTURE LAYER                        │
-│  models (SQLAlchemy) · repositories · caches · services     │
-│  (flush() never commit())                                    │
-└─────────────────────────────────────────────────────────────┘
-```
-
-### 3.2 Module Structure (4 Layers × 4 Files)
-
-```
-app/modules/{module}/
-├── domain/
-│   ├── entities.py          # Dataclasses extending BaseEntity
-│   ├── value_objects.py     # Plain classes: _normalize → _validate
-│   └── enums.py             # (str, Enum)
-├── application/
-│   ├── interfaces.py        # Protocol contracts
-│   ├── use_cases.py         # One {Module}UseCases class
-│   ├── mappers.py           # ENTITY/DTOS · ENTITY/MODELS · ENTITY/CACHE
-│   ├── exceptions.py        # {Module}Exception + one per rule
-│   └── utils.py             # Module-local helpers
-├── infrastructure/
-│   ├── models.py            # SQLAlchemy extending BaseModel
-│   ├── repositories.py      # Postgres{Entity}Repository — flush()
-│   ├── caches.py            # Redis{Entity}Cache — never raises
-│   └── services.py          # External systems behind Protocol
-└── presentation/
-    ├── routers.py           # payload → mapper → use case → mapper
-    ├── schemas.py           # Pydantic v2 with full Field + ConfigDict
-    ├── docs.py              # router_docs + {action}_docs
-    └── dependencies.py      # Depends factories
 ```
 
 ### 3.3 Three Error-Handling Shapes
