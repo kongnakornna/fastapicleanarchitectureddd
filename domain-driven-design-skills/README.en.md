@@ -1,0 +1,146 @@
+# Domain-Driven Design (DDD) Skill Panorama
+
+---
+
+> :warning: **Work In Progress (WIP)**: This repository and its in-house backbone are under active construction and continuous iteration. Some structures, documentation, and specifications may change at any time.
+
+This repository centers on self-developed `ddd-*` Skills, providing a domain modeling backbone pipeline for AI Agents (Discovery / Strategic / Tactical / Validation / Specification Bridging). It also documents mainstream DDD-related AI Skills from the ecosystem as research references (see [External Ecosystem References](#external-ecosystem-reference)) for comparison and on-demand use.
+
+```sh
+# Quick clone (with all submodules)
+git clone --recurse-submodules https://github.com/<your-org>/domain-driven-design-skills.git
+```
+
+---
+
+## In-House DDD Skills (`ddd-*` Skills)
+
+The core deliverable of this repository is the set of **self-developed `ddd-*` Skills** under the `skills/` directory, forming a domain modeling backbone pipeline for AI Agents. External ecosystem Skills serve only as **research references** (see [External Ecosystem References](#external-ecosystem-reference)) for comparison and on-demand use — they do not carry mainline responsibilities.
+
+### Design Motivation & Boundaries
+
+**Problems to solve**:
+
+- Most DDD Skills in the open-source ecosystem are **single-point capabilities** (e.g., only doing event storming, only doing aggregate code generation), lacking a **complete, loopable pipeline** from problem space discovery -> strategic decomposition -> tactical modeling -> model validation.
+- Input/output formats across different Skills are not unified, making it difficult for AI Agents to **chain them** into deliverable modeling artifacts.
+- The modeling process is inherently **non-linear**, but most Skills don't provide explicit backtrack trigger conditions, making it impossible to locate the upstream stage that needs correction when issues are found later.
+
+**Goals**:
+
+- Provide standardized Skills covering 5 stages (Discovery / Strategic / Tactical / Validation / Specification Bridging), with each Skill producing **structured artifacts** in a single conversation turn.
+- Unify the SKILL.md interface contract (When to Use, Input, Process, Output, Validation Checklist, Backtrack Triggers) to ensure cross-stage artifact compatibility.
+- Explicitly define **backtrack trigger conditions** (e.g., invariant expression rate < 60% -> return to `ddd-aggregates`) to support bidirectional closed-loop feedback.
+- Support **non-sequential entry**: new projects, existing systems, partial deepening, quality audits, and specification generation can all find an appropriate entry Skill.
+
+**Non-goals**:
+
+- **No direct business code generation** — this repository focuses on domain modeling and engineering specification bridging (OpenSpec); concrete code implementation is left to developers or downstream AI tools.
+- **No specific tech stack prescribed** (for Java / Kotlin / Python / .NET implementations, use external ecosystem Skills).
+
+### Skill List (5 Stages / 9 Skills)
+
+| Stage           | Skill                     | Summary                                                                                                               | Optional Enhancement (External)               |
+| :-------------- | :------------------------ | :-------------------------------------------------------------------------------------------------------------------- | :-------------------------------------------- |
+| I Discovery     | `ddd-scope`               | Scope convergence: problem statement, goals/non-goals, constraints, terminology seeds, risk inventory                 | `ddd-strategic-design`, `ddd-planning`        |
+| I Discovery     | `ddd-discover`            | Collaborative domain discovery: event flows, command/event candidates, hotspots, ambiguity list                       |                                               |
+| II Strategic    | `ddd-subdomains`          | Subdomain classification: Core/Supporting/Generic + core domain declaration & ownership recommendations               | `ddd-context-mapping`, `domain-driven-design` |
+| II Strategic    | `ddd-contexts`            | Bounded Context design: responsibilities, Ubiquitous Language glossary, boundary ADRs, ownership                      |                                               |
+| II Strategic    | `ddd-context-map`         | Context mapping: integration patterns (ACL/OHS/PL etc.), contract ownership, failure modes                            |                                               |
+| III Tactical    | `ddd-aggregates`          | Aggregate design: invariants, entities/value objects, transaction boundaries & cross-aggregate consistency strategies | `domain-driven-design`, `clean-ddd-hexagonal` |
+| III Tactical    | `ddd-domain-interactions` | Domain interactions: domain event directory, domain services, repository interfaces, factories                        |                                               |
+| IV Validation   | `ddd-model-review`        | Model quality assessment: consistency scoring, completeness checks, coupling analysis & backtrack triggers            | `clean-architecture`                          |
+| V Specification | `ddd-openspec-bridge`     | Specification bridging: map DDD tactical artifacts to OpenSpec structured specifications                              | `openspec-assistant`                          |
+
+> **Non-linear process**: Bidirectional feedback is supported between stages. Model validation (Stage IV) can trigger backtracking to earlier stages for correction, ultimately exporting through Stage V to engineering specifications. See Appendix B in [ddd-skill-system-design.en.md](docs/ddd-skill-system-design.en.md) for the detailed dependency graph and backtrack trigger matrix.
+
+![DDD Modeling Workflow Overview](assets/ddd_process_en.png)
+
+### Entry Selection & Invocation
+
+**Choose entry by scenario**:
+
+| Scenario                               | Recommended Entry                    | Description                                                                        |
+| :------------------------------------- | :----------------------------------- | :--------------------------------------------------------------------------------- |
+| New project, vague requirements        | `ddd-scope` -> `ddd-discover` -> ... | Start from scope convergence, complete all 5 stages                                |
+| Requirements clear, direct exploration | `ddd-discover`                       | Scope context already available, skip scope convergence                            |
+| Subdomains known, refine boundaries    | `ddd-contexts`                       | Design contexts and Ubiquitous Language based on existing subdomain classification |
+| Deep tactical work on single context   | `ddd-aggregates`                     | Context definitions available, focus on aggregates and domain interactions         |
+| Existing model needs health check      | `ddd-model-review`                   | Assess consistency, completeness, and coupling of existing modeling artifacts      |
+| Ready for development, generate specs  | `ddd-openspec-bridge`                | Convert tactical models to OpenSpec changesets                                     |
+
+**Invocation**: Use `@skill-name` syntax in AI Agent conversations. Artifacts can be directly passed as input to the next stage's Skill:
+
+---
+
+## External Ecosystem Reference
+
+The table below summarizes research records of representative DDD-related Skills from the open-source community, for **understanding the landscape, comparing differences, and composing on-demand**. They are **not part of this repository's backbone** and are provided for reference only — not distributed with this repository.
+
+| Design Layer              | Skill Name                | Source Path                                  | Source Repository                                                                           | Use Case                                                                                             |
+| :------------------------ | :------------------------ | :------------------------------------------- | :------------------------------------------------------------------------------------------ | :--------------------------------------------------------------------------------------------------- |
+| General Tactical Modeling | `domain-driven-design`    | `relative-skills/wondelai-skills`            | [wondelai/skills](https://github.com/wondelai/skills)                                       | General tactical modeling tool focusing on entities, VOs, aggregates, domain services, repositories  |
+| Architecture Style Fusion | `clean-ddd-hexagonal`     | `relative-skills/robust-skills`              | [ccheney/robust-skills](https://github.com/ccheney/robust-skills)                           | DDD + Clean Architecture + Hexagonal Architecture fusion with dependency rule decision tree          |
+| Strategic Planning        | `ddd-strategic-design`    | `relative-skills/antigravity-awesome-skills` | [sickn33/antigravity-awesome-skills](https://github.com/sickn33/antigravity-awesome-skills) | Bounded Contexts, subdomains, Ubiquitous Language, context mapping for strategic design              |
+| Strategic Planning        | `ddd-context-mapping`     | `relative-skills/antigravity-awesome-skills` | [sickn33/antigravity-awesome-skills](https://github.com/sickn33/antigravity-awesome-skills) | Integration between Bounded Contexts: Anti-Corruption Layer, Open Host Service patterns              |
+| Strategic Planning        | `architecture-patterns`   | `relative-skills/antigravity-awesome-skills` | [sickn33/antigravity-awesome-skills](https://github.com/sickn33/antigravity-awesome-skills) | Comprehensive architecture pattern set covering Clean Architecture, Hexagonal, and DDD               |
+| Tech Stack Specialization | `arch-ddd`                | `relative-skills/aiee-team`                  | [ai-enhanced-engineer/aiee-team](https://github.com/ai-enhanced-engineer/aiee-team)         | Python DDD architect guiding domain models, repository patterns, Unit of Work                        |
+| Tech Stack Specialization | `ddd-planning`            | `relative-skills/claude-skill-registry`      | [majiayu000/claude-skill-registry](https://github.com/majiayu000/claude-skill-registry)     | Kotlin DDD planner supporting Event Storming and Kotlin code generation                              |
+| Platform-Specific         | `cleanddd-skills`         | `relative-skills/cleanddd-skills`            | [netcorepal/cleanddd-skills](https://github.com/netcorepal/cleanddd-skills)                 | Clean DDD four-stage suite: requirements analysis -> modeling -> project init -> code implementation |
+| Platform-Specific         | `claude-flow`             | `relative-skills/agentic-flow`               | [ruvnet/agentic-flow](https://github.com/ruvnet/agentic-flow)                               | Claude Flow kernel using DDD to build modular AI agent systems                                       |
+| Platform-Specific         | `Solon AI Skills`         | `relative-skills/solon-ai`                   | [opensolon/solon-ai](https://github.com/opensolon/solon-ai)                                 | Solon AI framework treating Skills as autonomous semantic contexts, inspired by DDD                  |
+| Domain-Specific           | `microservices-architect` | `relative-skills/jeffallan-claude-skills`    | [Jeffallan/claude-skills](https://github.com/Jeffallan/claude-skills)                       | Microservices architect using DDD Bounded Contexts to guide service decomposition                    |
+
+> Referencing: Fetch from the source repository links in the table, then invoke each repository's Skills according to their native conventions (typically `@skill-name`).
+
+**Selection Guide**:
+
+| If you need...                                                         | Recommended Skill                                                      |
+| :--------------------------------------------------------------------- | :--------------------------------------------------------------------- |
+| Help writing DDD-style code                                            | **General Tactical Modeling** (`domain-driven-design`)                 |
+| Assessing or refactoring existing code for DDD compliance              | **General Tactical Modeling** (`domain-driven-design`)                 |
+| Designing a new, architecturally clean system                          | **Architecture Style Fusion** (`clean-ddd-hexagonal`)                  |
+| Planning or organizing complex business module/microservice boundaries | **Strategic Planning** (`ddd-strategic-design`, `ddd-context-mapping`) |
+| Project has a specific tech stack preference                           | **Tech Stack Specialization** (`arch-ddd`, `ddd-planning`)             |
+| Finding a standardized, structured DDD process for the team            | **Platform-Specific** (`cleanddd-skills`)                              |
+| Building complex AI agent systems                                      | **Platform-Specific** (`claude-flow`, `Solon AI Skills`)               |
+
+---
+
+## Quality Validation
+
+To perform **objective, repeatable quality assessment** of the in-house `ddd-*` Skill backbone, the repository maintains an independent `validation-cases/` directory containing end-to-end blind-run validation cases and general validation methodology.
+
+- [validation-cases/README.en.md](validation-cases/README.en.md) — **Validation Method Overview**: 6-step process (fuzzy input -> blind-run 8 Skills -> ground truth extraction -> benchmark scoring -> backtrack injection test -> summary report), blind-run constraints, injection matrix, reusable steps, and known limitations.
+- [validation-cases/cargo-validation/](validation-cases/cargo-validation/) — **Cargo Validation Case**: Using Eric Evans + Citerus' Cargo Shipping DDD Sample (submodule `validation-cases/cargo-shipping`) as ground truth reference, running the full 8-Skill pipeline. Current weighted score **85.8%** (B+ Good), backtrack trigger tests **5/5 all passed**; see [REPORT.md](validation-cases/cargo-validation/REPORT.md) (in Chinese) for full conclusions.
+- [validation-cases/insurance-validation/](validation-cases/insurance-validation/) — **Insurance Underwriting & Claims Validation Case**: a **no-canonical-reference** domain (insurance), scored with the expert-review method (four criteria replacing ground-truth anchors). Weighted score **90.9%** (not directly comparable with the Cargo score); it also appends Stage V (`ddd-openspec-bridge`, OpenSpec changeset 9/9 checklist passed), completing full 5-stage validation; see [REPORT.md](validation-cases/insurance-validation/REPORT.md) (in Chinese) for full conclusions.
+
+Validation results have been fed back into backbone SKILL iterations (e.g., `ddd-aggregates`' "foreign reference re-examination + Specification pattern," `ddd-model-review`'s "industry benchmarking dimension," `ddd-contexts`' "intermediate concept ADR"), forming an observable feedback loop.
+
+---
+
+## Directory Structure
+
+> Research records of external ecosystem Skills are listed in the [External Ecosystem References](#external-ecosystem-reference) section; they are no longer distributed as submodules.
+
+---
+
+## Related Documents
+
+- [ddd-quickstart.en.md](docs/ddd-quickstart.en.md) — **Quickstart**: what the Skills are, where they run, and how to complete a modeling run from scratch (must-read for newcomers)
+- [ddd-skill-system-design.en.md](docs/ddd-skill-system-design.en.md) — In-house backbone system design document (5-stage model, dependency graph, feedback loop matrix)
+- [ddd-pipeline-article.en.md](docs/ddd-pipeline-article.en.md) — Narrative introduction to the skill pipeline (first-gen 4-stage / 8-Skill design + Cargo validation key findings)
+- [ddd-openspec-mapping.en.md](docs/ddd-openspec-mapping.en.md) — Mapping Guide: Standard definitions for converting DDD tactical artifacts to OpenSpec specifications
+- [ddd-skills-report.en.md](docs/ddd-skills-report.en.md) — DDD skills research report (with references and improvement backlog)
+- [validation-cases/README.en.md](validation-cases/README.en.md) — Validation Method Overview (6-step blind-run process, injection matrix, reuse guide)
+- [validation-cases/cargo-validation/REPORT.md](validation-cases/cargo-validation/REPORT.md) — Cargo Shipping validation report (current score 85.8%) (in Chinese)
+- [validation-cases/insurance-validation/REPORT.md](validation-cases/insurance-validation/REPORT.md) — Insurance validation report (no canonical reference, expert-review 90.9%) (in Chinese)
+
+---
+
+## Submodule Management
+
+The repository keeps a single submodule, `validation-cases/cargo-shipping` (the ground-truth source for the validation case). If you've cloned but haven't pulled it:
+
+```sh
+git submodule update --init --recursive
+```
