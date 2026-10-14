@@ -1,2199 +1,67 @@
-# 📁 โครงสร้างโฟลเดอร์ทั้งหมด 
+# 📘 ERP + IoT System Architecture Guide for Food Group Companies
+## (Updated from FastAPI Clean Architecture + DDD Template)
 
-## ทั้ง 3 ส่วน: FastAPI Backend + Django Frontend + Docker Stack
-
----
-
-## 🌐 ภาพรวม Monorepo (Root)
-
-```bash
-  uv python pin 3.13
-  Remove-Item -Recurse -Force .venv
-  uv sync
-  make migrate
-  make dev
-```
-
-```bash
-  make migrate
-  make dev
-```
-```
-project-root/                              # ← Root ของทั้งระบบ
-│
-├── fastapi-backend/                       # 🐍 ส่วนที่ 1: FastAPI (เดิม — ไม่แก้)
-├── django-frontend/                       # 🎨 ส่วนที่ 2: Django BFF (ใหม่)
-├── docs/                                  # 📘 เอกสารรวม + AI Prompts
-├── scripts/                               # 🛠️ Scripts รวม
-├── .gitignore                             # Git ignore รวม
-├── .editorconfig                          # Editor config
-├── docker-compose.yaml                    # 🐳 Stack รวม 2 ส่วน
-├── .env                                   # Env รวม
-├── .env.example                           # Env template
-└── README.md                              # 📘 เอกสารหลัก
-```
+> **Complete Document** — Merges the architecture from **ERPIoT** with the **ERP for Food Group Companies (Part 1-2)** and **Smart Mushroom Farm IoT** to create a Multi-company ERP + IoT system that covers every dimension of the food business.
 
 ---
-
-# 🐍 ส่วนที่ 1: FastAPI Backend  
-
-```
-fastapi-backend/
-│
-├── app/                                   # 📦 แอปพลิเคชันหลัก
-│   │
-│   ├── __init__.py
-│   ├── app.py                             # Entry point — FastAPI()
-│   ├── routes.py                          # Router registration
-│   ├── middleware.py                      # Middleware registration
-│   │
-│   ├── core/                              # ⚙️ Cross-cutting concerns
-│   │   ├── __init__.py
-│   │   ├── settings.py                    # Settings (pydantic-settings)
-│   │   ├── security.py                    # Nested JWT (JWS + JWE)
-│   │   ├── database.py                    # SQLAlchemy async engine
-│   │   ├── cache.py                       # Redis client
-│   │   ├── logging.py                     # Loguru + orjson
-│   │   ├── middleware.py                  # ResponseFormatting, LogRequest, DeviceId
-│   │   └── exceptions.py                  # CoreException
-│   │
-│   └── modules/                           # 📚 9 modules (ตาม README)
-│       │
-│       ├── shared/                        # 🔗 Base types (ไม่ routed)
-│       │   ├── domain/
-│       │   │   ├── entities.py            # BaseEntity, DomainError, Pagination
-│       │   │   ├── value_objects.py       # UNSET, Email, Name, Phone
-│       │   │   └── enums.py               # Role, ResponseMessages, SortOrder
-│       │   ├── application/
-│       │   │   ├── use_cases.py           # SharedUseCases
-│       │   │   ├── exceptions.py          # StandardException, DomainException
-│       │   │   └── utils.py               # BRASILIA_TZ, resolve_client_ip
-│       │   ├── infrastructure/
-│       │   │   └── models.py              # Base, BaseModel
-│       │   └── presentation/
-│       │       ├── schemas.py             # StandardResponse, Pagination*
-│       │       └── dependencies.py        # Cross-module factories
-│       │
-│       ├── authentication/                # 🔐 Login/Refresh/Logout
-│       │   ├── domain/
-│       │   │   ├── entities.py            # Authentication
-│       │   │   ├── value_objects.py
-│       │   │   └── enums.py
-│       │   ├── application/
-│       │   │   ├── interfaces.py          # ITokenService
-│       │   │   ├── use_cases.py
-│       │   │   ├── mappers.py
-│       │   │   ├── exceptions.py
-│       │   │   └── utils.py
-│       │   ├── infrastructure/
-│       │   │   ├── models.py              # Authentication, RefreshToken, AccessToken
-│       │   │   ├── repositories.py
-│       │   │   ├── caches.py
-│       │   │   └── services.py            # TokenService
-│       │   └── presentation/
-│       │       ├── routers.py
-│       │       ├── schemas.py
-│       │       ├── docs.py
-│       │       └── dependencies.py
-│       │
-│       ├── user/                          # 👤 Accounts + Roles
-│       │   ├── domain/
-│       │   ├── application/
-│       │   ├── infrastructure/
-│       │   └── presentation/
-│       │
-│       ├── key/                           # 🔑 API Keys (canonical)
-│       │   ├── domain/
-│       │   ├── application/
-│       │   ├── infrastructure/
-│       │   └── presentation/
-│       │
-│       ├── knowledge/                     # 📚 CRUD + Broadcast
-│       │   ├── domain/
-│       │   ├── application/
-│       │   ├── infrastructure/
-│       │   └── presentation/
-│       │
-│       ├── notification/                  # 🔔 Role fan-out
-│       │   ├── domain/
-│       │   ├── application/
-│       │   ├── infrastructure/
-│       │   └── presentation/
-│       │
-│       ├── websocket/                     # 🔌 Real-time
-│       │   ├── application/
-│       │   ├── infrastructure/
-│       │   └── presentation/
-│       │
-│       ├── health/                        # ❤️ Liveness
-│       │   └── presentation/
-│       │
-│       └── example/                       # 📝 Minimal reference
-│           └── presentation/
-│
-├── migrations/                            # 🗄️ Alembic
-│   ├── env.py                             # ⚠️ ต้อง import ทุก model
-│   ├── script.py.mako
-│   └── versions/                          # (empty)
-│
-├── scripts/                               # 🛠️ Utility scripts
-│   ├── create_module.py
-│   ├── generate_secret.py
-│   ├── generate_fernet.py
-│   ├── directory_tree.py
-│   ├── websocket_test.html
-│   └── asyncapi.yaml
-│
-├── secrets/keys/                          # 🔐 JWT keys (gitignored)
-│   ├── signing-private.pem
-│   ├── signing-public.pem
-│   ├── encryption-private.pem
-│   └── encryption-public.pem
-│
-├── test/                                  # 🧪 Tests
-│   ├── core/
-│   └── modules/
-│       ├── authentication/
-│       ├── example/
-│       ├── health/
-│       ├── key/
-│       ├── knowledge/
-│       ├── notifications/
-│       ├── shared/
-│       ├── user/
-│       └── websocket/
-│
-├── docs/                                  # 📘 Postman + specs
-│   └── postman_collection.json
-│
-├── .env.example
-├── .gitignore
-├── .python-version
-├── alembic.ini
-├── docker-compose.yaml                    # FastAPI stack (standalone)
-├── Dockerfile
-├── Makefile
-├── pyproject.toml
-├── requirements.txt
-├── README.md
-└── README-PTBR.md
-```
-
----
-
-# 🎨 ส่วนที่ 2: Django Frontend BFF  
-
-```
-django-frontend/
-│
-├── config/                                # ⚙️ Django Project
-│   ├── __init__.py
-│   ├── settings.py                        # Settings + INSTALLED_APPS + MIDDLEWARE
-│   ├── urls.py                            # Root URLconf
-│   ├── asgi.py                            # ASGI (Channels)
-│   ├── wsgi.py                            # WSGI (fallback)
-│   └── routing.py                         # WebSocket routing
-│
-├── apps/                                  # 📚 Django Apps
-│   │
-│   ├── shared/                            # 🔗 Base types
-│   │   ├── __init__.py
-│   │   ├── apps.py
-│   │   ├── domain/
-│   │   │   ├── __init__.py
-│   │   │   ├── entities.py                # BaseEntity, DomainError, Pagination
-│   │   │   ├── value_objects.py           # UNSET, Email, Name, Phone
-│   │   │   └── enums.py                   # Role, ResponseMessages, SortOrder
-│   │   ├── application/
-│   │   │   ├── __init__.py
-│   │   │   ├── use_cases.py               # SharedUseCases
-│   │   │   ├── interfaces.py              # Protocols
-│   │   │   ├── exceptions.py              # StandardException, DomainException
-│   │   │   └── utils.py
-│   │   ├── infrastructure/
-│   │   │   ├── __init__.py
-│   │   │   ├── fastapi_client.py          # HTTPX client (Core)
-│   │   │   └── middleware.py              # FastAPISessionMiddleware
-│   │   └── presentation/
-│   │       ├── __init__.py
-│   │       ├── context_processors.py      # user_context
-│   │       └── dependencies.py            # Factories
-│   │
-│   ├── layout/                            # 🎨 Layout Components
-│   │   ├── __init__.py
-│   │   ├── apps.py
-│   │   ├── presentation/
-│   │   │   ├── __init__.py
-│   │   │   ├── views.py
-│   │   │   └── urls.py
-│   │   └── templates/
-│   │       └── layout/
-│   │           ├── app_layout.html        # = AppLayoutComponent
-│   │           ├── header.html            # = HeaderComponent
-│   │           ├── sidebar.html           # = SidebarComponent
-│   │           ├── footer.html            # = FooterComponent
-│   │           └── layout_settings.html   # = LayoutSettingsComponent
-│   │
-│   ├── authentication/                    # 🔐 Auth Proxy
-│   │   ├── __init__.py
-│   │   ├── apps.py
-│   │   ├── domain/
-│   │   │   ├── __init__.py
-│   │   │   └── entities.py
-│   │   ├── application/
-│   │   │   ├── __init__.py
-│   │   │   ├── use_cases.py               # Login, Logout, Refresh
-│   │   │   └── interfaces.py              # IAuthService
-│   │   ├── infrastructure/
-│   │   │   ├── __init__.py
-│   │   │   └── fastapi_auth_client.py
-│   │   └── presentation/
-│   │       ├── __init__.py
-│   │       ├── views.py
-│   │       ├── urls.py
-│   │       └── forms.py
-│   │
-│   ├── dashboard/                         # 🏠 Dashboard
-│   │   ├── __init__.py
-│   │   ├── apps.py
-│   │   ├── application/
-│   │   │   ├── __init__.py
-│   │   │   └── use_cases.py
-│   │   ├── infrastructure/
-│   │   │   ├── __init__.py
-│   │   │   └── fastapi_client.py
-│   │   └── presentation/
-│   │       ├── __init__.py
-│   │       ├── views.py
-│   │       └── urls.py
-│   │
-│   ├── user/                              # 👤 User Proxy
-│   │   ├── __init__.py
-│   │   ├── apps.py
-│   │   ├── domain/
-│   │   ├── application/
-│   │   ├── infrastructure/
-│   │   └── presentation/
-│   │
-│   ├── key/                               # 🔑 API Keys Proxy
-│   │   ├── __init__.py
-│   │   ├── apps.py
-│   │   ├── domain/
-│   │   │   ├── __init__.py
-│   │   │   ├── entities.py                # Key entity
-│   │   │   ├── value_objects.py           # KeySecret, KeyPrefix
-│   │   │   └── enums.py                   # KeyStatus, KeyScope
-│   │   ├── application/
-│   │   │   ├── __init__.py
-│   │   │   ├── use_cases.py               # KeyUseCases
-│   │   │   ├── interfaces.py              # IKeyRepository, IKeyCache
-│   │   │   ├── mappers.py                 # KeyMapper
-│   │   │   └── exceptions.py              # KeyException
-│   │   ├── infrastructure/
-│   │   │   ├── __init__.py
-│   │   │   └── fastapi_client.py          # KeyFastAPIClient
-│   │   └── presentation/
-│   │       ├── __init__.py
-│   │       ├── views.py
-│   │       ├── urls.py
-│   │       └── forms.py
-│   │
-│   ├── knowledge/                         # 📚 Knowledge Proxy
-│   │   ├── __init__.py
-│   │   ├── apps.py
-│   │   ├── domain/
-│   │   ├── application/
-│   │   ├── infrastructure/
-│   │   └── presentation/
-│   │
-│   ├── notification/                      # 🔔 Notification Proxy
-│   │   ├── __init__.py
-│   │   ├── apps.py
-│   │   ├── domain/
-│   │   ├── application/
-│   │   ├── infrastructure/
-│   │   └── presentation/
-│   │
-│   ├── websocket/                         # 🔌 WebSocket Proxy
-│   │   ├── __init__.py
-│   │   ├── apps.py
-│   │   ├── application/
-│   │   │   ├── __init__.py
-│   │   │   └── consumers.py               # NotificationProxyConsumer
-│   │   ├── infrastructure/
-│   │   │   ├── __init__.py
-│   │   │   └── fastapi_ws_client.py
-│   │   └── presentation/
-│   │       ├── __init__.py
-│   │       └── routing.py
-│   │
-│   └── core/                              # 🛠️ Core utilities
-│       ├── __init__.py
-│       ├── apps.py
-│       ├── application/
-│       │   ├── __init__.py
-│       │   └── use_cases.py
-│       ├── infrastructure/
-│       │   ├── __init__.py
-│       │   └── services.py
-│       └── presentation/
-│           ├── __init__.py
-│           └── views.py                   # HealthView, ErrorViews
-│
-├── templates/                             # 🎨 Global Templates
-│   │
-│   ├── base.html                          # ← App Layout (extends)
-│   │
-│   ├── partials/                          # Layout partials
-│   │   ├── header.html
-│   │   ├── sidebar.html
-│   │   ├── footer.html
-│   │   ├── layout-settings.html
-│   │   ├── page-header.html
-│   │   ├── pagination.html
-│   │   ├── messages.html
-│   │   └── confirm-modal.html
-│   │
-│   ├── authentication/
-│   │   ├── login.html
-│   │   └── logout.html
-│   │
-│   ├── dashboard/
-│   │   └── index.html
-│   │
-│   ├── user/
-│   │   ├── me.html
-│   │   └── list.html
-│   │
-│   ├── key/
-│   │   ├── list.html
-│   │   ├── detail.html
-│   │   └── form.html
-│   │
-│   ├── knowledge/
-│   │   ├── list.html
-│   │   ├── detail.html
-│   │   └── form.html
-│   │
-│   ├── notification/
-│   │   └── list.html
-│   │
-│   └── errors/
-│       ├── 400.html
-│       ├── 403.html
-│       ├── 404.html
-│       └── 500.html
-│
-├── static/                                # 🎨 Static files
-│   │
-│   ├── css/
-│   │   ├── tailwind.css                   # ← Tailwind source
-│   │   ├── tailwind.output.css            # ← Build output
-│   │   └── app.css                        # Custom overrides
-│   │
-│   ├── js/
-│   │   ├── app.js                         # Alpine.js root
-│   │   ├── header.js
-│   │   ├── sidebar.js
-│   │   ├── layout-settings.js
-│   │   ├── websocket.js
-│   │   └── api.js
-│   │
-│   └── img/
-│       ├── logo.svg
-│       ├── logo-dark.svg
-│       └── favicon.ico
-│
-├── test/                                  # 🧪 Tests
-│   ├── __init__.py
-│   ├── conftest.py
-│   ├── core/
-│   └── modules/
-│       ├── shared/
-│       ├── layout/
-│       ├── authentication/
-│       ├── dashboard/
-│       ├── user/
-│       ├── key/
-│       ├── knowledge/
-│       ├── notification/
-│       └── websocket/
-│
-├── .env                                   # Local env (gitignored)
-├── .env.example
-├── .gitignore
-├── .editorconfig
-├── Dockerfile                             # Django container
-├── docker-compose.yaml                    # Django stack (standalone)
-├── manage.py
-├── requirements.txt
-├── pyproject.toml
-├── tailwind.config.js
-├── postcss.config.js
-└── README.md
-```
-
----
-
-# 📘 ส่วนที่ 3: Docs & AI Prompts (Root-level)
-
-```
-docs/
-│
-├── README.md                              # 📑 Index 68 modules
-├── template_modules.md                    # 📘 Master template
-├── Design.md                              # 🏗️ Architecture design
-├── ERP-Part-1-2.md                        # 📗 ERP design doc
-│
-└── prompts/                               # 📄 1 module = 1 file
-    │
-    ├── layer-0-core/                      # (6 modules)
-    │   ├── money.md
-    │   ├── tenant_context.md
-    │   ├── audit.md
-    │   ├── idempotency.md
-    │   ├── config.md
-    │   └── events.md
-    │
-    ├── layer-1-foundation/                # (11 modules)
-    │   ├── tenancy.md
-    │   ├── authentication.md
-    │   ├── user.md
-    │   ├── employee.md
-    │   ├── customer.md
-    │   ├── supplier.md
-    │   ├── product.md
-    │   ├── pricing.md
-    │   ├── key.md                         # ← ตัวอย่างเต็ม
-    │   ├── knowledge.md
-    │   └── notification.md
-    │
-    ├── layer-2-money-path/                # (7 modules)
-    │   ├── order.md
-    │   ├── invoice.md
-    │   ├── ledger.md
-    │   ├── payment.md
-    │   ├── accounting_gateway.md
-    │   ├── tax.md
-    │   └── reconciliation.md
-    │
-    ├── layer-3-goods-path/                # (13 modules)
-    │   ├── inventory.md
-    │   ├── warehouse.md
-    │   ├── lot.md
-    │   ├── production.md
-    │   ├── recipe.md
-    │   ├── quality.md
-    │   ├── waste.md
-    │   ├── procurement.md
-    │   ├── traceability.md
-    │   ├── agriculture.md
-    │   ├── crop.md
-    │   ├── soil.md
-    │   └── irrigation.md
-    │
-    ├── layer-4-operations/                # (13 modules)
-    │   ├── transport.md
-    │   ├── delivery.md
-    │   ├── route.md
-    │   ├── gps.md
-    │   ├── retail.md
-    │   ├── pos.md
-    │   ├── shift.md
-    │   ├── line_channel.md
-    │   ├── promotion.md
-    │   ├── loyalty.md
-    │   ├── crm.md
-    │   ├── campaign.md
-    │   └── support.md
-    │
-    ├── layer-5-intelligence/              # (7 modules)
-    │   ├── reporting.md
-    │   ├── analytics.md
-    │   ├── forecast.md                    # ← ตัวอย่างเต็ม
-    │   ├── kpi.md
-    │   ├── satisfaction.md
-    │   ├── recommendation.md
-    │   └── oee.md
-    │
-    ├── layer-6-monitoring/                # (8 modules)
-    │   ├── iot.md
-    │   ├── cctv.md
-    │   ├── monitoring.md
-    │   ├── backup.md
-    │   ├── alerting.md
-    │   ├── audit_viewer.md
-    │   ├── maintenance.md
-    │   └── energy.md
-    │
-    └── layer-7-templates/                 # (3 modules)
-        ├── health.md
-        ├── example.md
-        └── blank.md
-```
-
----
-
-# 🐳 ส่วนที่ 4: Docker Stack รวม (Root-level)
-
-```
-project-root/
-│
-├── docker-compose.yaml                    # 🐳 Stack รวม 2 ส่วน
-├── .env                                   # Env รวม
-└── .env.example                           # Env template
-```
-
-### `docker-compose.yaml` (Root)
-
-```yaml
-name: "erp-iot-crm-iot"
-
-services:
-  # ═══════════════════════════════════════════════════════
-  # 🐍 FastAPI Backend (เดิม — ไม่แก้)
-  # ═══════════════════════════════════════════════════════
-  api:
-    build:
-      context: ./fastapi-backend
-      dockerfile: Dockerfile
-    container_name: erp-iot-api
-    depends_on:
-      database:
-        condition: service_healthy
-      cache:
-        condition: service_healthy
-    expose:
-      - "${APPLICATION_PORT}"
-    networks:
-      - erp-iot-network
-    ports:
-      - "${APPLICATION_PORT}:2000"
-    restart: unless-stopped
-    volumes:
-      - ./fastapi-backend:/app
-    environment:
-      - APPLICATION_ENVIRONMENT=${APPLICATION_ENVIRONMENT}
-      - POSTGRESQL_HOST=database
-      - POSTGRESQL_PORT=5432
-      - POSTGRESQL_DATABASE=${POSTGRESQL_DATABASE}
-      - POSTGRESQL_USERNAME=${POSTGRESQL_USERNAME}
-      - POSTGRESQL_PASSWORD=${POSTGRESQL_PASSWORD}
-      - REDIS_HOST=cache
-      - REDIS_PORT=6379
-      - REDIS_PASSWORD=${REDIS_PASSWORD}
-
-  # ═══════════════════════════════════════════════════════
-  # 🎨 Django Frontend BFF (ใหม่)
-  # ═══════════════════════════════════════════════════════
-  frontend:
-    build:
-      context: ./django-frontend
-      dockerfile: Dockerfile
-    container_name: erp-iot-frontend
-    depends_on:
-      - api
-    expose:
-      - "${DJANGO_PORT}"
-    networks:
-      - erp-iot-network
-    ports:
-      - "${DJANGO_PORT}:8001"
-    restart: unless-stopped
-    volumes:
-      - ./django-frontend:/app
-    environment:
-      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
-      - DJANGO_DEBUG=${DJANGO_DEBUG}
-      - DJANGO_ALLOWED_HOSTS=${DJANGO_ALLOWED_HOSTS}
-      - FASTAPI_BASE_URL=http://api:2000
-      - FASTAPI_TIMEOUT=${FASTAPI_TIMEOUT}
-
-  # ═══════════════════════════════════════════════════════
-  # ⚡ Redis Cache
-  # ═══════════════════════════════════════════════════════
-  cache:
-    image: "redis:8.6-alpine"
-    container_name: erp-iot-cache
-    command: >
-      redis-server
-      --requirepass "${REDIS_PASSWORD}"
-      --appendonly yes
-      --appendfsync everysec
-      --maxmemory ${REDIS_MAX_MEMORY}
-      --maxmemory-policy ${REDIS_MAX_MEMORY_POLICY}
-      --databases ${REDIS_DATABASES}
-    environment:
-      - "REDIS_PASSWORD=${REDIS_PASSWORD}"
-    expose:
-      - "${REDIS_PORT}"
-    healthcheck:
-      test: [ "CMD-SHELL", "redis-cli -a \"$${REDIS_PASSWORD}\" --no-auth-warning ping | grep -q PONG" ]
-      interval: 3s
-      timeout: 5s
-      retries: 20
-      start_period: 5s
-    networks:
-      - erp-iot-network
-    ports:
-      - "${REDIS_PORT}:6379"
-    restart: unless-stopped
-    volumes:
-      - redis_data:/data
-
-  # ═══════════════════════════════════════════════════════
-  # 🗄️ PostgreSQL
-  # ═══════════════════════════════════════════════════════
-  database:
-    container_name: erp-iot-database
-    image: "postgres:17-alpine"
-    environment:
-      - "POSTGRES_DB=${POSTGRESQL_DATABASE}"
-      - "POSTGRES_USER=${POSTGRESQL_USERNAME}"
-      - "POSTGRES_PASSWORD=${POSTGRESQL_PASSWORD}"
-    expose:
-      - "${POSTGRESQL_PORT}"
-    healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -d \"$${POSTGRES_DB}\" -U \"$${POSTGRES_USER}\"" ]
-      interval: 3s
-      timeout: 5s
-      retries: 20
-      start_period: 5s
-    networks:
-      - erp-iot-network
-    ports:
-      - "${POSTGRESQL_PORT}:5432"
-    restart: unless-stopped
-    volumes:
-      - postgres_data:/var/lib/postgresql/data/
-
-  # ═══════════════════════════════════════════════════════
-  # 🎛️ pgAdmin (optional)
-  # ═══════════════════════════════════════════════════════
-  database-admin:
-    image: "dpage/pgadmin4:9.2"
-    container_name: erp-iot-database-admin
-    depends_on:
-      database:
-        condition: service_healthy
-    environment:
-      - "PGADMIN_DEFAULT_EMAIL=${PGADMIN_EMAIL}"
-      - "PGADMIN_DEFAULT_PASSWORD=${PGADMIN_PASSWORD}"
-    expose:
-      - "${PGADMIN_PORT}"
-    networks:
-      - erp-iot-network
-    ports:
-      - "${PGADMIN_PORT}:80"
-    restart: unless-stopped
-    volumes:
-      - pgadmin_data:/var/lib/pgadmin
-
-  # ═══════════════════════════════════════════════════════
-  # 🎛️ RedisInsight (optional)
-  # ═══════════════════════════════════════════════════════
-  cache-admin:
-    image: "redis/redisinsight:3.4.2"
-    container_name: erp-iot-cache-admin
-    depends_on:
-      cache:
-        condition: service_healthy
-    environment:
-      - "RI_REDIS_HOST=cache"
-      - "RI_REDIS_PORT=6379"
-      - "RI_REDIS_USERNAME=${REDIS_USERNAME}"
-      - "RI_REDIS_PASSWORD=${REDIS_PASSWORD}"
-      - "RI_REDIS_ALIAS=${REDISINSIGHT_REDIS_ALIAS}"
-    expose:
-      - "${REDISINSIGHT_PORT}"
-    networks:
-      - erp-iot-network
-    ports:
-      - "${REDISINSIGHT_PORT}:5540"
-    restart: unless-stopped
-    volumes:
-      - redisinsight_data:/data
-
-volumes:
-  postgres_data:
-  pgadmin_data:
-  redis_data:
-  redisinsight_data:
-
-networks:
-  erp-iot-network:
-    name: erp-iot-network
-    driver: bridge
-```
-
----
-
-# 🔧 ส่วนที่ 5: Dockerfiles
-
-### `fastapi-backend/Dockerfile`
-
-```dockerfile
-FROM python:3.14-slim
-
-WORKDIR /app
-COPY requirements.txt .
-
-RUN pip install --no-cache-dir -r requirements.txt
-
-COPY . .
-
-EXPOSE 2000
-
-CMD ["uvicorn", "app.app:app", "--host", "0.0.0.0", "--proxy-headers", "--port", "2000"]
-```
-
-### `django-frontend/Dockerfile`
-
-```dockerfile
-FROM python:3.14-slim
-
-WORKDIR /app
-
-# ติดตั้ง system dependencies
-RUN apt-get update && apt-get install -y \
-    nodejs npm \
-    && rm -rf /var/lib/apt/lists/*
-
-# ติดตั้ง Python dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
-# ติดตั้ง Node dependencies (สำหรับ Tailwind build)
-COPY package.json .
-RUN npm install
-
-# คัดลอก source code
-COPY . .
-
-# Build Tailwind CSS
-RUN npm run build:css || echo "Tailwind build skipped"
-
-# Collect static files
-RUN python manage.py collectstatic --noinput || echo "collectstatic skipped"
-
-EXPOSE 8001
-
-CMD ["daphne", "-b", "0.0.0.0", "-p", "8001", "config.asgi:application"]
-```
-
----
-
-# 📊 Module Mapping (Django ↔ FastAPI)
-
-| Django App | → | FastAPI Module | Endpoint |
-|---|---|---|---|
-| `shared` | → | `shared` | (base types) |
-| `layout` | → | (N/A) | (UI only) |
-| `authentication` | → | `authentication` | `/api/v1/authentication/` |
-| `dashboard` | → | (composite) | (combines many) |
-| `user` | → | `user` | `/api/v1/user/` |
-| `key` | → | `key` | `/api/v1/key/` |
-| `knowledge` | → | `knowledge` | `/api/v1/knowledge/` |
-| `notification` | → | `notification` | `/api/v1/notification/` |
-| `websocket` | → | `websocket` | `/api/v1/websocket/connect/` |
-| `core` | → | `health` | `/health/` |
-
----
-
-# 🌐 Dataflow Diagram
-
-```mermaid
-flowchart TB
-    subgraph Browser["🌐 Browser"]
-        B["User"]
-    end
-
-    subgraph Django["🎨 Django Frontend :8001"]
-        D1["Templates + Tailwind"]
-        D2["Views + Use Cases"]
-        D3["FastAPIClient (HTTPX)"]
-        D4["WebSocket Proxy"]
-    end
-
-    subgraph FastAPI["🐍 FastAPI Backend :8000"]
-        F1["Routers + Schemas"]
-        F2["Use Cases"]
-        F3["Repositories"]
-        F4["ConnectionManager"]
-    end
-
-    subgraph Data["🗄️ Data Layer"]
-        PG[("PostgreSQL 17")]
-        RD[("Redis 8")]
-    end
-
-    B -->|"HTTP + Cookies"| D1
-    D1 --> D2
-    D2 --> D3
-    D2 --> D4
-    D3 -->|"HTTP + Cookies"| F1
-    D4 -->|"WS + Cookies"| F4
-    F1 --> F2
-    F2 --> F3
-    F3 --> PG
-    F2 --> RD
-    F4 --> RD
-
-    style B fill:#457b9d,color:#fff
-    style Django fill:#2d6a4f,color:#fff
-    style FastAPI fill:#1d3557,color:#fff
-    style Data fill:#6c584c,color:#fff
-    style PG fill:#336791,color:#fff
-    style RD fill:#dc382d,color:#fff
-```
-
----
-
-# 📋 สรุป
-
-| ส่วน | Path | หน้าที่ | จำนวน |
-|---|---|---|---|
-| **🐍 FastAPI Backend** | `fastapi-backend/` | API-only (ไม่แก้) | 9 modules |
-| **🎨 Django Frontend** | `django-frontend/` | BFF + Proxy + Render | 9 apps |
-| **📘 Docs & AI Prompts** | `docs/` | เอกสาร + 68 prompts | 68 files |
-| **🐳 Docker Stack** | `docker-compose.yaml` | Stack รวม | 6 services |
-| **🛠️ Scripts** | `scripts/` | Utility scripts | 6 files |
-
----
-
-# 🚀 Quick Start
-
-```bash
-# 1. Clone repo
-git clone <repo-url>
-cd project-root
-
-# 2. Copy env
-cp .env.example .env
-
-# 3. รัน FastAPI stack (standalone)
-cd fastapi-backend
-make dependencies-up-silent
-make dev
-# → http://localhost:8000
-
-# 4. รัน Django Frontend (standalone)
-cd ../django-frontend
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-python manage.py runserver 8001
-# → http://localhost:8001
-
-# 5. หรือรันทั้ง stack (root)
-cd ..
-docker compose up --build
-# → Django: http://localhost:8001
-# → FastAPI: http://localhost:8000
-# → pgAdmin: http://localhost:8080
-# → RedisInsight: http://localhost:8081
-
- 
-```
-
-**A production-shaped Python backend template — Clean Architecture, Domain-Driven Design, and everything already wired.**
-
-[![Python](https://img.shields.io/badge/Python-3.14-3776AB?logo=python&logoColor=white)](https://www.python.org/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.136-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
-[![Pydantic](https://img.shields.io/badge/Pydantic-v2-E92063?logo=pydantic&logoColor=white)](https://docs.pydantic.dev/)
-[![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-2.0-D71F00?logo=sqlalchemy&logoColor=white)](https://www.sqlalchemy.org/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
-[![Redis](https://img.shields.io/badge/Redis-8-FF4438?logo=redis&logoColor=white)](https://redis.io/)
-[![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
-[![uv](https://img.shields.io/badge/uv-package%20manager-DE5FE9?logo=uv&logoColor=white)](https://docs.astral.sh/uv/)
-[![Ruff](https://img.shields.io/badge/Ruff-linted-D7FF64?logo=ruff&logoColor=black)](https://docs.astral.sh/ruff/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-
-[![Stars](https://img.shields.io/github/stars/BrunoTanabe/fastapi-clean-architecture-ddd-template?style=flat&logo=github)](https://github.com/kongnakornna/fastapi-clean-architecture-ddd-erp-iot/fastapi-clean-architecture-ddd-template/stargazers)
-[![Forks](https://img.shields.io/github/forks/BrunoTanabe/fastapi-clean-architecture-ddd-template?style=flat&logo=github)](https://github.com/kongnakornna/fastapi-clean-architecture-ddd-erp-iot/fastapi-clean-architecture-ddd-template/network/members)
-[![Issues](https://img.shields.io/github/issues/BrunoTanabe/fastapi-clean-architecture-ddd-template?style=flat&logo=github)](https://github.com/kongnakornna/fastapi-clean-architecture-ddd-erp-iot/fastapi-clean-architecture-ddd-template/issues)
-[![Last commit](https://img.shields.io/github/last-commit/BrunoTanabe/fastapi-clean-architecture-ddd-template?style=flat&logo=github)](https://github.com/kongnakornna/fastapi-clean-architecture-ddd-erp-iot/fastapi-clean-architecture-ddd-template/commits)
-
-**English** · [Português](README-PTBR.md)
-
-</div>
-
----
-
-Most "clean architecture" templates give you empty folders and a diagram. This one gives you a
-**working application**: cookie-based authentication with nested JWTs, API-key management with
-rotation, role-based access control enforced twice over, Redis cache-aside with tombstone
-invalidation, real-time WebSocket delivery, notifications with role fan-out, and a Docker stack
-that migrates itself on boot.
-
-Nine modules, twenty-three routes, seven tables — all following one consistent set of patterns you
-can copy for the tenth module.
 
 ## Table of Contents
 
-- [Why This Template](#why-this-template)
-- [Quick Start](#quick-start)
-- [Architecture](#architecture)
-- [Modules](#modules)
-- [API Reference](#api-reference)
-- [Security](#security)
-- [Data](#data)
-- [Caching](#caching)
-- [Development](#development)
-- [Configuration](#configuration)
-- [Known Limitations](#known-limitations)
-- [Contributing](#contributing)
-- [License](#license)
-
----
-
-## Why This Template
-
-| | Feature | What you actually get |
-|---|---|---|
-| 🏛️ | **Clean Architecture + DDD** | Four layers per module with enforced dependency direction. `domain/` imports no framework — ever. |
-| 🔐 | **Authentication, done properly** | Nested JWT (JWS signed with Ed25519, wrapped in a JWE encrypted with ECDH-ES + A256GCM), delivered in HTTP-only cookies, with HMAC fingerprints stored server-side so tokens are revocable. |
-| 🔑 | **API keys** | Full lifecycle — create, list, rotate, revoke. The raw key is returned exactly once and never stored. |
-| 👥 | **Role-based access** | `admin` / `manager` / `user`, enforced by the dependency **and** by a path allowlist. Two independent gates. |
-| ⚡ | **Redis cache-aside** | Namespaced and versioned keys, with tombstone invalidation that closes the revoked-credential race. Caches never raise — a Redis outage degrades to the database. |
-| 🔔 | **Notifications** | Per-user and role-cascaded broadcast fan-out, dispatched over WebSocket best-effort after the write commits. |
-| 🔌 | **WebSockets** | Authenticated channel with Origin validation, since CORS does not cover the handshake. |
-| 📦 | **Self-migrating stack** | `docker compose up` gives you Postgres, Redis, pgAdmin and RedisInsight; the app runs Alembic to head on startup. |
-| 📖 | **OpenAPI that means something** | Every endpoint documents its full error contract, not just the happy path. |
-
----
-
-## Quick Start
-
-### Prerequisites
-
-| Tool | Version | Why |
-|---|---|---|
-| [Python](https://www.python.org/) | 3.14+ | Pinned in `.python-version` |
-| [uv](https://docs.astral.sh/uv/) | latest | Dependency and virtualenv management |
-| [Docker](https://www.docker.com/) + Compose | latest | Postgres, Redis, and the admin UIs |
-
-### Five commands
-
-```bash
-# 1. Clone
-git clone fastapi-clean-architecture-ddd-erp-iot
-cd fastapi-clean-architecture-ddd-template
-# 1.1 Install make
-choco install make
-
-# 2. Configure — every key in .env.example must have a value
-cp .env.example .env
-
-# 3. Install dependencies
-uv sync
-
-# 4. Start Postgres, Redis and the admin UIs
-make dependencies-up-silent
-
-# 5. Run the API (migrations apply automatically on boot)
-make dev
-```
-
-> [!IMPORTANT]
-> Step 2 is not optional. `Settings` declares most fields as **required**, so the app raises a
-> `ValidationError` on startup if any key is left empty. See
-> [Configuration](#configuration) for every key and a sensible value.
-
-### What you get
-
-| Service | URL | Notes |
-|---|---|---|
-| **API** | http://localhost:8000 | `APPLICATION_PORT` |
-| **Swagger UI** | http://localhost:8000/docs | Disabled in `production` |
-| **ReDoc** | http://localhost:8000/redoc | Disabled in `production` |
-| **OpenAPI JSON** | http://localhost:8000/openapi.json | Disabled in `production` |
-| **Health check** | http://localhost:8000/health/ | Public |
-| **pgAdmin** | http://localhost:8080 | `PGADMIN_EMAIL` / `PGADMIN_PASSWORD` |
-| **RedisInsight** | http://localhost:8081 | Pre-wired to the `cache` service |
-| **Dev tools** | http://localhost:8000/devtools/ | `development` only — WebSocket test client, AsyncAPI docs |
-
-### First request
-
-An admin user is seeded from `SECURITY_ADMIN_EMAIL` / `SECURITY_ADMIN_PASSWORD`. Log in — note
-that this endpoint takes **form-encoded** data, not JSON:
-
-```bash
-curl -X POST http://localhost:8000/api/v1/authentication/login/ \
-  -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "username=$SECURITY_ADMIN_EMAIL&password=$SECURITY_ADMIN_PASSWORD" \
-  -c cookies.txt
-
-curl http://localhost:8000/api/v1/user/me/ -b cookies.txt
-```
-
-> [!TIP]
-> A Postman collection covering every endpoint lives at
-> [`docs/`](docs/). Import it, then fill in the `admin_email` and `admin_password`
-> collection variables.
-
----
-
-## Architecture
-
-Every module is split into four layers. Dependencies point **inward only** — the domain knows
-nothing about anything else.
-
-```mermaid
-flowchart TB
-    subgraph Outer[" "]
-        direction TB
-        P["<b>presentation/</b><br/>routers · schemas<br/>docs · dependencies"]
-        I["<b>infrastructure/</b><br/>models · repositories<br/>caches · services"]
-    end
-
-    subgraph Inner[" "]
-        direction TB
-        A["<b>application/</b><br/>use cases · interfaces<br/>mappers · exceptions"]
-        D["<b>domain/</b><br/>entities · value objects<br/>enums"]
-    end
-
-    CORE["<b>core/</b><br/>settings · security · database<br/>cache · middleware · logging"]
-    SHARED["<b>shared/</b><br/>BaseEntity · BaseModel<br/>SharedUseCases · UNSET"]
-
-    P --> A
-    I --> A
-    A --> D
-    P -.-> CORE
-    I -.-> CORE
-    A --> SHARED
-    D --> SHARED
-
-    style D fill:#2d6a4f,stroke:#1b4332,color:#fff
-    style A fill:#40916c,stroke:#2d6a4f,color:#fff
-    style I fill:#1d3557,stroke:#0d1b2a,color:#fff
-    style P fill:#457b9d,stroke:#1d3557,color:#fff
-    style CORE fill:#6c584c,stroke:#463f3a,color:#fff
-    style SHARED fill:#7f5539,stroke:#582f0e,color:#fff
-```
-
-| Layer | Directory | Contains | May import |
-|---|---|---|---|
-| **Domain** | `domain/` | `entities.py`, `value_objects.py`, `enums.py` | `shared` only. **No** FastAPI, SQLAlchemy, or Pydantic. |
-| **Application** | `application/` | `use_cases.py`, `interfaces.py`, `mappers.py`, `exceptions.py`, `utils.py` | `domain`, `shared` |
-| **Infrastructure** | `infrastructure/` | `models.py`, `repositories.py`, `caches.py`, `services.py` | `domain`, `application`, `core` |
-| **Presentation** | `presentation/` | `routers.py`, `schemas.py`, `docs.py`, `dependencies.py` | everything below it |
-
-The application layer depends on `typing.Protocol` contracts, never on concrete classes. That is
-what makes a use case testable with an in-memory fake and lets you swap Postgres for anything
-else without touching business logic.
-
-<details>
-<summary><b>The three error-handling shapes</b> — one per layer kind</summary>
-
-<br/>
-
-Getting this wrong is the most consequential mistake in the codebase, so it is worth stating
-precisely.
-
-**3-branch** — use cases and router handlers:
-
-```python
-except StandardException:
-    raise
-except DomainError as e:
-    raise DomainException(e)
-except Exception as e:
-    logger.opt(exception=e).error("An error occurred in the create key endpoint.")
-    raise KeyException()
-```
-
-**2-branch** — repositories and services. No `DomainError` branch: these layers never evaluate
-domain rules.
-
-```python
-except StandardException:
-    raise
-except Exception as e:
-    logger.opt(exception=e).error("An error occurred in the create key repository.")
-    raise KeyException()
-```
-
-**Never-raise** — caches. Every method catches, logs, and returns `None`.
-
-```python
-except Exception as e:
-    logger.opt(exception=e).error(
-        "An error occurred in the get key by hashed key cache. Falling back to the database."
-    )
-    return None
-```
-
-> [!WARNING]
-> `except StandardException` **must come first**. `StandardException` extends
-> `HTTPException`, so any other ordering swallows every deliberate 404 and 409 into a 500.
-
-A cache failure degrades to the database and must never fail a request — that is why the cache
-shape has no re-raise branch at all.
-
-</details>
-
-<details>
-<summary><b>Module anatomy</b> — every file and what belongs in it</summary>
-
-<br/>
-
-```text
-app/modules/{module}/
-├── domain/
-│   ├── entities.py          Dataclasses extending BaseEntity; validation in __post_init__
-│   ├── value_objects.py     Plain classes: _normalize → _validate → __str__ → __eq__
-│   └── enums.py             Module enums, always (str, Enum)
-├── application/
-│   ├── interfaces.py        Protocol contracts: I{Entity}Repository / Cache / Service
-│   ├── use_cases.py         One {Module}UseCases class; business rules live here
-│   ├── mappers.py           # ENTITY / DTOS · # ENTITY / MODELS · # ENTITY / CACHE
-│   ├── exceptions.py        Generic {Module}Exception + one per business rule
-│   └── utils.py             Module-local helpers
-├── infrastructure/
-│   ├── models.py            SQLAlchemy models extending BaseModel
-│   ├── repositories.py      Postgres{Entity}Repository — flush(), never commit()
-│   ├── caches.py            Redis{Entity}Cache — namespaced, tombstoned, never raises
-│   └── services.py          External or stateful systems behind a Protocol
-└── presentation/
-    ├── routers.py           Handlers: payload → mapper → use case → mapper → return
-    ├── schemas.py           Pydantic v2 with full Field + ConfigDict
-    ├── docs.py              router_docs + one {action}_docs per endpoint
-    └── dependencies.py      Depends factories, returning the Protocol type
-```
-
-Empty files are normal. A module keeps the full skeleton even when a layer file is unused — an
-empty `caches.py` means "this module does not cache", not "someone forgot a file".
-
-`scripts/create_module.py` generates this exact tree.
-
-</details>
-
-### Request lifecycle
-
-```mermaid
-sequenceDiagram
-    autonumber
-    participant C as Client
-    participant MW as Middleware stack
-    participant R as Router
-    participant M as Mapper
-    participant UC as Use case
-    participant Repo as Repository
-    participant Cache as Redis
-    participant DB as PostgreSQL
-
-    C->>MW: HTTP request
-    Note over MW: CORS → ResponseFormatting →<br/>LogRequest → DeviceId
-    MW->>R: scoped request
-    R->>R: authenticate_* dependency<br/>(role + path allowlist)
-    R->>M: payload + Authentication
-    M-->>R: domain entity
-    R->>UC: entity
-    UC->>Cache: read-through?
-    alt cache hit
-        Cache-->>UC: entity
-    else miss or Redis down
-        UC->>Repo: query
-        Repo->>DB: SELECT (flush, never commit)
-        DB-->>Repo: rows
-        Repo-->>UC: domain entity
-        UC->>Cache: populate (best-effort)
-    end
-    UC-->>R: domain entity
-    R->>M: entity
-    M-->>R: response schema
-    R-->>MW: plain schema
-    Note over MW: wraps in StandardResponse envelope
-    MW-->>C: JSON response
-```
-
-Handlers never build the response envelope — `ResponseFormattingMiddleware` does that. Handlers
-never contain business logic — the use case does that. The body of every handler is exactly
-`payload → mapper → use case → mapper → return`.
-
----
-
-## Modules
-
-```text
-app/modules/
-├── shared/           Base types every module builds on — not routed
-├── authentication/   Login, refresh, logout; nested JWT issuance
-├── user/             Internal accounts and roles
-├── key/              API keys — the most complete module
-├── knowledge/        CRUD + broadcast notification reference
-├── notification/     Per-user and role fan-out
-├── websocket/        Real-time delivery
-├── health/           Liveness and Alembic version
-└── example/          Minimal reference module, no persistence
-```
-
-| Module | Routes | Persistence | Cache | Service | Role |
-|---|---|---|---|---|---|
-| `authentication` | 3 | ✅ | ✅ | `ITokenService` | Session lifecycle, token rotation |
-| `key` | 6 | ✅ | ✅ | `IKeyService` | **Canonical reference** — copy this one |
-| `user` | 2 | ✅ | — | — | Accounts, roles, `/me` |
-| `knowledge` | 4 | ✅ | partial | — | CRUD + broadcast notifications |
-| `notification` | 2 | ✅ | — | — | Per-user + role-cascaded fan-out |
-| `websocket` | 1 + WS | — | — | `IConnectionManagerService` | In-memory, single-process |
-| `health` | 3 | `alembic_version` | — | — | Liveness, docs redirect, migration state |
-| `example` | 1 | — | — | — | Minimal demo; no repository, no model |
-| `shared` | — | base types | — | — | `BaseEntity`, `BaseModel`, `SharedUseCases` |
-
-> [!TIP]
-> When a pattern is ambiguous, read **`key`**. It is the only module exercising every layer:
-> cache with tombstones, a service, full CRUD plus rotation, actor projections, and transient
-> secret handling.
-
-<details>
-<summary><b>What lives in <code>shared</code></b></summary>
-
-<br/>
-
-| File | Exports |
-|---|---|
-| `domain/entities.py` | `BaseEntity`, `DomainError`, `DomainErrors`, `Pagination`, `PaginatedList` |
-| `domain/value_objects.py` | `UNSET`, `RESOURCE_NAME_PATTERN`, `Email`, `Name`, `Phone` |
-| `domain/enums.py` | `ApplicationEnvironment`, `CookieSameSite`, `ResponseMessages`, `Role`, `SortOrder` |
-| `infrastructure/models.py` | `Base`, `BaseModel` |
-| `application/exceptions.py` | `StandardException`, `DomainException`, `CoreException`, `OriginNotAllowedException` |
-| `application/use_cases.py` | `SharedUseCases` — notifications and user lookups |
-| `application/utils.py` | `BRASILIA_TZ`, `current_timestamp()`, `resolve_client_ip()` |
-| `presentation/schemas.py` | `StandardResponse`, `PaginationParams`, `PaginationMeta`, `CreateResponse`, `UpdateResponse`, `DeleteResponse` |
-| `presentation/dependencies.py` | Cross-module repository, cache, and `SharedUseCases` factories |
-
-**Inherited fields — never redeclare these.**
-
-`BaseModel` (ORM) provides `id` (UUID, `gen_random_uuid()`), `is_active` (soft-delete flag),
-`created_at` and `updated_at` (Brasília timezone, DB-managed).
-
-`BaseEntity` (domain) provides the same four plus `deactivate()`.
-
-**The `UNSET` sentinel.** Partial updates need to distinguish "field omitted" from "field
-explicitly set to null". `UNSET` is that distinction, and it flows through three places:
-
-1. The entity defaults the field to `UNSET`.
-2. The update mapper sets it from `payload.model_fields_set`.
-3. The use case keeps the stored value wherever the incoming one `is UNSET`.
-
-Always compare with `is` / `is not`, never `==`.
-
-</details>
-
----
-
-## API Reference
-
-**22 HTTP routes + 1 WebSocket channel.** Every route is registered twice — with and without a
-trailing slash — so both forms work; only the trailing-slash form appears in OpenAPI.
-
-### Authentication
-
-| Method | Path | Access | Description |
-|---|---|---|---|
-| `POST` | `/api/v1/authentication/login/` | 🌐 Public | Issues the cookie pair. **Form-encoded**, not JSON. |
-| `PATCH` | `/api/v1/authentication/refresh/` | 👤 User | Rotates the refresh token and mints a new access token. |
-| `DELETE` | `/api/v1/authentication/logout/` | 🌐 Public¹ | Revokes the session and clears cookies. |
-
-### User
-
-| Method | Path | Access | Description |
-|---|---|---|---|
-| `POST` | `/api/v1/user/` | 🌐 Public | Registers an account. Email must match `SECURITY_EMAIL_ALLOWED_DOMAINS`. |
-| `GET` | `/api/v1/user/me/` | 👤 User | The authenticated user's profile. |
-
-### API keys
-
-| Method | Path | Access | Description |
-|---|---|---|---|
-| `POST` | `/api/v1/key/` | 🔴 Admin | Creates a key. **Returns the raw secret once.** |
-| `GET` | `/api/v1/key/` | 🔴 Admin | Paginated list. |
-| `GET` | `/api/v1/key/{id}/` | 🔴 Admin | One key with its creator and updater. |
-| `PATCH` | `/api/v1/key/{id}/` | 🔴 Admin | Renames or re-describes. Partial. |
-| `PATCH` | `/api/v1/key/{id}/rotate/` | 🔴 Admin | New secret, same record. **Returns the raw secret once.** |
-| `DELETE` | `/api/v1/key/{id}/` | 🔴 Admin | Revokes (soft delete) and invalidates the cache. |
-
-### Knowledge
-
-| Method | Path | Access | Description |
-|---|---|---|---|
-| `POST` | `/api/v1/knowledge/` | 🟠 Manager | Creates and broadcasts a notification to managers. |
-| `GET` | `/api/v1/knowledge/` | 🟠 Manager | Paginated list. |
-| `PATCH` | `/api/v1/knowledge/{id}/` | 🟠 Manager | Partial update. |
-| `DELETE` | `/api/v1/knowledge/{id}/` | 🟠 Manager | Soft delete. |
-
-### Notification
-
-| Method | Path | Access | Description |
-|---|---|---|---|
-| `GET` | `/api/v1/notification/` | 👤 User | The caller's notifications, paginated. |
-| `PATCH` | `/api/v1/notification/{id}/` | 👤 User | Marks as read. |
-
-### Health, WebSocket, Example
-
-| Method | Path | Access | Description |
-|---|---|---|---|
-| `GET` | `/health/` | 🌐 Public | Liveness probe. |
-| `GET` | `/` | ⚠️ | Intended to redirect to `/docs` — see [Known Limitations](#known-limitations). |
-| `GET` | `/api/v1/alembic-version/` | 🔴 Admin | The applied migration revision. |
-| `GET` | `/api/v1/websocket/connect/` | 🌐 Public | Documentation-only decoy; raises immediately. |
-| `WS` | `/api/v1/websocket/connect/` | 👤 User | The real channel. Origin-validated. |
-| `POST` | `/api/v1/example/` | 🌐 Public | Minimal reference endpoint. |
-
-¹ `logout` sits in the public allowlist tier but still runs `authenticate_logout`, which tolerates
-partially expired state so a stale session can always be cleaned up.
-
-<details>
-<summary><b>Response envelope</b> — every response has the same shape</summary>
-
-<br/>
-
-`ResponseFormattingMiddleware` wraps every JSON response. Handlers return a plain schema and never
-construct this themselves.
-
-```json
-{
-  "code": 200,
-  "method": "GET",
-  "path": "/api/v1/key/",
-  "timestamp": "2026-07-31T12:34:56Z",
-  "details": {
-    "message": "Resource retrieved successfully",
-    "data": { }
-  }
-}
-```
-
-| Field | Meaning |
-|---|---|
-| `code` | HTTP status code |
-| `method` | HTTP method of the request |
-| `path` | Request path |
-| `timestamp` | ISO 8601, UTC |
-| `details.message` | A `ResponseMessages` constant — never an ad-hoc string |
-| `details.data` | The endpoint's payload, or `{"errors": ...}` on failure |
-
-Swagger, ReDoc, and `text/event-stream` responses bypass the wrapper.
-
-</details>
-
-<details>
-<summary><b>Pagination</b> — query parameters and metadata</summary>
-
-<br/>
-
-| Parameter | Type | Default | Constraint |
-|---|---|---|---|
-| `page` | int | `1` | ≥ 1 |
-| `limit` | int | `20` | 1–100 |
-| `sort_order` | enum | `desc` | `asc` \| `desc` |
-| `sort_by` | enum | per module | Must be a real column |
-
-```bash
-curl "http://localhost:8000/api/v1/key/?page=1&limit=10&sort_by=updated_at&sort_order=desc" -b cookies.txt
-```
-
-Every list response carries a `pagination` block:
-
-```json
-{
-  "total": 87,
-  "page": 2,
-  "limit": 20,
-  "total_pages": 5,
-  "has_next": true,
-  "has_prev": true
-}
-```
-
-The total is computed in the **same query** as the page, using a window function
-(`func.count(...).over()`) — there is never a second `COUNT(*)` round trip.
-
-> The HTTP layer says `limit`; the domain layer says `per_page`. The mappers translate at the
-> boundary.
-
-</details>
-
-<details>
-<summary><b>Error catalogue</b> — status codes and when they occur</summary>
-
-<br/>
-
-| Status | `ResponseMessages` | When |
-|---|---|---|
-| `400` | `VALIDATION_ERROR` | A domain rule failed — raised as `DomainException` |
-| `400` | `BAD_REQUEST` | An update submitted no effective change |
-| `401` | `UNAUTHORIZED_ERROR` | Credential missing, invalid, revoked, or expired |
-| `403` | `AUTHORIZATION_ERROR` | Authenticated but not permitted, or the path is not in the caller's tier |
-| `404` | `RESOURCE_NOT_FOUND` | Record does not exist or is soft-deleted |
-| `405` | `METHOD_NOT_ALLOWED` | Method unsupported on that path |
-| `409` | `CONFLICT` | Natural-key collision, e.g. a duplicate name |
-| `422` | `VALIDATION_ERROR` | Pydantic rejected the payload before the handler ran |
-| `500` | `INTERNAL_ERROR` | Unexpected failure — the module's generic exception |
-| `502` | `BAD_GATEWAY` | Upstream dependency failed |
-| `504` | `GATEWAY_TIMEOUT` | Upstream dependency timed out |
-
-`400` and `422` are genuinely different: `422` is FastAPI rejecting the request shape before your
-code runs; `400` is a business rule failing inside it.
-
-Every error body carries `details.data.errors` — a string for one failure, a list when several
-were collected at once (an entity reports **all** its validation failures in a single response,
-not just the first).
-
-</details>
-
-<details>
-<summary><b>WebSocket channel</b> — connecting and message shape</summary>
-
-<br/>
-
-**Endpoint:** `ws://localhost:8000/api/v1/websocket/connect/`
-
-Authentication uses the same HTTP-only cookies as the REST API — the browser sends them
-automatically on the upgrade. The `Origin` header is validated against
-`SECURITY_ALLOW_ORIGINS`, because `CORSMiddleware` does **not** cover the WebSocket handshake.
-
-Messages flow **server → client** only. Client frames are accepted and discarded, which makes them
-usable as a keepalive.
-
-```json
-{
-  "message_type": "notification",
-  "body": {
-    "id": "550e8400-e29b-41d4-a716-446655440000",
-    "created_at": "2026-01-15T10:30:00Z",
-    "notification_type": "knowledge_created",
-    "title": "Knowledge base created",
-    "body": "The knowledge base 'ML Fundamentals' was created successfully.",
-    "redirect_url": "https://app.example.com,mycompany.com,gmail.com/knowledge/550e8400"
-  }
-}
-```
-
-Broadcasts apply a role cascade: `ADMIN` reaches admins, `MANAGER` reaches managers and admins,
-`USER` reaches everyone.
-
-A browser test client and the full AsyncAPI specification are served at `/devtools/` in
-development — see `scripts/websocket_test.html` and `scripts/asyncapi.yaml`.
-
-</details>
-
----
-
-## Security
-
-### Authentication flow
-
-```mermaid
-sequenceDiagram
-    autonumber
-    participant C as Client
-    participant API as API
-    participant DB as PostgreSQL
-    participant R as Redis
-
-    rect rgba(69,123,157,0.12)
-    Note over C,R: Login
-    C->>API: POST /authentication/login/ (form-encoded)
-    API->>DB: verify password (Argon2)
-    API->>API: build nested JWT<br/>JWS Ed25519 → JWE ECDH-ES + A256GCM
-    API->>DB: store HMAC fingerprints of each jti
-    API->>R: cache the authentication
-    API-->>C: Set-Cookie: access_token, refresh_token, device_id
-    end
-
-    rect rgba(45,106,79,0.12)
-    Note over C,R: Authenticated request
-    C->>API: GET /user/me/ (cookies sent automatically)
-    API->>API: decrypt JWE → verify JWS
-    API->>R: look up by token fingerprint
-    alt cache miss
-        API->>DB: load authentication, compare fingerprint
-    end
-    API->>API: check role tier + path allowlist
-    API-->>C: 200
-    end
-
-    rect rgba(180,120,40,0.12)
-    Note over C,R: Refresh
-    C->>API: PATCH /authentication/refresh/
-    API->>DB: rotate jti, keep previous_hashed_jti briefly
-    API->>R: invalidate both cached dimensions
-    API-->>C: new cookie pair
-    end
-
-    rect rgba(200,60,60,0.12)
-    Note over C,R: Logout
-    C->>API: DELETE /authentication/logout/
-    API->>DB: revoke refresh + access tokens
-    API->>R: delete by access token AND by refresh token
-    API-->>C: cleared cookies
-    end
-```
-
-### Why nested JWTs
-
-A plain signed JWT is readable by anyone holding it. This template signs **and** encrypts:
-
-| Layer | Algorithm | Purpose |
-|---|---|---|
-| Inner **JWS** | Ed25519 | Proves authenticity and integrity |
-| Outer **JWE** | ECDH-ES + A256GCM | Keeps claims opaque to the client |
-
-Tokens travel in **HTTP-only cookies**, not `Authorization` headers, so JavaScript cannot read
-them. An HMAC-SHA256 fingerprint of each token's `jti` is stored in the database — the token
-itself never is — which makes tokens revocable and tampering detectable.
-
-Key pairs load from PEM files under `secrets/keys/` and are generated on first boot when
-`JWT_AUTO_GENERATE_KEYS` is true.
-
-> [!CAUTION]
-> `secrets/keys/*.pem` is gitignored for a reason. Generate fresh keys per environment and never
-> commit them. Rotating a key requires a process restart — they are cached at startup.
-
-### Roles and the two gates
-
-```mermaid
-flowchart LR
-    REQ([Request]) --> DEP{authenticate_*<br/>dependency}
-    DEP -->|role too low| F1[403]
-    DEP -->|role ok| ALLOW{path in the<br/>role's allowlist?}
-    ALLOW -->|no| F2[403]
-    ALLOW -->|yes| OK([Handler])
-
-    style F1 fill:#c1121f,color:#fff
-    style F2 fill:#c1121f,color:#fff
-    style OK fill:#2d6a4f,color:#fff
-```
-
-Both gates must agree. This is deliberate: the dependency is easy to forget on a new handler, and
-the allowlist is easy to forget on a new path. Requiring both means a mistake fails closed.
-
-| Tier | Setting | Reaches |
-|---|---|---|
-| 🌐 Public | `SECURITY_NO_AUTH_PATHS` | Everyone, including anonymous |
-| 👤 User | `SECURITY_USER_ALLOWED_PATHS` | Public + user |
-| 🟠 Manager | `SECURITY_MANAGER_ALLOWED_PATHS` | User + manager |
-| 🔴 Admin | `SECURITY_ADMIN_ALLOWED_PATHS` | Manager + admin |
-| 🔑 API key | `SECURITY_API_KEY_ALLOWED_PATHS` | Independent tier — currently empty |
-
-Tiers cascade, so each path is declared **once**, in the lowest tier that should reach it. Both
-slash forms must be registered:
-
-```python
-(_path_rule("/api/v1/key/", "POST"),)
-(_path_rule("/api/v1/key", "POST"),)
-```
-
-> [!WARNING]
-> Forgetting the second form is the most common cause of "works in Swagger, 403 from the client".
-
-### API keys
-
-Fully implemented — the mechanism works, but `SECURITY_API_KEY_ALLOWED_PATHS` is empty, so no
-endpoint currently accepts key authentication. Add paths there to enable it.
-
-```mermaid
-flowchart LR
-    GEN["generate_api_key()"] --> RAW["Raw key<br/><code>iap_xxxxx…</code>"]
-    RAW --> RESP["Returned once<br/>in the response"]
-    RAW --> HMAC["HMAC-SHA256"]
-    HMAC --> STORE[("hashed_key<br/>stored")]
-    RAW -.->|never stored| STORE
-
-    style RESP fill:#40916c,color:#fff
-    style STORE fill:#1d3557,color:#fff
-```
-
-The record keeps a non-secret `prefix` and `last_four` for display, plus the hash for verification
-(compared with `hmac.compare_digest`, in constant time). The raw key is returned **once**, on
-creation and on rotation, and cannot be recovered afterwards.
-
----
-
-## Data
-
-### Entity relationships
-
-```mermaid
-erDiagram
-    USERS ||--o{ AUTHENTICATIONS : "has sessions"
-    USERS ||--o{ NOTIFICATIONS : "receives"
-    USERS ||--o{ KEYS : "created_by / updated_by"
-    USERS ||--o{ KNOWLEDGES : "created_by / updated_by"
-    AUTHENTICATIONS ||--|| REFRESH_TOKENS : "1:1 cascade"
-    REFRESH_TOKENS ||--|| ACCESS_TOKENS : "1:1 cascade"
-
-    USERS {
-        uuid id PK
-        string first_name
-        string last_name
-        string preferred_name
-        enum gender
-        date birthdate
-        string email UK
-        string phone
-        string hashed_password
-        enum role
-        bool is_active
-    }
-    AUTHENTICATIONS {
-        uuid id PK
-        uuid user_id FK
-        string ip_address
-        string device
-        string user_agent
-        string origin
-        bool blacklisted
-    }
-    REFRESH_TOKENS {
-        uuid id PK
-        uuid authentication_id FK
-        string hashed_jti
-        string previous_hashed_jti
-        datetime expires_at
-        bool revoked
-    }
-    ACCESS_TOKENS {
-        uuid id PK
-        uuid refresh_id FK
-        string hashed_jti
-        string previous_hashed_jti
-        enum permission
-        datetime expires_at
-        bool revoked
-    }
-    KEYS {
-        uuid id PK
-        string name
-        string description
-        string prefix
-        string last_four
-        string hashed_key UK
-        datetime expires_at
-        datetime last_used_at
-        uuid created_by FK
-        uuid updated_by FK
-    }
-    KNOWLEDGES {
-        uuid id PK
-        string name
-        string description
-        uuid created_by FK
-        uuid updated_by FK
-    }
-    NOTIFICATIONS {
-        uuid id PK
-        uuid user_id FK
-        enum notification_type
-        string title
-        string body
-        string redirect_url
-        jsonb metadata
-        string originated_from_broadcast
-        bool is_read
-        datetime read_at
-    }
-```
-
-Deleting a user **cascades** to their authentications and notifications, but is **restricted** by
-any key or knowledge base they authored — audit trails must not lose their author.
-
-Table names are prefixed from `APPLICATION_TABLE_PREFIX`, so with the default value the users
-table is `erp_users`.
-
-### Conventions
-
-| Concept | Rule | Example |
-|---|---|---|
-| Table name | `{prefix}_{plural_snake}` | `..._keys` |
-| Enum type | `{snake}_enum` | `role_enum` |
-| Unique constraint | `uq_{plural}_{cols}` | `uq_keys_hashed_key` |
-| Index | `ix_{plural}_{cols}` | `ix_keys_prefix` |
-| Check constraint | `ck_{plural}_{rule}` | `ck_keys_single_owner` |
-| Soft delete | `is_active = false` | never a physical `DELETE` |
-
-> [!NOTE]
-> PostgreSQL stores enum **member names** in uppercase (`ADMIN`, `KNOWLEDGE_CREATED`), not the
-> lowercase Python values. This matters whenever you write raw SQL or a seed migration.
-
-### Migrations
-
-`migrations/versions/` ships **empty** — your first migration creates the whole schema for your
-project. The application runs `alembic upgrade head` on startup, so a fresh stack migrates itself.
-
-```bash
-make migration m="create_my_entity_model"   # autogenerate
-make migrate                                 # apply
-```
-
-> [!IMPORTANT]
-> A new model must be imported in `migrations/env.py` and added to its `_ = [...]` list.
-> Autogenerate only sees registered models — and worse, it emits a `drop_table` for a live table
-> whose model it cannot see.
-
----
-
-## Caching
-
-Postgres is the source of truth. Redis is an accelerator you must be able to lose at any moment.
-
-```mermaid
-sequenceDiagram
-    autonumber
-    participant UC as Use case
-    participant R as Redis
-    participant DB as PostgreSQL
-
-    rect rgba(45,106,79,0.12)
-    Note over UC,DB: Read-through
-    UC->>R: get(key)
-    alt hit
-        R-->>UC: entity
-    else miss, or Redis unavailable
-        R-->>UC: None
-        UC->>DB: SELECT
-        DB-->>UC: entity
-        UC->>R: insert (best-effort)
-    end
-    end
-
-    rect rgba(200,60,60,0.12)
-    Note over UC,DB: Invalidation — tombstone first
-    UC->>DB: UPDATE / revoke
-    UC->>R: SET tombstone (TTL)
-    UC->>R: DEL entry
-    Note right of R: A slow reader that missed the cache<br/>checks the tombstone before writing,<br/>so it cannot resurrect revoked data.
-    end
-```
-
-### The race the tombstone closes
-
-Without it, this interleaving silently resurrects revoked data:
-
-```text
-reader:  cache miss ──► read from DB ──────────────► write snapshot to cache
-writer:                    └─► revoke in DB ──► delete cache key
-```
-
-The reader's write lands *after* the writer's delete, and a revoked credential keeps
-authenticating until its TTL expires. The protocol closes it in three steps: `delete` writes the
-tombstone **before** removing the entry, `insert` checks for a tombstone **before** writing, and
-tombstones outlive the longest plausible read-then-write window.
-
-### Namespacing and versioning
-
-```python
-REDIS_NAMESPACE = f"{REDIS_KEY_PREFIX}:v{REDIS_CACHE_VERSION}"
-```
-
-Every key hangs off this namespace. **Bump `REDIS_CACHE_VERSION` whenever you change what gets
-serialized** — the previous generation becomes unreachable and expires by TTL on its own. That is
-the correct response to a payload-format change, not flushing the cache and not adding migration
-logic to the deserializer.
-
-| Setting | Default | Purpose |
-|---|---|---|
-| `REDIS_KEY_PREFIX` | project slug | Namespace root |
-| `REDIS_CACHE_VERSION` | `1` | Generation counter |
-| `REDIS_DEFAULT_TTL_SECONDS` | `3600` | Fallback TTL |
-| `REDIS_SESSION_TTL_SECONDS` | `1800` | Authentication entries |
-| `REDIS_TOMBSTONE_TTL_SECONDS` | `30` | How long repopulation stays suppressed |
-| `REDIS_FLUSH_ON_STARTUP` | `True` | Wipe the namespace during startup |
-| `REDIS_MAX_CONNECTIONS` | `50` | Pool size |
-
-**The use case owns policy; the cache class only executes.** When to read through, when to
-invalidate, and which TTL to use are business decisions, so they live in one reviewable place.
-
----
-
-## Development
-
-### Make targets
-
-| Command | What it does |
-|---|---|
-| `make dev` | `uvicorn app.app:app --reload` |
-| `make start` | Full Docker stack, build + follow logs |
-| `make start-silent` | Full Docker stack, detached |
-| `make stop` | Stop the stack |
-| `make delete` | Stop and **remove volumes** — destroys data |
-| `make dependencies-up` | Only Postgres, Redis, and the admin UIs, following logs |
-| `make dependencies-up-silent` | Same, detached |
-| `make dependencies-down` | Stop those services |
-| `make logs` | Follow Compose logs |
-| `make view-processes` | `docker ps -a` |
-| `make migrate` | `alembic upgrade head` |
-| `make migration m="..."` | `alembic revision --autogenerate` |
-| `make lint` | `ruff check .` |
-| `make format` | `ruff format .` |
-| `make help` | List every target |
-
-### Docker services
-
-| Service | Image | Host port | Container port |
-|---|---|---|---|
-| `api` | built from `Dockerfile` | `${APPLICATION_PORT}` (8000) | 8000 |
-| `database` | `postgres:17-alpine` | `${POSTGRESQL_PORT}` (5432) | 5432 |
-| `database-admin` | `dpage/pgadmin4:9.2` | `${PGADMIN_PORT}` (8080) | 80 |
-| `cache` | `redis:8.6-alpine` | `${REDIS_PORT}` (6379) | 6379 |
-| `cache-admin` | `redis/redisinsight:3.4.2` | `${REDISINSIGHT_PORT}` (8081) | 5540 |
-
-`api` waits on healthchecks for both `database` and `cache` before starting. Redis runs with AOF
-persistence and an LRU eviction policy.
-
-### Scripts
-
-| Script | Purpose |
-|---|---|
-| `scripts/create_module.py` | Interactive generator for the four-layer module skeleton |
-| `scripts/generate_secret.py` | A 32-byte hex secret for the HMAC fingerprint settings |
-| `scripts/generate_fernet.py` | A Fernet key |
-| `scripts/directory_tree.py` | Writes the project tree to `scripts/directory_tree.txt` |
-| `scripts/websocket_test.html` | Browser WebSocket client — served at `/devtools/` in dev |
-| `scripts/asyncapi.yaml` | AsyncAPI 2.6 spec for the WebSocket channel |
-
-### Logging
-
-Structured JSON to **stderr** via loguru, serialized with `orjson`. In development the output is
-indented and syntax-highlighted; `stackprinter` renders rich tracebacks.
-
-```json
-{
-  "timestamp": "2026-07-31T12:34:56.789012+00:00",
-  "level": "INFO",
-  "message": "Creating api key 'CI pipeline' in database.",
-  "source": "repositories.py:create:31"
-}
-```
-
-| Level | Used for |
-|---|---|
-| `DEBUG` | Use-case entry and exit; cache hits and misses |
-| `INFO` | Repository calls, business decisions, and every raise of a business-rule exception |
-| `WARNING` | Best-effort operations that failed harmlessly, e.g. a WebSocket dispatch |
-| `ERROR` | Unexpected failures, always via `logger.opt(exception=e).error(...)` |
-| `CRITICAL` | Reserved |
-
-`LogRequestMiddleware` attaches a request id (length `LOGS_REQUEST_ID_LENGTH`) and timing headers
-to every request.
-
-> [!NOTE]
-> `LOGS_PATH` is currently unused — no file sink is registered. Logs go to stderr only, which is
-> the right default for containers. Add a `logger.add(...)` sink in `app/core/logging.py` if you
-> want files.
-
-### Testing
-
-`test/` mirrors `app/modules/`, with a package per module. The policy is **unit-first**: drive use
-cases through in-memory fakes of their Protocols, construct entities directly, and touch no real
-database, Redis, or network.
-
-```text
-test/
-├── core/
-└── modules/
-    ├── authentication/  example/  health/  key/
-    ├── knowledge/  notifications/  shared/  user/  websocket/
-```
-
-> [!NOTE]
-> pytest is **not yet a dependency** and the test packages are empty scaffolding. Install it with
-> `uv add --dev pytest pytest-asyncio`, then add `[tool.pytest.ini_options]` with
-> `asyncio_mode = "auto"` and `testpaths = ["test"]` to `pyproject.toml`.
-
----
-
-## Configuration
-
-Every setting is a typed field on `Settings` in `app/core/settings.py`, loaded from `.env` by
-pydantic-settings. Access it through the `settings` singleton — never `os.environ`.
-
-> [!IMPORTANT]
-> Most fields are **required**. An empty value in `.env` raises a `ValidationError` naming the key
-> at startup, which is deliberate: a silent default that differs between environments is far
-> harder to debug than a boot failure.
-
-<details>
-<summary><b>Full configuration reference</b> — all 83 keys</summary>
-
-<br/>
-
-#### Application
-
-| Key | Example                                       | Description |
-|---|-----------------------------------------------|---|
-| `APPLICATION_TITLE` | `ERPIoT` | OpenAPI title |
-| `APPLICATION_SUMMARY` | *(text)*                                      | OpenAPI summary |
-| `APPLICATION_DESCRIPTION` | *(markdown)*                                  | OpenAPI description |
-| `APPLICATION_VERSION` | `3.0.0`                                       | OpenAPI version |
-| `APPLICATION_CONTACT_NAME` | `Bruno Tanabe`                                | OpenAPI contact |
-| `APPLICATION_CONTACT_URL` | *(url)*                                       | OpenAPI contact |
-| `APPLICATION_CONTACT_EMAIL` | *(email)*                                     | OpenAPI contact |
-| `APPLICATION_CONTACT_PHONE` | *(phone)*                                     | OpenAPI contact |
-| `APPLICATION_PORT` | `8000`                                        | Host port |
-| `APPLICATION_ENVIRONMENT` | `development`                                 | `development` \| `homolog` \| `production` |
-| `APPLICATION_CONNECT_TIMEOUT_SECONDS` | `30`                                          | Connection timeout |
-| `APPLICATION_URL` | `http://localhost:8000`                       | Public base URL |
-| `APPLICATION_TABLE_PREFIX` | project slug                                  | Prefix on every table name |
-
-#### API key
-
-| Key | Example | Description |
-|---|---|---|
-| `API_KEY_PREFIX` | `iap` | Visible prefix on generated keys |
-| `API_KEY_HASH_FINGERPRINT` | *(32-byte hex)* | HMAC secret — `scripts/generate_secret.py` |
-| `API_KEY_ENTROPY_BYTES` | `32` | Randomness per generated key |
-
-#### Auth schemes
-
-| Key | Example | Description |
-|---|---|---|
-| `AUTH_BEARER_TOKEN_SCHEME_NAME` | `BearerAuth` | OpenAPI security scheme name |
-| `AUTH_BEARER_TOKEN_SCHEME_DESCRIPTION` | *(text)* | OpenAPI description |
-| `AUTH_API_KEY_NAME` | `X-API-Key` | Header carrying the API key |
-| `AUTH_API_KEY_SCHEME_NAME` | `ApiKeyAuth` | OpenAPI security scheme name |
-| `AUTH_API_KEY_DESCRIPTION` | *(text)* | OpenAPI description |
-
-#### Cookies
-
-| Key | Example | Description |
-|---|---|---|
-| `COOKIES_MAX_AGE_SECONDS` | `7776000` | Cookie lifetime (90 days) |
-| `COOKIES_TOKEN_TYPE_KEY` | `token_type` | Token-type cookie name |
-| `COOKIES_ACCESS_TOKEN_KEY` | `access_token` | Access-token cookie name |
-| `COOKIES_ACCESS_TOKEN_PATH` | `/api/v1/` | Access-token cookie scope |
-| `COOKIES_REFRESH_TOKEN_KEY` | `refresh_token` | Refresh-token cookie name |
-| `COOKIES_REFRESH_TOKEN_PATH` | `/api/v1/authentication/refresh/` | Refresh cookie scope — sent only to the refresh endpoint |
-| `COOKIES_DEVICE_KEY` | `device_id` | Device cookie name |
-| `COOKIES_DOMAIN` | `localhost` | Cookie domain |
-| `COOKIES_SAME_SITE` | `none` | `lax` \| `strict` \| `none` |
-
-#### JWT
-
-| Key | Example | Description |
-|---|---|---|
-| `JWT_ISSUER` | `http://localhost:8000` | `iss` claim |
-| `JWT_AUDIENCE` | `api://…` | `aud` claim |
-| `JWT_SIGNING_KEY_PASSWORD` | *(secret)* | Password for the signing private key |
-| `JWT_ENCRYPTION_KEY_PASSWORD` | *(secret)* | Password for the encryption private key |
-| `JWT_SIGNING_PRIVATE_KEY_PATH` | `secrets/keys/signing-private.pem` | Ed25519 private key |
-| `JWT_SIGNING_PUBLIC_KEY_PATH` | `secrets/keys/signing-public.pem` | Ed25519 public key |
-| `JWT_ENCRYPTION_PRIVATE_KEY_PATH` | `secrets/keys/encryption-private.pem` | X25519 private key |
-| `JWT_ENCRYPTION_PUBLIC_KEY_PATH` | `secrets/keys/encryption-public.pem` | X25519 public key |
-| `JWT_ACCESS_TOKEN_EXPIRE_MINUTES` | `30` | Access-token lifetime |
-| `JWT_REFRESH_TOKEN_EXPIRE_DAYS` | `90` | Refresh-token lifetime |
-| `JWT_HASH_FINGERPRINT` | *(32-byte hex)* | HMAC secret for `jti` fingerprints |
-| `JWT_AUTO_GENERATE_KEYS` | `True` | Generate missing key pairs on first boot |
-| `JWT_KEYS_DIR` | `secrets/keys` | Where key pairs live |
-
-#### Logs
-
-| Key | Example | Description |
-|---|---|---|
-| `LOGS_NAME` | project slug | Logger name |
-| `LOGS_PATH` | `logs` | Reserved — no file sink is registered yet |
-| `LOGS_LEVEL` | `INFO` | Minimum level |
-| `LOGS_REQUEST_ID_LENGTH` | `8` | Request-id length |
-| `LOGS_PYGMENTS_STYLE` | `monokai` | Highlight theme in development |
-
-#### PostgreSQL
-
-| Key | Example | Description |
-|---|---|---|
-| `POSTGRESQL_DATABASE` | project slug | Database name |
-| `POSTGRESQL_USERNAME` | *(user)* | Database user |
-| `POSTGRESQL_PASSWORD` | *(secret)* | Database password |
-| `POSTGRESQL_HOST` | `localhost` | Use `database` from inside Compose |
-| `POSTGRESQL_PORT` | `5432` | Database port |
-
-#### pgAdmin *(Compose only)*
-
-| Key | Example | Description |
-|---|---|---|
-| `PGADMIN_EMAIL` | *(email)* | pgAdmin login |
-| `PGADMIN_PASSWORD` | *(secret)* | pgAdmin password |
-| `PGADMIN_PORT` | `8080` | Host port |
-
-#### Redis
-
-| Key | Example | Description |
-|---|---|---|
-| `REDIS_HOST` | `localhost` | Use `cache` from inside Compose |
-| `REDIS_PORT` | `6379` | Redis port |
-| `REDIS_PASSWORD` | *(secret)* | Redis password |
-| `REDIS_DB` | `0` | Database index |
-| `REDIS_USERNAME` | `default` | ACL username |
-| `REDIS_SSL` | `False` | `rediss://` when true |
-| `REDIS_CONNECTION_TIMEOUT_SECONDS` | `10` | Connect timeout |
-| `REDIS_SOCKET_TIMEOUT_SECONDS` | `5` | Socket timeout |
-| `REDIS_DEFAULT_TTL_SECONDS` | `3600` | Default entry TTL |
-| `REDIS_SESSION_TTL_SECONDS` | `1800` | Authentication entry TTL |
-| `REDIS_TOMBSTONE_TTL_SECONDS` | `30` | Tombstone lifetime |
-| `REDIS_KEY_PREFIX` | project slug | Namespace root |
-| `REDIS_CACHE_VERSION` | `1` | Bump on payload-format change |
-| `REDIS_FLUSH_ON_STARTUP` | `True` | Wipe the namespace at startup |
-| `REDIS_MAX_CONNECTIONS` | `50` | Pool size |
-| `REDIS_DATABASES` | `16` | *(Compose only)* |
-| `REDIS_MAX_MEMORY` | `256mb` | *(Compose only)* |
-| `REDIS_MAX_MEMORY_POLICY` | `allkeys-lru` | *(Compose only)* |
-
-#### RedisInsight *(Compose only)*
-
-| Key | Example | Description |
-|---|---|---|
-| `REDISINSIGHT_PORT` | `8081` | Host port |
-| `REDISINSIGHT_REDIS_ALIAS` | *(name)* | Connection alias |
-
-#### ngrok
-
-| Key | Example | Description |
-|---|---|---|
-| `NGROK_AUTH_TOKEN` | *(token)* | Optional — starts a tunnel in `development` |
-
-#### Security
-
-| Key | Example | Description |
-|---|---|---|
-| `SECURITY_ALLOW_ORIGINS` | `["http://localhost:8000"]` | CORS **and** WebSocket origin allowlist |
-| `SECURITY_ALLOW_HEADERS` | `["Accept","Authorization",…]` | CORS headers |
-| `SECURITY_ALLOW_METHODS` | `["GET","POST",…]` | CORS methods |
-| `SECURITY_EMAIL_ALLOWED_DOMAINS` | `["admin.com"]` | Registration domain allowlist; `[]` disables it |
-| `SECURITY_ADMIN_EMAIL` | *(email)* | Seeded admin account |
-| `SECURITY_ADMIN_PASSWORD` | *(secret)* | Seeded admin password |
-
-</details>
-
-<details>
-<summary><b>Computed settings</b> — derived, not configured</summary>
-
-<br/>
-
-Sixteen values are computed from the keys above and must not be set directly:
-
-| Property | Derived from |
-|---|---|
-| `APPLICATION_ENVIRONMENT_DEBUG` | `APPLICATION_ENVIRONMENT != production` |
-| `COOKIES_ACCESS_TOKEN_MAX_AGE` | `JWT_ACCESS_TOKEN_EXPIRE_MINUTES × 60` |
-| `COOKIES_REFRESH_TOKEN_MAX_AGE` | `JWT_REFRESH_TOKEN_EXPIRE_DAYS × 86400` |
-| `POSTGRESQL_DATABASE_URL` / `_ASYNC_DATABASE_URL` | The `POSTGRESQL_*` group |
-| `REDIS_URL` | The `REDIS_*` connection group |
-| `REDIS_NAMESPACE` | `REDIS_KEY_PREFIX` + `REDIS_CACHE_VERSION` |
-| `JWT_SIGNING_*_KEY`, `JWT_ENCRYPTION_*_KEY` | The PEM files on disk |
-| `SECURITY_*_ALLOWED_PATHS` | The per-tier path rules |
-
-Set the JWT expiry, not the cookie age — the cookie age follows.
-
-</details>
-
----
-
-## Known Limitations
-
-Documented on purpose. These are conscious trade-offs or work in progress — not defects to
-"clean up".
-
-| Area | Current state | Impact |
-|---|---|---|
-| **WebSocket fan-out** | `ConnectionManager` holds connections in an in-memory dict on `app.state` | Delivery works within one process only. Multi-worker deployments need Redis pub/sub. |
-| **`knowledge` caching** | `IKnowledgeCache` declares only `insert`, and the use case never calls it | The scaffolding is present but inactive. Follow `key` to complete it. |
-| **API-key tier** | `SECURITY_API_KEY_ALLOWED_PATHS` is an empty tuple | Key authentication is fully implemented but no endpoint accepts it yet. |
-| **Tests** | Packages exist, pytest is not a dependency | Run `uv add --dev pytest pytest-asyncio` to bootstrap. |
-| **File logging** | `LOGS_PATH` is configured but no file sink is registered | Logs go to stderr only — correct for containers, surprising if you expect files. |
-| **`GET /`** | Uses `no_authentication`, but `/` is absent from `SECURITY_NO_AUTH_PATHS` | The docs redirect returns **403**. Add `_path_rule("/", "GET")` to that tier to enable it. |
-
----
-
-## Contributing
-
-1. Fork and branch from `development`.
-2. Follow the conventions — [Architecture](#architecture) documents every layer pattern, the three
-   error-handling shapes, and the naming rules.
-3. `make lint && make format` before committing.
-4. Use [Conventional Commits](https://www.conventionalcommits.org/): `feat(key): add rotation endpoint`.
-5. Open a pull request describing what changed and why.
-
-New to the codebase? Read `app/modules/key/` end to end. It exercises every layer and every
-pattern in a single module.
-
----
-
-## License
-
-Released under the [MIT License](LICENSE). © 2025 Bruno Tanabe.
-
-<div align="center">
-
-**Built by  KONGNAKORN JANTAKUN**
-
-If this template saved you time, consider leaving a ⭐
-
-</div>
-
-# 📘 คู่มือสถาปัตยกรรมระบบ ERP + IoT สำหรับกลุ่มบริษัทอาหาร
-## (อัปเดตจาก FastAPI Clean Architecture + DDD Template)
-
-> **เอกสารฉบับสมบูรณ์** — ผสานสถาปัตยกรรมจาก **ERPIoT** เข้ากับ **ERP กลุ่มบริษัทอาหาร (Part 1-2)** และ **IoT ฟาร์มเห็ดอัจฉริยะ** เพื่อสร้างระบบ ERP + IoT แบบ Multi-company ที่รองรับทุกมิติธุรกิจอาหาร
-
----
-
-## สารบัญ
-
-1. [บทนิยาม](#1-บทนิยาม)
-2. [บทหัวข้อ](#2-บทหัวข้อ)
-3. [โครงสร้างการทำงาน](#3-โครงสร้างการทำงาน)
-4. [วัตถุประสงค์](#4-วัตถุประสงค์)
-5. [กลุ่มเป้าหมาย](#5-กลุ่มเป้าหมาย)
-6. [ความรู้พื้นฐาน](#6-ความรู้พื้นฐาน)
-7. [บทนำ](#7-บทนำ)
-8. [โครงสร้างโฟลเดอร์ app/modules](#8-โครงสร้างโฟลเดอร์-appmodules)
-9. [หลักการทำงาน (Concept)](#9-หลักการทำงาน-concept)
-10. [Workflow และ Dataflow](#10-workflow-และ-dataflow)
-11. [Case Study](#11-case-study)
+1. [Definitions](#1-definitions)
+2. [Topics](#2-topics)
+3. [Operating Structure](#3-operating-structure)
+4. [Objectives](#4-objectives)
+5. [Target Groups](#5-target-groups)
+6. [Prerequisites](#6-prerequisites)
+7. [Introduction](#7-introduction)
+8. [Folder Structure: app/modules](#8-folder-structure-appmodules)
+9. [Core Concepts](#9-core-concepts)
+10. [Workflow and Dataflow](#10-workflow-and-dataflow)
+11. [Case Studies](#11-case-studies)
 12. [AI Prompt Template (template_modules.md)](#12-ai-prompt-template)
-13. [AI Prompt ต่อ Module](#13-ai-prompt-ต่อ-module)
-14. [Checklist Module](#14-checklist-module)
+13. [AI Prompt per Module](#13-ai-prompt-per-module)
+14. [Module Checklist](#14-module-checklist)
 15. [Security Code](#15-security-code)
-16. [Load Test](#16-load-test-development)
-17. [สรุป](#17-สรุป)
+16. [Load Test (Development)](#16-load-test-development)
+17. [Summary](#17-summary)
 18. [Git Flow / Code Review / CI-CD](#18-git-flow--code-review--cicd)
 19. [Root Cause Analysis](#19-root-cause-analysis)
 
 ---
 
-## 1. บทนิยาม
 
-| คำศัพท์ | ความหมาย |
+## 1. Definitions
+
+| Term | Meaning |
 |---|---|
-| **Clean Architecture** | สถาปัตยกรรมที่แยกชั้นโค้ดเป็น Domain, Application, Infrastructure, Presentation โดย dependencies ชี้เข้าด้านในเสมอ |
-| **DDD (Domain-Driven Design)** | การออกแบบซอฟต์แวร์ตาม business domain จริง โดยใช้ Entity, Value Object, Aggregate, Domain Event |
-| **Multi-company (Multi-tenant)** | ระบบเดียวรองรับหลายนิติบุคคล แยกข้อมูลด้วย Schema-per-Tenant |
-| **Money Path** | เส้นทางเงิน: Order → Invoice → Ledger → Outbox → Cloud → Reconciliation |
-| **Goods Path** | เส้นทางสินค้า: PO → Receive → Lot → Store → Issue → Produce → Ship → Sell |
-| **Data Path** | เส้นทางข้อมูล: Sensor/RFID/GPS/POS → Kafka → Stream → OLAP → BI/KPI |
-| **Idempotency** | คุณสมบัติที่ทำให้การเรียกซ้ำให้ผลลัพธ์เดิม ป้องกัน double-charge |
-| **Outbox Pattern** | เขียน DB ก่อน แล้วค่อย sync กับระบบภายนอกผ่าน outbox table |
-| **FEFO/FIFO** | First-Expired-First-Out / First-In-First-Out การหมุนสต็อก |
-| **Traceability** | ความสามารถติดตามสินค้าตั้งแต่ฟาร์ม → โรงงาน → ร้านค้า → ลูกค้า |
-| **Reconciliation** | การกระทบยอดระหว่างเงิน/สินค้ากับระบบบัญชี |
-| **Saga Pattern** | จัดการ distributed transaction ด้วยลำดับ local transaction + compensating action |
-| **Domain Event** | เหตุการณ์ในโดเมน เช่น InvoiceIssued, StockLow, BatchCompleted |
-| **Value Object** | วัตถุที่ไม่มี identity เช่น Money, Email, Address |
-| **Aggregate** | กลุ่มของ Entity ที่จัดการเป็นหน่วยเดียว |
-| **MQTT** | โปรโตคอลส่งข้อความแบบ publish/subscribe เหมาะกับ IoT |
-| **Digital Twin** | แบบจำลองเสมือนของโรงงาน/ฟาร์ม ใช้ทดลองก่อนใช้งานจริง |
-| **KPI** | ตัวชี้วัดความสำเร็จ เช่น Gross margin, Waste %, NPS |
-| **RCA** | Root Cause Analysis การวิเคราะห์หาสาเหตุรากของปัญหา |
+| **Clean Architecture** | An architecture that separates code into Domain, Application, Infrastructure, and Presentation layers, with dependencies always pointing inward |
+| **DDD (Domain-Driven Design)** | Software design based on the real business domain, using Entities, Value Objects, Aggregates, and Domain Events |
+| **Multi-company (Multi-tenant)** | One system serving multiple legal entities, with data isolated via Schema-per-Tenant |
+| **Money Path** | The money trail: Order → Invoice → Ledger → Outbox → Cloud → Reconciliation |
+| **Goods Path** | The goods trail: PO → Receive → Lot → Store → Issue → Produce → Ship → Sell |
+| **Data Path** | The data trail: Sensor/RFID/GPS/POS → Kafka → Stream → OLAP → BI/KPI |
+| **Idempotency** | The property that repeated calls produce the same result, preventing double-charges |
+| **Outbox Pattern** | Write to the DB first, then sync with external systems via an outbox table |
+| **FEFO/FIFO** | First-Expired-First-Out / First-In-First-Out stock rotation |
+| **Traceability** | The ability to track products from farm → factory → store → customer |
+| **Reconciliation** | The process of matching money/goods with the accounting system |
+| **Saga Pattern** | Managing distributed transactions through a sequence of local transactions + compensating actions |
+| **Domain Event** | An event in the domain, e.g., InvoiceIssued, StockLow, BatchCompleted |
+| **Value Object** | An object without identity, e.g., Money, Email, Address |
+| **Aggregate** | A group of Entities managed as a single unit |
+| **MQTT** | A publish/subscribe messaging protocol suited to IoT |
+| **Digital Twin** | A virtual model of a factory/farm used for simulation before real-world deployment |
+| **KPI** | Key Performance Indicator, e.g., Gross margin, Waste %, NPS |
+| **RCA** | Root Cause Analysis |
 
 ---
 
-## 2. บทหัวข้อ
+## 2. Topics
 
-### 2.1 โครงสร้างการทำงาน
-ระบบแบ่งเป็น **8 Layers** ตาม ERP-Part-1-2:
+### 2.1 Operating Structure
+The system is divided into **8 Layers** per ERP-Part-1-2:
 
-| Layer | ชื่อ | Module |
+| Layer | Name | Modules |
 |---|---|---|
 | **0** | Core (cross-cutting) | money, tenant_context, audit, idempotency, config, events |
 | **1** | Foundation | tenancy, authentication, user, employee, customer, supplier, product, pricing |
@@ -2204,23 +72,23 @@ If this template saved you time, consider leaving a ⭐
 | **6** | Monitoring & Sensing | iot, cctv, monitoring, backup, alerting, audit_viewer |
 | **7** | Templates | health, example, blank |
 
-### 2.2 วัตถุประสงค์
-- สร้าง ERP กลาง (Multi-company) สำหรับกลุ่มบริษัทอาหาร
-- รองรับ 3 เส้นทางหลัก: Money Path, Goods Path, Data Path
-- เชื่อมต่อ IoT + Automation + AI สำหรับโรงงานแปรรูปและฟาร์ม
-- มี Traceability ครบวงจร (QR/RFID/GPS)
-- รายงานและ KPI ทุกระดับ (Daily → 5Y)
-- ขยายไปบริษัทในเครือได้ (Multi-tenant)
+### 2.2 Objectives
+- Build a central ERP (Multi-company) for a food group
+- Support 3 main paths: Money Path, Goods Path, Data Path
+- Connect IoT + Automation + AI for processing plants and farms
+- Provide end-to-end Traceability (QR/RFID/GPS)
+- Deliver reports and KPIs at every level (Daily → 5Y)
+- Extend to affiliated companies (Multi-tenant)
 
-### 2.3 กลุ่มเป้าหมาย
-- เจ้าของกลุ่มบริษัทอาหาร
-- ผู้จัดการโรงงาน/ร้านค้า/ขนส่ง
-- ทีมบัญชี/การเงิน
-- ทีมไอทีและนักพัฒนา
-- นักวิเคราะห์ข้อมูล
-- พนักงานหน้างาน (POS, โกดัง, ผลิต)
+### 2.3 Target Groups
+- Owners of food group companies
+- Factory/store/transport managers
+- Accounting/finance teams
+- IT teams and developers
+- Data analysts
+- Frontline staff (POS, warehouse, production)
 
-### 2.4 ความรู้พื้นฐาน
+### 2.4 Prerequisites
 - Python 3.14+, FastAPI, Pydantic v2
 - Clean Architecture + DDD
 - PostgreSQL, Redis, Kafka
@@ -2228,14 +96,14 @@ If this template saved you time, consider leaving a ⭐
 - Machine Learning (LSTM, YOLO, XGBoost)
 - Docker, CI/CD, Git Flow
 
-### 2.5 เนื้อหาโดยย่อ
-ระบบ ERP นี้ขยายจาก **ERPIoT** ซึ่งมี 9 modules, 23 routes, 7 tables โดยเพิ่ม **55 modules** ตาม ERP-Part-1-2 ครอบคลุมทุกมิติธุรกิจอาหาร ตั้งแต่เงิน สินค้า การผลิต ขนส่ง ร้านค้า Traceability วิเคราะห์ คน ลูกค้า KPI Config Audit
+### 2.5 Content Overview
+This ERP system extends **ERPIoT**, which has 9 modules, 23 routes, and 7 tables, by adding **55 modules** per ERP-Part-1-2, covering every dimension of the food business — money, goods, production, transport, retail, traceability, analytics, people, customers, KPIs, config, and audit.
 
 ---
 
-## 3. โครงสร้างการทำงาน
+## 3. Operating Structure
 
-### 3.1 สถาปัตยกรรม 4 Layers (จาก Template)
+### 3.1 Four-Layer Architecture (from the Template)
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -2263,7 +131,7 @@ If this template saved you time, consider leaving a ⭐
 └─────────────────────────────────────────────────────────────┘
 ```
 
-### 3.2 โครงสร้าง Module (4 Layers × 4 ไฟล์)
+### 3.2 Module Structure (4 Layers × 4 Files)
 
 ```
 app/modules/{module}/
@@ -2289,9 +157,152 @@ app/modules/{module}/
     └── dependencies.py      # Depends factories
 ```
 
-### 3.3 3 Error-Handling Shapes
 
-| Shape | ใช้ที่ | จำนวน Branch |
+```bash   
+    backend/
+    │
+    ├── app/                                   # 📦 แอปพลิเคชันหลัก
+    │   │
+    │   ├── __init__.py
+    │   ├── app.py                             # Entry point — FastAPI()
+    │   ├── routes.py                          # Router registration
+    │   ├── middleware.py                      # Middleware registration
+    │   │
+    │   ├── core/                              # ⚙️ Cross-cutting concerns
+    │   │   ├── __init__.py
+    │   │   ├── settings.py                    # Settings (pydantic-settings)
+    │   │   ├── security.py                    # Nested JWT (JWS + JWE)
+    │   │   ├── database.py                    # SQLAlchemy async engine
+    │   │   ├── cache.py                       # Redis client
+    │   │   ├── logging.py                     # Loguru + orjson
+    │   │   ├── middleware.py                  # ResponseFormatting, LogRequest, DeviceId
+    │   │   └── exceptions.py                  # CoreException
+    │   │
+    │   └── modules/                           # 📚 9 modules (ตาม README)
+    │       │
+    │       ├── shared/                        # 🔗 Base types (ไม่ routed)
+    │       │   ├── domain/
+    │       │   │   ├── entities.py            # BaseEntity, DomainError, Pagination
+    │       │   │   ├── value_objects.py       # UNSET, Email, Name, Phone
+    │       │   │   └── enums.py               # Role, ResponseMessages, SortOrder
+    │       │   ├── application/
+    │       │   │   ├── use_cases.py           # SharedUseCases
+    │       │   │   ├── exceptions.py          # StandardException, DomainException
+    │       │   │   └── utils.py               # BRASILIA_TZ, resolve_client_ip
+    │       │   ├── infrastructure/
+    │       │   │   └── models.py              # Base, BaseModel
+    │       │   └── presentation/
+    │       │       ├── schemas.py             # StandardResponse, Pagination*
+    │       │       └── dependencies.py        # Cross-module factories
+    │       │
+    │       ├── authentication/                # 🔐 Login/Refresh/Logout
+    │       │   ├── domain/
+    │       │   │   ├── entities.py            # Authentication
+    │       │   │   ├── value_objects.py
+    │       │   │   └── enums.py
+    │       │   ├── application/
+    │       │   │   ├── interfaces.py          # ITokenService
+    │       │   │   ├── use_cases.py
+    │       │   │   ├── mappers.py
+    │       │   │   ├── exceptions.py
+    │       │   │   └── utils.py
+    │       │   ├── infrastructure/
+    │       │   │   ├── models.py              # Authentication, RefreshToken, AccessToken
+    │       │   │   ├── repositories.py
+    │       │   │   ├── caches.py
+    │       │   │   └── services.py            # TokenService
+    │       │   └── presentation/
+    │       │       ├── routers.py
+    │       │       ├── schemas.py
+    │       │       ├── docs.py
+    │       │       └── dependencies.py
+    │       │
+    │       ├── user/                          # 👤 Accounts + Roles
+    │       │   ├── domain/
+    │       │   ├── application/
+    │       │   ├── infrastructure/
+    │       │   └── presentation/
+    │       │
+    │       ├── key/                           # 🔑 API Keys (canonical)
+    │       │   ├── domain/
+    │       │   ├── application/
+    │       │   ├── infrastructure/
+    │       │   └── presentation/
+    │       │
+    │       ├── knowledge/                     # 📚 CRUD + Broadcast
+    │       │   ├── domain/
+    │       │   ├── application/
+    │       │   ├── infrastructure/
+    │       │   └── presentation/
+    │       │
+    │       ├── notification/                  # 🔔 Role fan-out
+    │       │   ├── domain/
+    │       │   ├── application/
+    │       │   ├── infrastructure/
+    │       │   └── presentation/
+    │       │
+    │       ├── websocket/                     # 🔌 Real-time
+    │       │   ├── application/
+    │       │   ├── infrastructure/
+    │       │   └── presentation/
+    │       │
+    │       ├── health/                        # ❤️ Liveness
+    │       │   └── presentation/
+    │       │
+    │       └── example/                       # 📝 Minimal reference
+    │           └── presentation/
+    │
+    ├── migrations/                            # 🗄️ Alembic
+    │   ├── env.py                             # ⚠️ ต้อง import ทุก model
+    │   ├── script.py.mako
+    │   └── versions/                          # (empty)
+    │
+    ├── scripts/                               # 🛠️ Utility scripts
+    │   ├── create_module.py
+    │   ├── generate_secret.py
+    │   ├── generate_fernet.py
+    │   ├── directory_tree.py
+    │   ├── websocket_test.html
+    │   └── asyncapi.yaml
+    │
+    ├── secrets/keys/                          # 🔐 JWT keys (gitignored)
+    │   ├── signing-private.pem
+    │   ├── signing-public.pem
+    │   ├── encryption-private.pem
+    │   └── encryption-public.pem
+    │
+    ├── test/                                  # 🧪 Tests
+    │   ├── core/
+    │   └── modules/
+    │       ├── authentication/
+    │       ├── example/
+    │       ├── health/
+    │       ├── key/
+    │       ├── knowledge/
+    │       ├── notifications/
+    │       ├── shared/
+    │       ├── user/
+    │       └── websocket/
+    │
+    ├── docs/                                  # 📘 Postman + specs
+    │   └── postman_collection.json
+    │
+    ├── .env.example
+    ├── .gitignore
+    ├── .python-version
+    ├── alembic.ini
+    ├── docker-compose.yaml                    # FastAPI stack (standalone)
+    ├── Dockerfile
+    ├── Makefile
+    ├── pyproject.toml
+    ├── requirements.txt
+    ├── README.md
+    └── README-PTBR.md
+```
+
+### 3.3 Three Error-Handling Shapes
+
+| Shape | Used In | Branches |
 |---|---|---|
 | **3-branch** | Use cases + router handlers | `StandardException → DomainException → Exception` |
 | **2-branch** | Repositories + services | `StandardException → Exception` |
@@ -2299,37 +310,37 @@ app/modules/{module}/
 
 ---
 
-## 4. วัตถุประสงค์ (รายละเอียด)
+## 4. Objectives (Detailed)
 
-1. **รวมศูนย์ข้อมูล** — 5 นิติบุคคล 3+ สาขา ใช้ ERP เดียว
-2. **เงินนิ่ง** — Money recon discrepancy = 0, Invoice ไม่ซ้ำ, VAT ถูกต้อง
-3. **สินค้านิ่ง** — Stock accuracy ≥ 99%, Lot traceability 100%
-4. **Traceability** — Forward: lot → shipment → customer, Backward: customer → lot → supplier
-5. **อัตโนมัติ** — Auto control พัดลม/พ่นหมอก/ไฟ ตามค่าเซ็นเซอร์
-6. **คาดการณ์** — Demand forecast MAPE < 20%
-7. **KPI** — ทุกระดับ (Company/Branch/Team/Individual)
-8. **ขยายได้** — Multi-tenant สำหรับบริษัทในเครือ
+1. **Centralize data** — 5 legal entities, 3+ branches, one ERP
+2. **Money stability** — Money recon discrepancy = 0, no duplicate invoices, correct VAT
+3. **Goods stability** — Stock accuracy ≥ 99%, Lot traceability 100%
+4. **Traceability** — Forward: lot → shipment → customer; Backward: customer → lot → supplier
+5. **Automation** — Auto-control fans/misters/lights based on sensor values
+6. **Forecasting** — Demand forecast MAPE < 20%
+7. **KPI** — At every level (Company/Branch/Team/Individual)
+8. **Scalability** — Multi-tenant for affiliated companies
 
 ---
 
-## 5. กลุ่มเป้าหมาย (รายละเอียด)
+## 5. Target Groups (Detailed)
 
-| กลุ่ม | ความต้องการ | Module ที่ใช้ |
+| Group | Needs | Modules Used |
 |---|---|---|
-| เจ้าของ | ภาพรวมกำไร/ขาดทุน | reporting, analytics, kpi |
-| ผู้จัดการโรงงาน | ผลิต, yield, waste | production, recipe, quality |
-| ผู้จัดการร้าน | ขาย, สต็อก, shift | pos, retail, inventory |
-| ทีมบัญชี | ใบกำกับ, ledger, VAT | invoice, ledger, tax |
-| ทีมขนส่ง | เส้นทาง, GPS, POD | transport, route, gps |
-| นักวิเคราะห์ | forecast, trend | forecast, analytics |
-| พนักงาน | ทำงานประจำวัน | pos, shift, inventory |
-| ลูกค้า B2B/B2C | สั่งซื้อ, ติดตาม | order, line_channel, loyalty |
+| Owners | Profit/loss overview | reporting, analytics, kpi |
+| Factory managers | Production, yield, waste | production, recipe, quality |
+| Store managers | Sales, stock, shifts | pos, retail, inventory |
+| Accounting teams | Invoices, ledger, VAT | invoice, ledger, tax |
+| Transport teams | Routes, GPS, POD | transport, route, gps |
+| Analysts | Forecast, trends | forecast, analytics |
+| Frontline staff | Daily operations | pos, shift, inventory |
+| B2B/B2C customers | Ordering, tracking | order, line_channel, loyalty |
 
 ---
 
-## 6. ความรู้พื้นฐาน
+## 6. Prerequisites
 
-| หัวข้อ | รายละเอียด | แหล่งเรียนรู้ |
+| Topic | Details | Learning Resource |
 |---|---|---|
 | Python 3.14+ | Syntax, async/await, type hints | python.org |
 | FastAPI | Routing, DI, middleware | fastapi.tiangolo.com |
@@ -2344,21 +355,21 @@ app/modules/{module}/
 
 ---
 
-## 7. บทนำ
+## 7. Introduction
 
-**ERPIoT** เป็น template ที่ไม่เหมือนใคร — ไม่ได้ให้แค่โฟลเดอร์ว่างกับ diagram แต่ให้ **working application** พร้อม cookie-based authentication ด้วย nested JWTs, API-key management with rotation, RBAC สองชั้น, Redis cache-aside with tombstone invalidation, WebSocket real-time, notifications with role fan-out และ Docker stack ที่ migrate ตัวเองบน boot มี **9 modules, 23 routes, 7 tables** — ทั้งหมดใช้ pattern เดียวกันที่คัดลอกไป module ที่ 10 ได้ทันที
+**ERPIoT** is a template unlike any other — it doesn't just give you empty folders and a diagram, it gives you a **working application** with cookie-based authentication using nested JWTs, API-key management with rotation, two-layer RBAC, Redis cache-aside with tombstone invalidation, real-time WebSocket, notifications with role fan-out, and a Docker stack that migrates itself on boot. It has **9 modules, 23 routes, 7 tables** — all following the same pattern you can copy for the 10th module.
 
-**ERP-Part-1-2** ขยาย template นี้เป็น **55 modules** ครอบคลุมทุกมิติธุรกิจอาหาร ตั้งแต่ Money Path, Goods Path, Data Path พร้อม Traceability (QR/RFID/GPS), IoT, AI Forecast, KPI และ Multi-tenant roll-out
+**ERP-Part-1-2** extends this template to **55 modules** covering every dimension of the food business — Money Path, Goods Path, Data Path — with Traceability (QR/RFID/GPS), IoT, AI Forecast, KPI, and Multi-tenant roll-out.
 
-**IoT Design** เพิ่มชั้น **Data Acquisition → Connectivity → Data Platform → AI & Analytics → Automation & Control** สำหรับฟาร์มเห็ดอัจฉริยะ ด้วยเซ็นเซอร์ DHT22, MH-Z19B, กล้อง RGB/Thermal, MQTT, Kafka, InfluxDB, LSTM, YOLOv8, Reinforcement Learning
+**IoT Design** adds the **Data Acquisition → Connectivity → Data Platform → AI & Analytics → Automation & Control** layers for smart mushroom farms using DHT22, MH-Z19B sensors, RGB/Thermal cameras, MQTT, Kafka, InfluxDB, LSTM, YOLOv8, and Reinforcement Learning.
 
-ระบบรวมนี้ตอบโจทย์ **กลุ่มบริษัทอาหาร** ที่ต้องการ ERP กลาง + IoT + AI ตั้งแต่ต้นน้ำ (ฟาร์ม) กลางน้ำ (โรงงานแปรรูป) ปลายน้ำ (ร้านค้า/ขนส่ง/ลูกค้า)
+This combined system answers the needs of **food group companies** that want a central ERP + IoT + AI spanning upstream (farm), midstream (processing plant), and downstream (retail/transport/customer).
 
 ---
 
-## 8. โครงสร้างโฟลเดอร์ app/modules
+## 8. Folder Structure: app/modules
 
-### 8.1 โครงสร้างเดิม (จาก Template)
+### 8.1 Original Structure (from the Template)
 
 ```
 app/modules/
@@ -2373,12 +384,12 @@ app/modules/
 └── example/          # Minimal reference module
 ```
 
-### 8.2 โครงสร้างใหม่ (จาก ERP-Part-1-2) — 55 Modules
+### 8.2 New Structure (from ERP-Part-1-2) — 55 Modules
 
 ```
 app/modules/
 │
-├── shared/                          # Base types (ไม่ routed)
+├── shared/                          # Base types (not routed)
 │
 ├── LAYER 0: CORE (cross-cutting)
 │   ├── money/                       # Decimal primitive, VAT
@@ -2401,7 +412,7 @@ app/modules/
 │
 ├── LAYER 2: MONEY PATH
 │   ├── order/                       # Order origin
-│   ├── invoice/                     # Invoice (หัวใจ)
+│   ├── invoice/                     # Invoice (core)
 │   ├── ledger/                      # Accounting
 │   ├── payment/                     # Payment
 │   ├── accounting_gateway/          # Cloud sync
@@ -2453,7 +464,7 @@ app/modules/
     └── blank/                       # Template
 ```
 
-### 8.3 โครงสร้าง Module มาตรฐาน (4 Layers)
+### 8.3 Standard Module Structure (4 Layers)
 
 ```
 app/modules/{module}/
@@ -2481,28 +492,28 @@ app/modules/{module}/
 
 ---
 
-## 9. หลักการทำงาน (Concept)
+## 9. Core Concepts
 
-### 9.1 หลักการออกแบบ 12 ข้อ
+### 9.1 Twelve Design Principles
 
 ```
 [1]  Money is Domain Invariant — Decimal + transaction + read-back
-[2]  Read-Back Verification — เขียนแล้วอ่านกลับมาเทียบก่อน commit
+[2]  Read-Back Verification — write then read back to compare before commit
 [3]  Idempotency Everywhere on Money/Goods Path
-[4]  Append-Only Audit — INSERT เท่านั้น
-[5]  Schema-Per-Tenant — แยกบริษัทในระดับ PostgreSQL schema
-[6]  Outbox for External Sync — เขียน DB ก่อน sync cloud
-[7]  Reversible Ledger — ห้ามลบ entry ต้อง reversal
+[4]  Append-Only Audit — INSERT only
+[5]  Schema-Per-Tenant — isolate companies at the PostgreSQL schema level
+[6]  Outbox for External Sync — write DB first, then sync to cloud
+[7]  Reversible Ledger — never delete an entry; use reversal
 [8]  Observable by Default — log + money/goods-path probe
-[9]  Lot Traceability — ทุก lot ต้อง trace ได้ forward+backward
-[10] FEFO/FIFO by Default — สต็อกต้องหมุนตามวันหมดอายุ/รับก่อน
-[11] Event-Driven for Analytics — ใช้ Kafka/outbox สำหรับ BI/KPI
-[12] Config over Code — VAT, waste%, pricing ต้อง config ไม่ hardcode
+[9]  Lot Traceability — every lot must be traceable forward + backward
+[10] FEFO/FIFO by Default — stock must rotate by expiry/receipt
+[11] Event-Driven for Analytics — use Kafka/outbox for BI/KPI
+[12] Config over Code — VAT, waste%, pricing must be config, not hardcoded
 ```
 
 ### 9.2 Cross-cutting Invariants
 
-| Invariant | ขอบเขต | ตรวจโดย |
+| Invariant | Scope | Verified By |
 |---|---|---|
 | Invoice total = sum(lines) + VAT | Money | Money VO + test |
 | sum(debit) = sum(credit) | Ledger | Domain invariant |
@@ -2511,25 +522,23 @@ app/modules/{module}/
 | Batch input = output + waste | Production | Yield check |
 | Shipment contents = Invoice contents | Transport | Dispatch check |
 | KPI actual = Σ(source events) | KPI | Aggregation check |
-| ทุก action แตะเงิน/สต็อก → audit log | ทุก module | Middleware |
+| Every action touching money/stock → audit log | All modules | Middleware |
 
-### 9.3 3 Error-Handling Shapes
+### 9.3 Three Error-Handling Shapes
 
 ```python
-# ===== 3-branch: Use cases + router handlers =====
-# 3-branch: ใช้ใน use cases และ router handlers
+# ===== 3-branch: use cases and router handlers =====
 try:
     ...
 except StandardException:
-    raise  # ต้องมาก่อนเสมอ — StandardException extends HTTPException
+    raise  # Must come first — StandardException extends HTTPException
 except DomainError as e:
-    raise DomainException(e)  # แปลง domain error เป็น HTTP error
+    raise DomainException(e)  # Convert domain error to HTTP error
 except Exception as e:
     logger.opt(exception=e).error("An error occurred in the create key endpoint.")
     raise KeyException()
 
-# ===== 2-branch: Repositories + services =====
-# 2-branch: ใช้ใน repositories และ services (ไม่ประเมิน domain rules)
+# ===== 2-branch: repositories and services (no domain rule evaluation) =====
 try:
     ...
 except StandardException:
@@ -2538,8 +547,7 @@ except Exception as e:
     logger.opt(exception=e).error("An error occurred in the create key repository.")
     raise KeyException()
 
-# ===== Never-raise: Caches =====
-# Never-raise: ใช้ใน caches (catch → log → return None)
+# ===== Never-raise: caches (catch → log → return None) =====
 try:
     ...
 except Exception as e:
@@ -2549,19 +557,19 @@ except Exception as e:
     return None
 ```
 
-### 9.4 3 Error-Handling Shapes (ตาราง)
+### 9.4 Three Error-Handling Shapes (Table)
 
-| Shape | ใช้ที่ | จำนวน Branch | หลักการ |
+| Shape | Used In | Branches | Principle |
 |---|---|---|---|
 | **3-branch** | Use cases, routers | 3 | `StandardException → DomainError → Exception` |
 | **2-branch** | Repositories, services | 2 | `StandardException → Exception` |
 | **Never-raise** | Caches | 1 | catch → log → return `None` |
 
-> ⚠️ **`except StandardException` ต้องมาก่อนเสมอ** เพราะ `StandardException` extends `HTTPException` — ถ้าเรียงผิดจะกลืน 404/409 เป็น 500
+> ⚠️ **`except StandardException` must come first** because `StandardException` extends `HTTPException` — wrong ordering swallows 404/409 into 500.
 
 ---
 
-## 10. Workflow และ Dataflow
+## 10. Workflow and Dataflow
 
 ### 10.1 Money Path
 
@@ -2577,7 +585,7 @@ except Exception as e:
              └──────────────┘
 ```
 
-**กติกา:** Idempotency · DB Transaction · Domain Invariant · Audit · Read-Back
+**Rules:** Idempotency · DB Transaction · Domain Invariant · Audit · Read-Back
 
 ### 10.2 Goods Path
 
@@ -2587,7 +595,7 @@ except Exception as e:
 └─────┘   └─────────┘   └─────┘   └───────┘   └───────┘   └─────────┘   └──────┘   └──────┘
 ```
 
-**กติกา:** FEFO/FIFO · Lot traceability · Cold-chain · Cycle count
+**Rules:** FEFO/FIFO · Lot traceability · Cold-chain · Cycle count
 
 ### 10.3 Data Path
 
@@ -2598,7 +606,7 @@ except Exception as e:
 └──────────────────┘               └─────────────────┘
 ```
 
-**กติกา:** At-least-once · Dedup · Time-window · Late data handling
+**Rules:** At-least-once · Dedup · Time-window · Late data handling
 
 ### 10.4 Dataflow Diagram (IoT + ERP Integration)
 
@@ -2628,7 +636,7 @@ except Exception as e:
                    └──────────┘
 ```
 
-### 10.5 Request Lifecycle (จาก Template)
+### 10.5 Request Lifecycle (from the Template)
 
 ```
 Client
@@ -2668,91 +676,91 @@ Client
                         JSON Response
 ```
 
-**หลักการสำคัญ:** Handlers never build the response envelope — `ResponseFormattingMiddleware` does that. Handlers never contain business logic — the use case does. Body of every handler is exactly `payload → mapper → use case → mapper → return`
+**Key principle:** Handlers never build the response envelope — `ResponseFormattingMiddleware` does that. Handlers never contain business logic — the use case does. The body of every handler is exactly `payload → mapper → use case → mapper → return`.
 
 ---
 
-## 11. Case Study
+## 11. Case Studies
 
-### 11.1 กรณีศึกษา: กลุ่มบริษัทอาหาร 5 นิติบุคคล
+### 11.1 Case Study: Food Group with 5 Legal Entities
 
-**ปัญหาเดิม:**
-- แต่ละบริษัทใช้ระบบแยกกัน ข้อมูลไม่เชื่อม
-- ใบกำกับซ้ำ, VAT ผิด, stock ไม่ตรง
-- ไม่มี traceability เมื่อเกิดปัญหา
-- รายงานต้องรวบรวม manual ใช้เวลา 3-5 วัน
+**Original problems:**
+- Each company used a separate system; data was not connected
+- Duplicate invoices, wrong VAT, mismatched stock
+- No traceability when problems occurred
+- Reports had to be compiled manually, taking 3–5 days
 
-**การแก้ไข:**
+**Solution:**
 
-| Phase | เดือน | สิ่งที่ทำ |
+| Phase | Month | Activities |
 |---|---|---|
 | 0 | 0 | Recon 3 paths (Money/Goods/Data) |
-| 1 | 1-2 | Stabilize Money & Goods |
+| 1 | 1–2 | Stabilize Money & Goods |
 | 2 | 3 | Harden + Traceability foundation |
 | 3 | 4 | Handoff (bus factor ≥ 2) |
-| 4 | 5-7 | Transport + Retail + LINE + IoT |
-| 5 | 8-10 | Reporting + KPI + Forecast |
-| 6 | 11-12 | Rollout to Affiliates |
+| 4 | 5–7 | Transport + Retail + LINE + IoT |
+| 5 | 8–10 | Reporting + KPI + Forecast |
+| 6 | 11–12 | Rollout to Affiliates |
 
-**ผลลัพธ์:**
+**Results:**
 
-| KPI | ก่อน | หลัง | เปลี่ยนแปลง |
+| KPI | Before | After | Change |
 |---|---|---|---|
-| Money recon discrepancy | 2-3% | 0% | -100% |
+| Money recon discrepancy | 2–3% | 0% | −100% |
 | Stock accuracy | 85% | 99% | +14% |
-| รายงาน | 3-5 วัน | Real-time | ทันที |
-| Traceability | ไม่มี | 100% | +100% |
+| Reports | 3–5 days | Real-time | Immediate |
+| Traceability | None | 100% | +100% |
 | Bus factor | 1 | 2 | +100% |
 
-### 11.2 กรณีศึกษา: ฟาร์มเห็ดนางรม จ.เชียงราย (IoT)
+### 11.2 Case Study: Oyster Mushroom Farm, Chiang Rai (IoT)
 
-**ปัญหาเดิม:**
-- อุณหภูมิ fluctuated 22-32°C
-- ผลผลิตเสียหาย 25% จากโรค
-- ต้นทุนไฟสูง ฿45,000/เดือน
+**Original problems:**
+- Temperature fluctuated 22–32°C
+- 25% yield loss from disease
+- Electricity cost ฿45,000/month
 
-**การแก้ไข:**
-1. ติดตั้ง DHT22 12 จุด + MH-Z19B 4 จุด
-2. Gateway Raspberry Pi + MQTT
-3. AI LSTM พยากรณ์อุณหภูมิ 6 ชม.
-4. Auto control พัดลม/พ่นหมอก
-5. YOLOv8 ตรวจจับราขาว
+**Solution:**
+1. Installed 12 DHT22 sensors + 4 MH-Z19B sensors
+2. Raspberry Pi gateway + MQTT
+3. LSTM AI forecasting temperature 6 hours ahead
+4. Auto-control fans/misters
+5. YOLOv8 detecting white mold
 
-**ผลลัพธ์ (6 เดือน):**
+**Results (6 months):**
 
-| KPI | ก่อน | หลัง | เปลี่ยนแปลง |
+| KPI | Before | After | Change |
 |---|---|---|---|
-| ผลผลิต/เดือน | 800 kg | 1,050 kg | +31% |
-| ของเสีย | 25% | 8% | -68% |
-| ค่าไฟ | ฿45,000 | ฿34,000 | -24% |
-| กำไรสุทธิ | ฿85,000 | ฿142,000 | +67% |
+| Yield/month | 800 kg | 1,050 kg | +31% |
+| Waste | 25% | 8% | −68% |
+| Electricity | ฿45,000 | ฿34,000 | −24% |
+| Net profit | ฿85,000 | ฿142,000 | +67% |
 
-### 11.3 แนวทางแก้ไขปัญหาที่อาจเกิดขึ้น
+### 11.3 Troubleshooting Guide
 
-| ปัญหา | สาเหตุ | แนวทาง |
+| Problem | Cause | Solution |
 |---|---|---|
-| เงินไม่นิ่งเดือน 1 | แก้ bug ทำเงินเพี้ยน | หยุดทุกอย่าง, โฟกัส money path, เลื่อน goods path |
-| Stock ไม่ตรง | ไม่มี recon | Goods recon + cycle count |
-| Lot/expiry หลุด | ไม่มี FEFO | FEFO + alert |
-| Invoice เลขซ้ำ | ไม่มี unique | SELECT FOR UPDATE + unique constraint |
-| Cloud sync double-charge | ไม่มี outbox | Outbox + idempotency |
-| Forecast แม่นต่ำ | ข้อมูลไม่พอ | Backtest + human override |
-| Multi-tenant รั่ว | ไม่มี isolation test | Isolation test + RLS |
+| Money unstable in month 1 | Bug fixes distort money | Stop everything, focus on money path, defer goods path |
+| Stock mismatch | No recon | Goods recon + cycle count |
+| Lot/expiry lost | No FEFO | FEFO + alert |
+| Duplicate invoice numbers | No unique constraint | SELECT FOR UPDATE + unique constraint |
+| Cloud sync double-charge | No outbox | Outbox + idempotency |
+| Low forecast accuracy | Insufficient data | Backtest + human override |
+| Multi-tenant leak | No isolation test | Isolation test + RLS |
 
 ---
 
 ## 12. AI Prompt Template
 
-### 12.1 ไฟล์ `docs/template_modules.md`
+### 12.1 File `docs/template_modules.md`
 
 ```markdown
-# AI Prompt Template — สร้าง Module ใหม่ใน ERP + IoT
+# AI Prompt Template — Creating a New Module in ERP + IoT
 
-## ข้อมูล Module
+## Module Information
 
-| หัวข้อ | รายละเอียด |
+| Topic | Details |
 |---|---|
-| **ชื่อ Module** | `{module_name}` |
+| **Module Name** | `{module_name}` |
 | **Layer** | `{layer_number}` (0-7) |
 | **Priority** | `{priority}` (🔴/🟠/🟡/🟢) |
 | **Phase** | `{phase}` (0-6) |
@@ -2761,23 +769,23 @@ Client
 
 ## Prompt Template
 
-### สร้าง Module `{module_name}`
+### Create Module `{module_name}`
 
-**บริบท:**
-- ERP กลุ่มบริษัทอาหาร (Multi-company)
+**Context:**
+- Food group ERP (Multi-company)
 - Clean Architecture + DDD (4 layers)
 - Python 3.14+, FastAPI, Pydantic v2, SQLAlchemy 2.0
 - PostgreSQL 17 (schema-per-tenant), Redis 8, Kafka
-- ทุก action แตะเงิน/สต็อก → audit log
-- Money Path + Goods Path ต้อง idempotent
+- Every action touching money/stock → audit log
+- Money Path + Goods Path must be idempotent
 
-**ข้อกำหนด:**
+**Requirements:**
 
 1. **Domain Layer** (`domain/`)
    - `entities.py`: Dataclasses extending `BaseEntity`
    - `value_objects.py`: Plain classes with `_normalize → _validate → __str__ → __eq__`
    - `enums.py`: All enums as `(str, Enum)`
-   - **ห้าม import framework ใดๆ**
+   - **No framework imports**
 
 2. **Application Layer** (`application/`)
    - `interfaces.py`: Protocol contracts (`I{Entity}Repository`, `I{Entity}Cache`, `I{Entity}Service`)
@@ -2803,7 +811,7 @@ Client
    - Repositories + services: 2-branch (`StandardException → Exception`)
    - Caches: never-raise (catch → log → return `None`)
 
-6. **Invariants ที่ต้องรักษา:**
+6. **Invariants to preserve:**
    - `{module_specific_invariants}`
 
 7. **Domain Events:**
@@ -2811,64 +819,64 @@ Client
    - `{module_specific_events}`
 
 8. **Tests:**
-   - Unit test สำหรับ use cases (in-memory fakes)
-   - Integration test สำหรับ repository
-   - Property-based test สำหรับ invariants
+   - Unit tests for use cases (in-memory fakes)
+   - Integration tests for repositories
+   - Property-based tests for invariants
 
 **Output:**
-- ไฟล์ครบ 16 ไฟล์ (4 layers × 4 ไฟล์)
-- Comment 2 ภาษา (ไทย + English)
-- พร้อมรันด้วย `uvicorn app.app:app --reload`
+- All 16 files (4 layers × 4 files)
+- Bilingual comments (Thai + English)
+- Ready to run with `uvicorn app.app:app --reload`
 ```
 
-### 12.2 ตัวอย่าง AI Prompt สำหรับ Module `invoice`
+### 12.2 Example AI Prompt for the `invoice` Module
 
 ```
-สร้าง Module `invoice` ตาม template_modules.md
+Create the `invoice` module per template_modules.md
 
-บริบท:
+Context:
 - Layer 2 (Money Path), Priority 🔴, Phase 1
 - Dependencies: money, order, tax, ledger, audit, idempotency
 - Domain: Invoice (entity), InvoiceLine (VO), InvoiceStatus (enum), VAT (VO)
 - Invariants: total = sum(lines) + VAT, sum(debit) = sum(credit)
 - Events: InvoiceIssued, InvoicePaid, InvoiceVoided
 
-ใช้ 4 layers:
+Use 4 layers:
 - domain/entities.py → Invoice (extends BaseEntity)
 - application/use_cases.py → InvoiceUseCases (issue, pay, void)
 - infrastructure/repositories.py → PostgresInvoiceRepository
 - presentation/routers.py → POST /invoice/, GET /invoice/{id}/
 
-Error handling: 3-branch ใน use cases, 2-branch ใน repos
-Idempotency: ใช้ idempotency key ทุก money path
-Read-back: หลัง create ให้ read กลับมา verify ก่อน return
+Error handling: 3-branch in use cases, 2-branch in repos
+Idempotency: use idempotency key on every money path
+Read-back: after create, read back to verify before return
 ```
 
 ---
 
-## 13. AI Prompt ต่อ Module
+## 13. AI Prompt per Module
 
 ### 13.1 Module: `money` (Layer 0, Core)
 
 ```
-สร้าง Module `money` ตาม template_modules.md
+Create the `money` module per template_modules.md
 
-บริบท:
+Context:
 - Layer 0 (Core), Priority 🔴, Phase 1
-- Dependencies: ไม่มี (primitive module)
+- Dependencies: none (primitive module)
 - Domain: Money (VO), Currency (enum), VAT (VO)
 - Invariants: Decimal precision, sum(debit) = sum(credit)
 - Events: MoneyAdded, MoneySubtracted
 
-ใช้ 4 layers:
+Use 4 layers:
 - domain/value_objects.py → Money (Decimal, currency, __add__, __sub__, __eq__)
 - application/use_cases.py → MoneyUseCases (add, subtract, convert, calculate_vat)
-- infrastructure/models.py → ไม่มี model (pure VO)
+- infrastructure/models.py → no model (pure VO)
 - presentation/schemas.py → MoneySchema (amount: Decimal, currency: str)
 
 Error handling:
 - money.py: 3-branch (validate, raise DomainError)
-- caches.py: ไม่มี cache (pure computation)
+- caches.py: no cache (pure computation)
 
 Tests:
 - Property-based: a + b == b + a (commutative)
@@ -2880,16 +888,16 @@ Tests:
 ### 13.2 Module: `invoice` (Layer 2, Money Path)
 
 ```
-สร้าง Module `invoice` ตาม template_modules.md
+Create the `invoice` module per template_modules.md
 
-บริบท:
+Context:
 - Layer 2 (Money Path), Priority 🔴, Phase 1
 - Dependencies: money, order, tax, ledger, audit, idempotency
 - Domain: Invoice (entity), InvoiceLine (VO), InvoiceStatus (enum)
 - Invariants: total = sum(lines) + VAT, invoice_number unique
 - Events: InvoiceIssued, InvoicePaid, InvoiceVoided
 
-ใช้ 4 layers:
+Use 4 layers:
 - domain/entities.py → Invoice (extends BaseEntity)
   - fields: id, invoice_number, customer_id, lines, subtotal, vat, total, status, issued_at
   - methods: issue(), pay(), void(), add_line()
@@ -2925,9 +933,9 @@ Tests:
   - DELETE /api/v1/invoice/{id}/ → void (soft delete)
 - presentation/schemas.py → InvoiceCreate, InvoiceUpdate, InvoiceResponse, InvoiceListResponse
 
-Error handling: 3-branch ใน use cases, 2-branch ใน repos, never-raise ใน caches
-Idempotency: ใช้ idempotency key ทุก create/pay
-Read-back: หลัง create/issue ให้ read กลับมา verify
+Error handling: 3-branch in use cases, 2-branch in repos, never-raise in caches
+Idempotency: use idempotency key on every create/pay
+Read-back: after create/issue, read back to verify
 
 Tests:
 - Unit: create_invoice with valid/invalid payload
@@ -2940,16 +948,16 @@ Tests:
 ### 13.3 Module: `inventory` (Layer 3, Goods Path)
 
 ```
-สร้าง Module `inventory` ตาม template_modules.md
+Create the `inventory` module per template_modules.md
 
-บริบท:
+Context:
 - Layer 3 (Goods Path), Priority 🔴, Phase 1
 - Dependencies: product, warehouse, lot, audit
 - Domain: StockMovement (entity), StockBalance (VO), MovementType (enum)
 - Invariants: Stock in − Stock out = Stock on hand, Σ(lot.qty) = Σ(movement.qty)
 - Events: StockPosted, StockLow, StockAdjusted
 
-ใช้ 4 layers:
+Use 4 layers:
 - domain/entities.py → StockMovement (extends BaseEntity)
   - fields: id, product_id, warehouse_id, lot_id, type, qty, reference, created_at
   - methods: post(), reverse()
@@ -2988,16 +996,16 @@ Tests:
 ### 13.4 Module: `traceability` (Layer 3, Goods Path)
 
 ```
-สร้าง Module `traceability` ตาม template_modules.md
+Create the `traceability` module per template_modules.md
 
-บริบท:
+Context:
 - Layer 3 (Goods Path), Priority 🔴, Phase 2
 - Dependencies: lot, inventory, transport, product
 - Domain: TraceEvent (entity), TraceCode (VO), TraceDirection (enum)
 - Invariants: Every lot traceable forward + backward
 - Events: TraceEventRecorded, TraceCodeGenerated, TraceQueried
 
-ใช้ 4 layers:
+Use 4 layers:
 - domain/entities.py → TraceEvent (extends BaseEntity)
   - fields: id, trace_code, event_type, ref_id, ref_type, location, timestamp, metadata
   - methods: record()
@@ -3027,16 +1035,16 @@ Tests:
 ### 13.5 Module: `iot` (Layer 6, Monitoring & Sensing)
 
 ```
-สร้าง Module `iot` ตาม template_modules.md
+Create the `iot` module per template_modules.md
 
-บริบท:
+Context:
 - Layer 6 (Monitoring & Sensing), Priority 🟠, Phase 4
 - Dependencies: monitoring, alerting, events
 - Domain: SensorReading (entity), SensorType (enum), Threshold (VO)
 - Invariants: Reading within valid range, Alert when threshold exceeded
 - Events: SensorReadingReceived, ThresholdExceeded, SensorOffline
 
-ใช้ 4 layers:
+Use 4 layers:
 - domain/entities.py → SensorReading (extends BaseEntity)
   - fields: id, sensor_id, sensor_type, value, unit, timestamp, location
   - methods: validate(), is_out_of_range()
@@ -3070,16 +1078,16 @@ Tests:
 ### 13.6 Module: `forecast` (Layer 5, Intelligence)
 
 ```
-สร้าง Module `forecast` ตาม template_modules.md
+Create the `forecast` module per template_modules.md
 
-บริบท:
+Context:
 - Layer 5 (Intelligence), Priority 🟠, Phase 5
 - Dependencies: analytics, reporting, production, inventory
 - Domain: Forecast (entity), ForecastMethod (enum), ForecastResult (VO)
 - Invariants: MAPE < 20%, Non-negative forecast
 - Events: ForecastGenerated, ForecastUpdated, ForecastAccuracyDropped
 
-ใช้ 4 layers:
+Use 4 layers:
 - domain/entities.py → Forecast (extends BaseEntity)
   - fields: id, product_id, branch_id, forecast_date, predicted_qty, actual_qty, method, mape
 - domain/value_objects.py → ForecastResult (predicted, actual, error, mape)
@@ -3108,16 +1116,16 @@ Tests:
 ### 13.7 Module: `kpi` (Layer 5, Intelligence)
 
 ```
-สร้าง Module `kpi` ตาม template_modules.md
+Create the `kpi` module per template_modules.md
 
-บริบท:
+Context:
 - Layer 5 (Intelligence), Priority 🟠, Phase 5
 - Dependencies: reporting, analytics, employee, satisfaction
 - Domain: KPI (entity), KPITarget (VO), KPILevel (enum)
 - Invariants: KPI actual = Σ(source events), Target >= 0
 - Events: KPICalculated, KPITargetMissed, KPIAchieved
 
-ใช้ 4 layers:
+Use 4 layers:
 - domain/entities.py → KPI (extends BaseEntity)
   - fields: id, name, level, target, actual, period, owner_id, source_module
   - methods: calculate(), is_achieved()
@@ -3147,16 +1155,16 @@ Tests:
 ### 13.8 Module: `pos` (Layer 4, Operations)
 
 ```
-สร้าง Module `pos` ตาม template_modules.md
+Create the `pos` module per template_modules.md
 
-บริบท:
+Context:
 - Layer 4 (Operations), Priority 🟠, Phase 4
 - Dependencies: retail, shift, pricing, promotion, loyalty, product, inventory
 - Domain: POSSale (entity), POSLine (VO), PaymentMethod (enum)
 - Invariants: Sale total = sum(lines) - discount + VAT, Cash drawer = sum(payments)
 - Events: POSSaleCompleted, POSReturnProcessed, ShiftClosed
 
-ใช้ 4 layers:
+Use 4 layers:
 - domain/entities.py → POSSale (extends BaseEntity)
   - fields: id, shift_id, lines, subtotal, discount, vat, total, payment_method, status
   - methods: complete(), return_items(), void()
@@ -3187,16 +1195,16 @@ Tests:
 ### 13.9 Module: `production` (Layer 3, Goods Path)
 
 ```
-สร้าง Module `production` ตาม template_modules.md
+Create the `production` module per template_modules.md
 
-บริบท:
+Context:
 - Layer 3 (Goods Path), Priority 🔴, Phase 1
 - Dependencies: recipe, inventory, lot, waste, quality, audit
 - Domain: ProductionBatch (entity), BatchInput (VO), BatchOutput (VO)
 - Invariants: Batch input = output + waste, Yield% within range
 - Events: BatchStarted, BatchCompleted, BatchAborted, YieldRecorded
 
-ใช้ 4 layers:
+Use 4 layers:
 - domain/entities.py → ProductionBatch (extends BaseEntity)
   - fields: id, batch_number, recipe_id, inputs, outputs, waste, start_time, end_time, status
   - methods: start(), complete(), abort(), record_yield()
@@ -3227,16 +1235,16 @@ Tests:
 ### 13.10 Module: `transport` (Layer 4, Operations)
 
 ```
-สร้าง Module `transport` ตาม template_modules.md
+Create the `transport` module per template_modules.md
 
-บริบท:
+Context:
 - Layer 4 (Operations), Priority 🟠, Phase 4
 - Dependencies: delivery, route, gps, invoice, inventory
 - Domain: Shipment (entity), ShipmentItem (VO), ShipmentStatus (enum)
 - Invariants: Shipment contents = Invoice contents, Cold-chain within range
 - Events: ShipmentCreated, ShipmentDispatched, ShipmentArrived, TempExceeded
 
-ใช้ 4 layers:
+Use 4 layers:
 - domain/entities.py → Shipment (extends BaseEntity)
   - fields: id, shipment_number, invoice_id, items, carrier_id, route_id, status, dispatched_at, arrived_at
   - methods: dispatch(), arrive(), record_temp()
@@ -3267,16 +1275,16 @@ Tests:
 ### 13.11 Module: `reporting` (Layer 5, Intelligence)
 
 ```
-สร้าง Module `reporting` ตาม template_modules.md
+Create the `reporting` module per template_modules.md
 
-บริบท:
+Context:
 - Layer 5 (Intelligence), Priority 🔴, Phase 5
 - Dependencies: analytics, invoice, inventory, production, kpi
 - Domain: Report (entity), ReportPeriod (enum), ReportType (enum)
 - Invariants: Report data consistent across periods
 - Events: ReportGenerated, ReportExported
 
-ใช้ 4 layers:
+Use 4 layers:
 - domain/entities.py → Report (extends BaseEntity)
   - fields: id, type, period, start_date, end_date, data, generated_at
 - domain/value_objects.py → ReportPeriod (DAILY, WEEKLY, MONTHLY, QUARTERLY, YEARLY, Y3, Y5)
@@ -3303,16 +1311,16 @@ Tests:
 ### 13.12 Module: `line_channel` (Layer 4, Operations)
 
 ```
-สร้าง Module `line_channel` ตาม template_modules.md
+Create the `line_channel` module per template_modules.md
 
-บริบท:
+Context:
 - Layer 4 (Operations), Priority 🟠, Phase 4
 - Dependencies: order, customer, pricing, notification
 - Domain: LINEOrder (entity), LINEUser (VO), LINEStatus (enum)
 - Invariants: Order total = sum(items), LINE user mapped to customer
 - Events: LINEOrderReceived, LINEOrderConfirmed, LINEOrderCancelled
 
-ใช้ 4 layers:
+Use 4 layers:
 - domain/entities.py → LINEOrder (extends BaseEntity)
   - fields: id, line_user_id, customer_id, items, total, status, raw_message
   - methods: confirm(), cancel()
@@ -3340,16 +1348,16 @@ Tests:
 ### 13.13 Module: `reconciliation` (Layer 2, Money Path)
 
 ```
-สร้าง Module `reconciliation` ตาม template_modules.md
+Create the `reconciliation` module per template_modules.md
 
-บริบท:
+Context:
 - Layer 2 (Money Path), Priority 🔴, Phase 1
 - Dependencies: invoice, ledger, payment, accounting_gateway, inventory
 - Domain: ReconCheck (entity), ReconResult (VO), ReconStatus (enum)
 - Invariants: Discrepancy = 0, All checks pass
 - Events: ReconStarted, ReconPassed, ReconFailed, DiscrepancyDetected
 
-ใช้ 4 layers:
+Use 4 layers:
 - domain/entities.py → ReconCheck (extends BaseEntity)
   - fields: id, check_type, source, target, expected, actual, discrepancy, status, checked_at
 - domain/value_objects.py → ReconResult (expected, actual, discrepancy, pass)
@@ -3377,16 +1385,16 @@ Tests:
 ### 13.14 Module: `payment` (Layer 2, Money Path)
 
 ```
-สร้าง Module `payment` ตาม template_modules.md
+Create the `payment` module per template_modules.md
 
-บริบท:
+Context:
 - Layer 2 (Money Path), Priority 🔴, Phase 2
 - Dependencies: invoice, ledger, accounting_gateway, tax
 - Domain: Payment (entity), PaymentMethod (enum), PaymentStatus (enum)
 - Invariants: Payment amount = invoice balance, sum(payments) <= invoice total
 - Events: PaymentReceived, PaymentMatched, PaymentVoided
 
-ใช้ 4 layers:
+Use 4 layers:
 - domain/entities.py → Payment (extends BaseEntity)
   - fields: id, payment_number, invoice_id, amount, method, reference, paid_at, status
   - methods: match(), void()
@@ -3415,16 +1423,16 @@ Tests:
 ### 13.15 Module: `warehouse` (Layer 3, Goods Path)
 
 ```
-สร้าง Module `warehouse` ตาม template_modules.md
+Create the `warehouse` module per template_modules.md
 
-บริบท:
+Context:
 - Layer 3 (Goods Path), Priority 🔴, Phase 1
 - Dependencies: inventory, lot, product, audit
 - Domain: Warehouse (entity), Location (VO), Bin (VO)
 - Invariants: Location unique within warehouse, Bin unique within location
 - Events: WarehouseCreated, LocationAdded, StockMoved, StockCounted
 
-ใช้ 4 layers:
+Use 4 layers:
 - domain/entities.py → Warehouse (extends BaseEntity)
   - fields: id, code, name, address, locations, is_active
   - methods: add_location(), remove_location()
@@ -3453,9 +1461,9 @@ Tests:
 
 ---
 
-## 14. Checklist Module
+## 14. Module Checklist
 
-| # | Module | Layer | Priority | Phase | สถานะ |
+| # | Module | Layer | Priority | Phase | Status |
 |---|---|---|---|---|---|
 | 1 | money | 0 | 🔴 | 1 | ☐ |
 | 2 | tenant_context | 0 | 🔴 | 1 | ☐ |
@@ -3517,21 +1525,18 @@ Tests:
 
 ## 15. Security Code
 
-### 15.1 Nested JWT (จาก Template)
+### 15.1 Nested JWT (from the Template)
 
 ```python
 # app/core/security.py
-# JWT ถูกออกแบบเป็น 2 ชั้น: JWS (Ed25519) + JWE (ECDH-ES + A256GCM)
-# JWT is nested: JWS (Ed25519) + JWE (ECDH-ES + A256GCM)
+# The JWT is designed in 2 layers: JWS (Ed25519) + JWE (ECDH-ES + A256GCM)
 
 # Layer 1: Sign the claims with Ed25519
-# ชั้นที่ 1: เซ็น claims ด้วย Ed25519
 jws_token = jwt.encode(
     payload=claims, key=settings.JWT_SIGNING_PRIVATE_KEY, algorithm="EdDSA"
 )
 
 # Layer 2: Encrypt the JWS with ECDH-ES + A256GCM
-# ชั้นที่ 2: เข้ารหัส JWS ด้วย ECDH-ES + A256GCM
 jwe_token = jwe.encrypt(
     plaintext=jws_token,
     key=settings.JWT_ENCRYPTION_PUBLIC_KEY,
@@ -3539,8 +1544,7 @@ jwe_token = jwe.encrypt(
     encryption="A256GCM",
 )
 
-# Store HMAC fingerprint of jti in DB (never the token itself)
-# เก็บ HMAC fingerprint ของ jti ใน DB (ไม่เก็บ token เอง)
+# Store the HMAC fingerprint of the jti in the DB (never the token itself)
 hashed_jti = hmac.new(
     settings.JWT_HASH_FINGERPRINT.encode(), jti.encode(), hashlib.sha256
 ).hexdigest()
@@ -3552,7 +1556,6 @@ hashed_jti = hmac.new(
 # app/modules/authentication/presentation/dependencies.py
 
 # Gate 1: Dependency — check role level
-# Gate 1: Dependency — ตรวจสอบระดับ role
 async def authenticate_admin(
     authentication: Authentication = Depends(authenticate_user),
 ):
@@ -3562,7 +1565,6 @@ async def authenticate_admin(
 
 
 # Gate 2: Path allowlist — enforced in middleware
-# Gate 2: Path allowlist — บังคับใน middleware
 SECURITY_ADMIN_ALLOWED_PATHS = (
     _path_rule("/api/v1/key/", "POST"),
     _path_rule("/api/v1/key", "POST"),
@@ -3579,7 +1581,6 @@ SECURITY_ADMIN_ALLOWED_PATHS = (
 
 def generate_api_key() -> tuple[str, str, str]:
     """Generate raw key, hash, and prefix."""
-    # สร้าง raw key, hash, และ prefix
     raw = secrets.token_urlsafe(32)  # 32 bytes entropy
     raw_key = f"{settings.API_KEY_PREFIX}_{raw}"
 
@@ -3595,7 +1596,6 @@ def generate_api_key() -> tuple[str, str, str]:
 
 def verify_api_key(raw_key: str, hashed_key: str) -> bool:
     """Verify with constant-time comparison."""
-    # ตรวจสอบด้วย constant-time comparison
     computed = hmac.new(
         settings.API_KEY_HASH_FINGERPRINT.encode(), raw_key.encode(), hashlib.sha256
     ).hexdigest()
@@ -3612,8 +1612,6 @@ def verify_api_key(raw_key: str, hashed_key: str) -> bool:
 class RedisKeyCache:
     """Cache that never raises — degrades to database."""
 
-    # Cache ที่ไม่ lanse exception — degrade ไป database
-
     async def get(self, key: str) -> Optional[KeyEntity]:
         try:
             data = await self.redis.get(f"{self.namespace}:{key}")
@@ -3625,7 +1623,6 @@ class RedisKeyCache:
     async def delete(self, key: str) -> None:
         try:
             # Write tombstone BEFORE delete
-            # เขียน tombstone ก่อนลบ
             await self.redis.setex(
                 f"{self.namespace}:tombstone:{key}",
                 settings.REDIS_TOMBSTONE_TTL_SECONDS,
@@ -3638,7 +1635,6 @@ class RedisKeyCache:
     async def insert(self, key: str, entity: KeyEntity) -> None:
         try:
             # Check tombstone BEFORE writing
-            # ตรวจสอบ tombstone ก่อนเขียน
             tombstone = await self.redis.get(f"{self.namespace}:tombstone:{key}")
             if tombstone:
                 return  # Suppress repopulation
@@ -3653,12 +1649,12 @@ class RedisKeyCache:
 
 ### 15.5 Security Checklist
 
-| # | รายการ | สถานะ |
+| # | Item | Status |
 |---|---|---|
-| 1 | HTTPS/TLS ทุก endpoint | ☐ |
-| 2 | JWT nested (JWS + JWE) | ☐ |
+| 1 | HTTPS/TLS on every endpoint | ☐ |
+| 2 | Nested JWT (JWS + JWE) | ☐ |
 | 3 | HTTP-only cookies | ☐ |
-| 4 | HMAC fingerprint ของ jti | ☐ |
+| 4 | HMAC fingerprint of jti | ☐ |
 | 5 | RBAC 2 gates (role + path) | ☐ |
 | 6 | API key rotation | ☐ |
 | 7 | Constant-time compare | ☐ |
@@ -3666,14 +1662,14 @@ class RedisKeyCache:
 | 9 | Rate limit (100 req/min/IP) | ☐ |
 | 10 | Input sanitization | ☐ |
 | 11 | Encrypt at rest (AES-256) | ☐ |
-| 12 | MFA สำหรับ admin | ☐ |
-| 13 | Secret ใน Vault/K8s Secret | ☐ |
+| 12 | MFA for admin | ☐ |
+| 13 | Secrets in Vault/K8s Secret | ☐ |
 | 14 | Audit log (append-only) | ☐ |
 | 15 | PDPA consent | ☐ |
 
 ---
 
-## 16. Load Test Development
+## 16. Load Test (Development)
 
 ### 16.1 Money Path Load Test
 
@@ -3686,7 +1682,6 @@ from httpx import AsyncClient
 @pytest.mark.asyncio
 async def test_invoice_throughput(client: AsyncClient):
     """Test 1,000 invoices/sec with idempotency."""
-    # ทดสอบ 1,000 ใบกำกับ/วินาที ด้วย idempotency
 
     import time
 
@@ -3741,7 +1736,7 @@ func TestSensorThroughput(t *testing.T) {
 
 ### 16.3 Load Test Tools
 
-| Tool | 用途 | คำสั่ง |
+| Tool | Use Case | Command |
 |---|---|---|
 | **k6** | HTTP load test | `k6 run script.js` |
 | **JMeter** | MQTT plugin | GUI + CLI |
@@ -3751,7 +1746,7 @@ func TestSensorThroughput(t *testing.T) {
 
 ### 16.4 Load Test Checklist
 
-| # | รายการ | เป้าหมาย | สถานะ |
+| # | Item | Target | Status |
 |---|---|---|---|
 | 1 | Money Path throughput | 1,000 invoice/s | ☐ |
 | 2 | Goods Path throughput | 10,000 movement/s | ☐ |
@@ -3766,29 +1761,29 @@ func TestSensorThroughput(t *testing.T) {
 
 ---
 
-## 17. สรุป
+## 17. Summary
 
-### 17.1 ประโยชน์ที่ได้รับ
+### 17.1 Benefits
 
-- **รวมศูนย์** — 5 นิติบุคคล ใช้ ERP เดียว
-- **เงินนิ่ง** — Money recon discrepancy = 0
-- **สินค้านิ่ง** — Stock accuracy ≥ 99%
+- **Centralized** — 5 legal entities use one ERP
+- **Money stability** — Money recon discrepancy = 0
+- **Goods stability** — Stock accuracy ≥ 99%
 - **Traceability** — 100% forward + backward
-- **อัตโนมัติ** — ลดแรงงาน, ทำงาน 24/7
-- **คาดการณ์** — MAPE < 20%
-- **รายงาน** — Real-time ทุกระดับ
-- **ขยายได้** — Multi-tenant
+- **Automation** — Reduces labor, runs 24/7
+- **Forecasting** — MAPE < 20%
+- **Reporting** — Real-time at every level
+- **Scalable** — Multi-tenant
 
-### 17.2 ข้อควรระวัง
+### 17.2 Cautions
 
-- เซ็นเซอร์ต้อง calibrate ทุก 6 เดือน
-- Network ขาด → ต้องมี buffer ที่ Edge
-- AI ต้อง retrain เมื่อสภาพเปลี่ยน
-- PDPA: ข้อมูลเกษตรกรต้องขอ consent
-- Schema migration พัง → ต้องมี backup ก่อน
-- Cloud API เปลี่ยน → ต้องมี abstraction layer
+- Sensors must be calibrated every 6 months
+- Network outage → need a buffer at the Edge
+- AI must be retrained when conditions change
+- PDPA: farmer data requires consent
+- Schema migration failure → must have a backup first
+- Cloud API changes → need an abstraction layer
 
-### 17.3 ข้อดี
+### 17.3 Pros
 
 - Clean Architecture + DDD — maintainable
 - 4 layers per module — testable
@@ -3798,26 +1793,26 @@ func TestSensorThroughput(t *testing.T) {
 - Cache with tombstone — race-free
 - Event-driven — scalable
 
-### 17.4 ข้อเสีย
+### 17.4 Cons
 
-- ต้นทุนเริ่มต้นสูง
-- ต้องมีความรู้เทคนิค
-- ขึ้นกับไฟฟ้า/เน็ต
-- ใช้เวลา 12 เดือน
-- ต้องมีคน 2 คน (bus factor ≥ 2)
+- High initial cost
+- Requires technical expertise
+- Depends on electricity/network
+- Takes 12 months
+- Needs at least 2 people (bus factor ≥ 2)
 
-### 17.5 ข้อห้าม
+### 17.5 Prohibitions
 
-- ❌ ห้ามเปิด actuator โดยไม่มี safety interlock
-- ❌ ห้ามเก็บ password แบบ plaintext
-- ❌ ห้ามใช้ default credential
-- ❌ ห้ามลบ ledger entry (ต้อง reversal)
-- ❌ ห้าม hardcode VAT/waste%/pricing
-- ❌ ห้าม sync cloud ก่อนเขียน DB (ต้อง outbox)
-- ❌ ห้าม commit ใน repository (ต้อง flush เท่านั้น)
-- ❌ ห้ามใช้ `except StandardException` หลัง `except Exception`
+- ❌ Never open an actuator without a safety interlock
+- ❌ Never store passwords in plaintext
+- ❌ Never use default credentials
+- ❌ Never delete a ledger entry (use reversal)
+- ❌ Never hardcode VAT/waste%/pricing
+- ❌ Never sync to cloud before writing to the DB (use outbox)
+- ❌ Never `commit` in a repository (only `flush`)
+- ❌ Never place `except StandardException` after `except Exception`
 
-### 17.6 ตัวอย่างโค้ดที่รันได้จริง
+### 17.6 Working Code Examples
 
 ```bash
 # 1. Clone
@@ -3855,6 +1850,9 @@ curl -X POST http://localhost:8000/api/v1/invoice/ \
 
 ---
 
+# Ollama Commands
+
+```bash
 # Run a specific model in interactive chat mode
 ollama run qwen3.6:latest
 
@@ -3865,26 +1863,22 @@ ollama rm deepseek-r1:7b
 ollama pull llama3.1:8b
 
 # Check active/currently loaded models in RAM/VRAM
-ollama **ps**
+ollama ps
+```
 
+---
 
-![alt text](py-1.png)
+**Author:** Kongnakorn Jantakun
+**Email:** kongnakornjantakun@gmail.com
+**Version:** 2.0.0
+**Updated:** 2026-09-17
 
-![alt text](py-2.png)
+---
 
-![alt text](py-3.png)
-
-![alt text](py-4.png)
-
-![alt text](py-5.png)
-
-**ผู้แต่ง:** Kongnakorn Jantakun
-**อีเมล:** kongnakornjantakun@gmail.com
-**เวอร์ชัน:** 2.0.0
-**อัปเดต:** 2026-09-17
-
-  
+```powershell
 powershell -ExecutionPolicy Bypass -File C:\AI\KoboldCpp\start.ps1
+```
 
-opencode --continew 
-
+```bash
+opencode --continue
+```
