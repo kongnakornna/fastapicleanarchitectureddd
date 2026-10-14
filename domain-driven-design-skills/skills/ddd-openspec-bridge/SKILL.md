@@ -63,7 +63,7 @@ date_added: "2026-05-11"
 - [ ] **ขนาด Requirement เหมาะสม**: แต่ละ Requirement ตรงกับ 1 ความสามารถทางธุรกิจที่ตรวจสอบได้อิสระ จำนวน Scenario ≤ 5 และไม่ข้าม Aggregate Root
 - [ ] **Scenario ยึดหลักกฎทางธุรกิจ**: ไม่มีรายละเอียดทางเทคนิค (Database, HTTP, ORM, Cache); Invariant P0 ของ `ddd-aggregates` ทั้งหมดได้รับการแปลงเป็น Scenario แล้ว
 - [ ] **ความสอดคล้องศัพท์**: ศัพท์ใน `proposal.md` และ `spec.md` ทั้งหมดค้นหาได้ในคลังคำศัพท์ของ `ddd-contexts`; Capabilities ใน `proposal.md` สอดคล้องกับ `ddd-contexts`
-- [ ] **รูปแบบ Event-Driven ได้รับการ落地**: สถานการณ์ข้าม Aggregate ใน `design.md` ระบุอย่างชัดเจนว่าเป็นไปตาม Outbox Pattern, Idempotency Key และ "1 ธุรกรรมแก้ไข 1 Aggregate"
+- [ ] **รูปแบบ Event-Driven ได้รับการ **: สถานการณ์ข้าม Aggregate ใน `design.md` ระบุอย่างชัดเจนว่าเป็นไปตาม Outbox Pattern, Idempotency Key และ "1 ธุรกรรมแก้ไข 1 Aggregate"
 - [ ] **จังหวะการทำซпотенциcontrolled (ก้าวเล็กๆ เร็วๆ)**: ขนาด Change Set นี้สามารถทำให้เสร็จในขั้นตอน Apply เดียวได้ ไม่ลื่นไปเป็น Waterfall จิ๋ว
 - [ ] งานใน `tasks.md` สามารถปฏิบัติได้ และแต่ละงานมีการอ้างอิง Requirement / Scenario ที่ชัดเจนเป็นเกณฑ์การยอมรับ
 - [ ] การจัดรูปแบบภาษาจีน-อังกฤษเป็นไปตามข้อกำหนดโครงการ (มีช่องว่างระหว่างจีนกับอังกฤษ ชื่อเฉพาะใส่ backtick)
@@ -77,14 +77,5 @@ date_added: "2026-05-11"
 - ศัพท์ไม่ได้อยู่ในคลังคำศัพท์ของ `ddd-contexts` → ย้อนกลับไป `ddd-contexts` เติมหรือปรับมาตรฐานศัพท์
 
 ## ตัวอย่าง
-
-```text
-@ddd-openspec-bridge
-จากผลงาน Modeling "ระบบจองห้องประชุม" ที่เสร็จสมบูรณ์ สร้างข้อกำหนด OpenSpec Change Set:
-- Aggregate: Booking, RoomSchedule
-- กระบวนการสำคัญ: การขอจอง, การตรวจจับความขัดแย้ง, การเช็คอิน, การยกเลิก
-- Context: Booking Context, Room Catalog Context
-สร้าง proposal.md, design.md และส่วน Requirement และ Scenario หลักของ specs/booking-context/booking/spec.md
-```
 
 > ตัวอย่างการเขียน Requirement / Scenario ที่สมบูรณ์ดูที่ [ddd-openspec-mapping.md §5](../../docs/ddd-openspec-mapping.md) (ตัวอย่างที่ทำได้จริงขั้นต่ำตั้งแต่ต้นจนจบโดยใช้ "การลงทะเบียนผู้ใช้" เป็นตัวอย่าง)
