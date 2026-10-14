@@ -1,7 +1,99 @@
 # 📘 ERP + IoT System Architecture Guide for Food Group Companies
-## (Updated from FastAPI Clean Architecture + DDD Template)
+## ( FastAPI Clean Architecture + DDD Template)
 
 > **Complete Document** — Merges the architecture from **ERPIoT** with the **ERP for Food Group Companies (Part 1-2)** and **Smart Mushroom Farm IoT** to create a Multi-company ERP + IoT system that covers every dimension of the food business.
+
+--- 
+## ตัวอย่าง การ ออกแบบ แล้วนำมา พัฒนาระบบ  แก้ปัญหา สร้างโอกการ เน้น ใช้งานจริง 
+1. Business Model Canvas (BMC) คือ เครื่องมือเชิงกลยุทธ์ในรูปแบบแผนภาพ 1 หน้ากระดาษ ที่ใช้ใช้ออกแบบ วิเคราะห์ และสรุปรูปแบบการดำเนินธุรกิจ คิดค้นโดย Alexander Osterwalder และ Yves Pigneur เพื่อช่วยให้ผู้ประกอบการมองเห็นภาพรวมของธุรกิจทั้งระบบได้อย่างรวดเร็ว โดยไม่ต้องเขียนแผนธุรกิจยาวหลายสิบหน้า
+2. Design Thinking  (การคิดเชิงออกแบบ) คือ กระบวนการคิดที่เน้นการทำความเข้าใจ "มนุษย์" หรือผู้ใช้อย่างลึกซึ้ง (Human-Centered) เพื่อแก้ไขปัญหาอย่างสร้างสรรค์และสร้างนวัตกรรมที่ตอบโจทย์ความต้องการที่แท้จริง
+ • หัวใจสำคัญไม่ใช่แค่เรื่องความสวยงาม แต่เป็นการมองหา "ทางออก" ที่เป็นรูปธรรม โดยมี 5 ขั้นตอนมาตรฐาน
+    1. Empathize (เข้าใจปัญหา): เข้าไปทำความเข้าใจผู้ใช้งานจริงผ่านการสังเกตและพูดคุย เพื่อหาความต้องการที่ซ่อนอยู่ (Insights)
+    2. Define (ระบุปัญหา): นำข้อมูลที่ได้มาวิเคราะห์เพื่อสรุป "หัวใจของปัญหา" ให้ชัดเจนว่าเรากำลังจะแก้ปัญหาให้ใคร และเรื่องอะไร
+    3. Ideate (ระดมความคิด): เน้นการหาไอเดียใหม่ๆ ให้ได้มากที่สุดโดยไม่มีการปิดกั้น เพื่อหาทางเลือกในการแก้ปัญหาที่หลากหลาย
+    4. Prototype (สร้างต้นแบบ): เลือกไอเดียที่ดีที่สุดมาสร้างเป็นแบบจำลองอย่างง่ายที่จับต้องได้ เพื่อนำไปทดลอง
+    5. Test (ทดสอบ): นำต้นแบบไปให้ผู้ใช้ทดลองจริง เพื่อรับข้อเสนอแนะและนำกลับมาปรับปรุงจนกว่าจะตอบโจทย์
+    ทำไมถึงสำคัญ?
+    • แก้ปัญหาได้ตรงจุด: เพราะเริ่มจากความเข้าใจผู้ใช้ ไม่ใช่การเดาเอาเอง
+    • ลดความเสี่ยง: การสร้างต้นแบบและทดสอบก่อนช่วยให้เห็นข้อผิดพลาดได้เร็วโดยไม่ต้องเสียเงินทุนจำนวนมาก
+    • สร้างนวัตกรรม: กระบวนการนี้ช่วยให้มองเห็นมุมมองใหม่ๆ ที่อาจไม่เคยนึกถึงมาก่อน
+3. Ghost Mindset   การทำเพื่อมุ่งมั่นทุ่มเทพัฒนาตนเอง หรือทำงานให้สำเร็จตามเป้าหมาย โดยตัดสิ่งรบกวนจากภายนอกออกไป  
+4. Microservices Architecture  (สถาปัตยกรรมแบบไมโครเซอร์วิส) คือรูปแบบการออกแบบซอฟต์แวร์ที่แบ่งระบบขนาดใหญ่ (Monolithic) ออกเป็นบริการย่อย ๆ หลายบริการ (Small Independent Services) โดยแต่ละบริการจะทำงานแยกจากกัน มีหน้าที่เฉพาะเจาะจงของตัวเอง และสามารถพัฒนา ทดสอบ อัปเดต หรือขยายขนาด (Scale) ได้อย่างอิสระ
+5. Domain-Driven Design (DDD) คือ แนวคิดหรือกรอบการออกแบบซอฟต์แวร์ที่เน้น "การจำลองธุรกิจและปัญหาของโดเมน (Domain)" ให้มาสะท้อนอยู่ในโครงสร้างของโค้ดและสถาปัตยกรรม แทนที่จะเน้นการคิดจากมุมมองของฐานข้อมูลหรือเทคโนโลยีเป็นหลัก
+6. Clean Architecture คือ แนวคิดหรือหลักการออกแบบสถาปัตยกรรมซอฟต์แวร์ (Software Architecture) ที่เสนอโดย Robert C. Martin (Uncle Bob) ซึ่งมีเป้าหมายหลักในการแยกตรรกะทางธุรกิจ (Business Logic) ออกจากเทคโนโลยีภายนอก เช่น ฐานข้อมูล (Database), เฟรมเวิร์ก (Framework), และส่วนติดต่อผู้ใช้ (UI) เพื่อให้ระบบมีความยืดหยุ่น บำรุงรักษาง่าย และทดสอบได้สะดวก
+7. Risk Management (การบริหารความเสี่ยง) คือ กระบวนการค้นหา ประเมิน วิเคราะห์ และควบคุมเหตุการณ์หรือความไม่แน่นอนที่อาจเกิดขึ้นในอนาคต เพื่อลดโอกาสเกิดหรือลดความรุนแรงของความเสียหายให้อยู่ในระดับที่องค์กรหรือบุคคลยอมรับได้
+8. POC (Proof of Concept) "การพิสูจน์แนวคิด" การทดสอบไอเดียหรือเทคโนโลยีในสเกลเล็กๆ ก่อนเริ่มลงทุนพัฒนาจริง เพื่อดูว่า "แนวคิดนี้จะทำงานได้จริงหรือไม่"
+9. Project Management (การบริหารโครงการ) คือ กระบวนการวางแผน การดำเนินงาน การควบคุม และการใช้ทรัพยากรที่มีอยู่ (เช่น บุคลากร เวลา และงบประมาณ) อย่างคุ้มค่า เพื่อให้โครงการบรรลุวัตถุประสงค์ที่กำหนดไว้ภายในเวลาและงบประมาณที่จำกัด
+10. Cost Management (การบริหารต้นทุน) คือ กระบวนการวางแผน ประมาณการ จัดทำงบประมาณ ควบคุม ติดตาม และวิเคราะห์ค่าใช้จ่ายต่างๆ ภายในโครงการหรือองค์กร เพื่อให้สามารถใช้ทรัพยากรที่มีอยู่ได้อย่างคุ้มค่า มีประสิทธิภาพสูงสุด และสร้างผลกำไรหรือความได้เปรียบในการแข่งขัน
+11. KPI ย่อมาจาก Key Performance Indicator หรือแปลเป็นไทยว่า “ดัชนีชี้วัดผลงาน” คือ เครื่องมือที่ใช้วัดและประเมินประสิทธิภาพการทำงานของบุคคล ทีม หรือองค์กร ว่าสามารถบรรลุเป้าหมายหรือผลลัพธ์ที่กำหนดไว้ได้มากน้อยเพียงใด
+ความหมายของแต่ละคำใน KPI มีดังนี้
+
+• K = Key (เป้าหมายหลัก หรือหัวใจสำคัญ)
+• P = Performance (ประสิทธิภาพ หรือผลลัพธ์ในการทำงาน)
+• I = Indicator (ดัชนี หรือตัวชี้วัดที่ออกมาเป็นรูปธรรม)
+
+> ประเภทของ KPI
+1. เชิงปริมาณ (Quantitative / Direct): วัดผลออกมาเป็นตัวเลขชัดเจน เช่น ยอดขาย (บาท), จำนวนชิ้นงาน, จำนวนลูกค้า
+2. เชิงคุณภาพ (Qualitative / Indirect): วัดผลจากความคิดเห็นหรือระดับความพึงพอใจ เช่น ความพึงพอใจของลูกค้า, ทักษะการทำงานเป็นทีม
+ระดับของ KPI ในองค์กร
+
+- ระดับองค์กร (Corporate): วัดภาพรวมความสำเร็จของบริษัท เช่น กำไรสุทธิ, ส่วนแบ่งทางการตลาด
+- ระดับแผนก/หน่วยงาน (Department): วัดผลงานเฉพาะส่วน เช่น ยอดขายของทีมการตลาด, ความถูกต้องของบัญชี
+- ระดับบุคคล (Individual): วัดผลงานของพนักงานแต่ละคน เพื่อใช้ประกอบการประเมินผลงาน โบนัส และการปรับเงินเดือน
+- หลักการตั้ง KPI ที่ดี (SMART)
+- การกำหนดตัวชี้วัดควรใช้หลัก SMART เพื่อให้ใช้งานได้จริง:
+- Specific (เจาะจง ชัดเจน)
+- Measurable (วัดผลเป็นตัวเลขได้)
+- Achievable (เป็นไปได้จริง ไม่เกินกำลังเกินไป)
+- Relevant (มีความเกี่ยวข้องกับเป้าหมายหลัก)
+- Time-bound (มีกำหนดเวลาที่ชัดเจน เช่น ภายใน 3 เดือน หรือสิ้นปี)
+
+12. CRM ย่อมาจาก Customer Relationship Management หรือ การบริหารความสัมพันธ์กับลูกค้า ซึ่งหมายถึงทั้ง "กลยุทธ์" ในการดูแลลูกค้า และ "ระบบซอฟต์แวร์" ที่ใช้เก็บข้อมูลและจัดการปฏิสัมพันธ์กับลูกค้า เพื่อสร้างความสัมพันธ์ระยะยาวและเพิ่มยอดขาย
+13. ERP (Enterprise Resource Planning) คือ ระบบซอฟต์แวร์สำหรับบริหารจัดการและวางแผนทรัพยากรทางธุรกิจขององค์กร โดยรวบรวมข้อมูลและกระบวนการทำงานหลักจากทุกแผนกเข้าไว้บนฐานข้อมูลกลางเดียวกัน เพื่อให้ทุกคนทำงานร่วมกันและเห็นข้อมูลแบบเรียลไทม์
+
+
+
+# 00 — สรุปธุรกิจแบบคลุมเครือ (Blind Input)
+
+> สรุปนี้เป็น blind input สำหรับกรณีตรวจสอบ เนื้อหาอธิบายเฉพาะสถานการณ์ทางธุรกิจ บทบาท เป้าหมาย ข้อจำกัด และสถานการณ์ผิดปกติเท่านั้น
+> **ถูกตัดออก**: DDD ทุกคำศัพท์ (Aggregate, Bounded Context, Entity, Value Object, Event, ACL เป็นต้น) และชื่อคลาส/การตัดสินใจออกแบบใดๆ
+
+---
+
+บริษัทประกันทรัพย์สินขนาดกลางกำลังดำเนินการแปลงระบบดิจิทัลสำหรับธุรกิจหลักด้านการรับประกันภัยและการเรียกร้องค่าสินไหมทดแทน ปัจจุบันสองกระบวนการนี้พึ่งพาแบบฟอร์มและการส่งต่อด้วยมือเป็นอย่างมาก ส่งผลให้ข้อมูลขาดความต่อเนื่องอย่างรุนแรง: ผู้รับประกันภัยไม่สามารถเห็นประวัติลูกค้าที่สมบูรณ์และผลงานการเรียกร้องค่าสินไหมทดแทนที่ผ่านมา พนักงานเรียกร้องค่าสินไหมทดแทนไม่ได้รับข้อมูลเงื่อนไขกรมธรรม์ที่แม่นยำ และฝ่ายบริหารไม่สามารถติดตามสถานะ "แจ้งเหตุแล้วยังไม่จ่ายค่าสินไหม" แบบเรียลไทม์ได้
+
+## สถานการณ์ธุรกิจปัจจุบัน
+
+- **ลูกค้าและการประกันภัย**: ลูกค้า (บุคคลและนิติบุคคล บางส่วนผ่านบริษัทนายหน้า) ยื่นคำขอประกันภัย ระบุวัตถุที่เอาประกัน (ยานพาหนะ ทรัพย์สิน สินค้า) วงเงินประกันที่ต้องการ ระยะเวลาประกัน และประวัติความสูญเสียที่ผ่านมา ลูกค้ารายเดียวกันอาจมีหลายกรมธรรม์และหลายวัตถุที่เอาประกัน
+- **การตัดสินใจรับประกันภัย**: ผู้รับประกันภัยตัดสินใจรับประกันภัย เพิ่มเบี้ยประกัน กำหนดเงื่อนไขเพิ่มเติม หรือปฏิเสธ โดยพิจารณาจากเนื้อหาคำขอ ผลงานการเรียกร้องค่าสินไหมทดแทนของลูกค้าในอดีต และแนวทางการรับประกันภัยของบริษัท วัตถุที่เอาประกันความเสี่ยงสูงอาจต้องขอความช่วยเหลือจากการประกันต่อ
+- **วงจรชีวิตกรมธรรม์**: หลังจากกรมธรรม์มีผลบังคับ ลูกค้าสามารถขอแก้ไข (เพิ่มวงเงินประกัน เปลี่ยนที่อยู่ เพิ่มวัตถุที่เอาประกัน) ประกันบางประเภทต่ออายุโดยอัตโนมัติทุกปี ลูกค้าที่ไม่ชำระเบี้ยประกันตรงเวลาอาจส่งผลให้กรมธรรม์ระงับ หลังระงับหากเกิดเหตุจะไม่จ่ายค่าสินไหม กรมธรรม์มีระยะเวลาคอย (หากเกิดเหตุภายในไม่กี่วันหลังออกกรมธรรม์จะไม่จ่าย) และค่า deductible (หากความสูญเสียต่ำกว่าจำนวนนี้จะไม่จ่าย)
+- **กระบวนการเรียกร้องค่าสินไหมทดแทน**: หลังเกิดเหตุ ลูกค้าแจ้งเหตุ พนักงานเรียกร้องค่าสินไหมทดแทนจัดการตรวจสอบ (ภาพถ่ายออนไลน์หรือลงพื้นที่จริง) ประเมินจำนวนเงินความสูญเสียและความรับผิดชอบ เปรียบเทียบกับเงื่อนไขกรมธรรม์ (ค่า deductible ความรับผิดชอบที่ยกเว้น ระยะเวลาคอย) คำนวณจำนวนเงินที่ต้องจ่าย จ่ายหลังการอนุมัติเป็นขั้นตอน คดีที่มีข้อสงสัยเรื่องการทุจริตจะเข้าสู่กระบวนการสอบสวน ระหว่างสอบสวนจะระงับการจ่าย หลังจ่ายค่าสินไหมเสร็จสิ้นอาจไล่เบี้ยเรียกคืนจากฝ่ายที่รับผิดชอบ
+- **การกำกับดูแลและการเงิน**: ข้อมูลกรมธรรม์และเรียกร้องค่าสินไหมทดแทนต้องส่งให้หน่วยงานกำกับดูแลตามระเบียบ เงินสำรองค่าสินไหมรอตัดบัญชีต้องคำนวณตามวิธีที่กฎหมายกำหนด ฝ่ายบริหารต้องการมุมมองแบบเรียลไทม์เพื่อติดตามขนาดและการกระจายของเหตุที่แจ้งแล้วยังไม่จ่ายค่าสินไหม
+
+## สถานการณ์ผิดปกติ (โลกจริง)
+
+- **ภัยพิบัติร้ายแรง**: พายุ ฝนตกหนัก และภัยธรรมชาติอื่นๆ ส่งผลให้จำนวนแจ้งเหตุเพิ่มขึ้นหลายเท่าในช่วงสั้นๆ แรงกดดันในการจ่ายค่าสินไหมเพิ่มขึ้นอย่างรวดเร็ว ระบบต้องรับมือกับการแจ้งเหตุจำนวนมากพร้อมกัน
+- **แจ้งเหตุซ้ำและเท็จ**: ความสูญเสียเดียวกันถูกแจ้งหลายครั้ง หรือลูกค้าขยายความสูญเสียเกินจริง ต้องมีการระบุและรวมเข้าด้วยกัน
+- **ข้อมูลมาช้า**: รายงานการตรวจสอบ ใบรับรองตำรวจ และเอกสารอื่นๆ มักมาล่าช้า กระบวนการเรียกร้องค่าสินไหมทดแทนต้องรอเอกสารให้ครบ บางแจ้งเหตุขาดข้อมูลสำคัญ (วัตถุที่เอาประกัน เวลา)
+- **สถานะกรมธรรม์ขัดแย้ง**: เมื่อคำขอแก้ไขและการแจ้งเหตุเกิดขึ้นพร้อมกัน จะเกิดข้อผิดพลาดง่ายๆ ว่าจะยึดเงื่อนไขสถานะใด
+- **การสอบสวนทุจริต**: ระหว่างการสอบสวน เรียกร้องค่าสินไหมจะถูกระงับ ผลการสอบสวนอาจพลิกผลการจ่ายค่าสินไหม
+
+## เป้าหมาย
+
+ทำให้กระบวนการรับประกันภัยและเรียกร้องค่าสินไหมทดแทนทั้งหมดเป็นดิจิทัล สร้างฐานข้อมูล "ลูกค้า—กรมธรรม์—เรียกร้องค่าสินไหม" ที่เป็นหนึ่งเดียว สนับสนุนการตัดสินใจรับประกันภัย กระบวนการเรียกร้องค่าสินไหมทดแทน ขั้นตอนอนุมัติ และการส่งข้อมูลให้หน่วยงานกำกับดูแล รวมทั้งให้ฝ่ายบริหารติดตามขนาดเรียกร้องค่าสินไหมรอตัดบัญชีแบบเรียลไทม์
+
+## ไม่ใช่เป้าหมาย
+
+- ไม่เกี่ยวข้องกับแบบจำลองคณิตศาสตร์ประกันภัยสำหรับการกำหนดอัตราเบี้ยประกันเอง (ถือว่าระบบคณิตศาสตร์ประกันภัยภายนอกให้อัตรา)
+- ไม่เกี่ยวข้องกับการลงทุนและการใช้เงิน
+- ไม่แทนที่ระบบฝั่งบริษัทนายหน้า (ถือว่ามีปฏิสัมพันธ์ผ่าน API)
+- ไม่ครอบคลุมกระบวนการประกันชีวิต ประกันสุขภาพ
+
+## ข้อจำกัด
+
+- ต้องปฏิบัติตามข้อกำหนดของหน่วยงานกำกับดูด้านการส่งข้อมูลและการคำนวณเงินสำรอง
+- การจ่ายค่าสินไหมทดแทนต้องมีการอนุมัติหลายขั้น จำนวนเงินมากต้องมีอำนาจสูงกว่า
+- ช่องทางแจ้งเหตุต้องรองรับการเข้าใช้งานจำนวนมากพร้อมกัน และห้ามสูญเสียแจ้งเหตุในช่วงเวลาเร่งด่วน
 
 ---
 
@@ -157,8 +249,7 @@ app/modules/{module}/
     └── dependencies.py      # Depends factories
 ```
 
-
-```bash   
+```sh
     backend/
     │
     ├── app/                                   # 📦 แอปพลิเคชันหลัก
@@ -298,6 +389,10 @@ app/modules/{module}/
     ├── requirements.txt
     ├── README.md
     └── README-PTBR.md
+```
+
+```text
+<3>WSL (43568 - Relay) ERROR: CreateProcessCommon:818: execvpe(/bin/bash) failed: No such file or directory
 ```
 
 ### 3.3 Three Error-Handling Shapes
@@ -555,6 +650,15 @@ except Exception as e:
         "An error occurred in the get key by hashed key cache. Falling back to the database."
     )
     return None
+```
+
+```text
+C:\Users\kongn\AppData\Local\Temp\md-notebook\md_notebook.py:2: SyntaxWarning: "\g" is an invalid escape sequence. Such sequences will not work in the future. Did you mean "\\g"? A raw string is also an option.
+  sys.path.append("c:\github\fastapicleanarchitectureddd")
+  File "C:\Users\kongn\AppData\Local\Temp\md-notebook\md_notebook.py", line 3
+    sys.path.append("C:\Users\kongn\AppData\Local\Temp\md-notebook")
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+SyntaxError: (unicode error) 'unicodeescape' codec can't decode bytes in position 2-3: truncated \UXXXXXXXX escape
 ```
 
 ### 9.4 Three Error-Handling Shapes (Table)
@@ -1550,6 +1654,15 @@ hashed_jti = hmac.new(
 ).hexdigest()
 ```
 
+```text
+C:\Users\kongn\AppData\Local\Temp\md-notebook\md_notebook.py:2: SyntaxWarning: "\g" is an invalid escape sequence. Such sequences will not work in the future. Did you mean "\\g"? A raw string is also an option.
+  sys.path.append("c:\github\fastapicleanarchitectureddd")
+  File "C:\Users\kongn\AppData\Local\Temp\md-notebook\md_notebook.py", line 3
+    sys.path.append("C:\Users\kongn\AppData\Local\Temp\md-notebook")
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+SyntaxError: (unicode error) 'unicodeescape' codec can't decode bytes in position 2-3: truncated \UXXXXXXXX escape
+```
+
 ### 15.2 Role-Based Access (2 Gates)
 
 ```python
@@ -1571,6 +1684,15 @@ SECURITY_ADMIN_ALLOWED_PATHS = (
     _path_rule("/api/v1/key/{id}/", "GET"),
     # ...
 )
+```
+
+```text
+C:\Users\kongn\AppData\Local\Temp\md-notebook\md_notebook.py:2: SyntaxWarning: "\g" is an invalid escape sequence. Such sequences will not work in the future. Did you mean "\\g"? A raw string is also an option.
+  sys.path.append("c:\github\fastapicleanarchitectureddd")
+  File "C:\Users\kongn\AppData\Local\Temp\md-notebook\md_notebook.py", line 3
+    sys.path.append("C:\Users\kongn\AppData\Local\Temp\md-notebook")
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+SyntaxError: (unicode error) 'unicodeescape' codec can't decode bytes in position 2-3: truncated \UXXXXXXXX escape
 ```
 
 ### 15.3 API Key (HMAC + Constant-Time Compare)
@@ -1601,6 +1723,15 @@ def verify_api_key(raw_key: str, hashed_key: str) -> bool:
     ).hexdigest()
 
     return hmac.compare_digest(computed, hashed_key)
+```
+
+```text
+C:\Users\kongn\AppData\Local\Temp\md-notebook\md_notebook.py:2: SyntaxWarning: "\g" is an invalid escape sequence. Such sequences will not work in the future. Did you mean "\\g"? A raw string is also an option.
+  sys.path.append("c:\github\fastapicleanarchitectureddd")
+  File "C:\Users\kongn\AppData\Local\Temp\md-notebook\md_notebook.py", line 3
+    sys.path.append("C:\Users\kongn\AppData\Local\Temp\md-notebook")
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+SyntaxError: (unicode error) 'unicodeescape' codec can't decode bytes in position 2-3: truncated \UXXXXXXXX escape
 ```
 
 ### 15.4 Redis Cache with Tombstone
@@ -1645,6 +1776,15 @@ class RedisKeyCache:
             )
         except Exception as e:
             logger.opt(exception=e).error("Cache insert failed.")
+```
+
+```text
+C:\Users\kongn\AppData\Local\Temp\md-notebook\md_notebook.py:2: SyntaxWarning: "\g" is an invalid escape sequence. Such sequences will not work in the future. Did you mean "\\g"? A raw string is also an option.
+  sys.path.append("c:\github\fastapicleanarchitectureddd")
+  File "C:\Users\kongn\AppData\Local\Temp\md-notebook\md_notebook.py", line 3
+    sys.path.append("C:\Users\kongn\AppData\Local\Temp\md-notebook")
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+SyntaxError: (unicode error) 'unicodeescape' codec can't decode bytes in position 2-3: truncated \UXXXXXXXX escape
 ```
 
 ### 15.5 Security Checklist
@@ -1702,6 +1842,15 @@ async def test_invoice_throughput(client: AsyncClient):
     print(f"Created 1000 invoices in {elapsed:.2f}s")
 ```
 
+```text
+C:\Users\kongn\AppData\Local\Temp\md-notebook\md_notebook.py:2: SyntaxWarning: "\g" is an invalid escape sequence. Such sequences will not work in the future. Did you mean "\\g"? A raw string is also an option.
+  sys.path.append("c:\github\fastapicleanarchitectureddd")
+  File "C:\Users\kongn\AppData\Local\Temp\md-notebook\md_notebook.py", line 3
+    sys.path.append("C:\Users\kongn\AppData\Local\Temp\md-notebook")
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+SyntaxError: (unicode error) 'unicodeescape' codec can't decode bytes in position 2-3: truncated \UXXXXXXXX escape
+```
+
 ### 16.2 MQTT Load Test
 
 ```go
@@ -1732,6 +1881,10 @@ func TestSensorThroughput(t *testing.T) {
 	t.Logf("published %d msgs in %v (%.0f msg/s)",
 		total, elapsed, float64(total)/elapsed.Seconds())
 }
+```
+
+```text
+main.go:4:8: no required module provides package github.com/eclipse/paho.mqtt.golang: go.mod file not found in current directory or any parent directory; see 'go help modules'
 ```
 
 ### 16.3 Load Test Tools
@@ -1814,7 +1967,7 @@ func TestSensorThroughput(t *testing.T) {
 
 ### 17.6 Working Code Examples
 
-```bash
+```sh
 # 1. Clone
 git clone fastapi-clean-architecture-ddd-erp-iot
 cd fastapi-clean-architecture-ddd-template
@@ -1848,11 +2001,15 @@ curl -X POST http://localhost:8000/api/v1/invoice/ \
   -d '{"customer_id":"c1","lines":[{"product_id":"p1","qty":10,"unit_price":100}]}'
 ```
 
+```text
+<3>WSL (43753 - Relay) ERROR: CreateProcessCommon:818: execvpe(/bin/bash) failed: No such file or directory
+```
+
 ---
 
 # Ollama Commands
 
-```bash
+```sh
 # Run a specific model in interactive chat mode
 ollama run qwen3.6:latest
 
@@ -1879,6 +2036,6 @@ ollama ps
 powershell -ExecutionPolicy Bypass -File C:\AI\KoboldCpp\start.ps1
 ```
 
-```bash
+```sh
 opencode --continue
 ```
