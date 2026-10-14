@@ -28,6 +28,147 @@
 19. [Root Cause Analysis](#19-root-cause-analysis)
 
 ---
+```bash   
+    backend/
+    │
+    ├── app/                                   # 📦 แอปพลิเคชันหลัก
+    │   │
+    │   ├── __init__.py
+    │   ├── app.py                             # Entry point — FastAPI()
+    │   ├── routes.py                          # Router registration
+    │   ├── middleware.py                      # Middleware registration
+    │   │
+    │   ├── core/                              # ⚙️ Cross-cutting concerns
+    │   │   ├── __init__.py
+    │   │   ├── settings.py                    # Settings (pydantic-settings)
+    │   │   ├── security.py                    # Nested JWT (JWS + JWE)
+    │   │   ├── database.py                    # SQLAlchemy async engine
+    │   │   ├── cache.py                       # Redis client
+    │   │   ├── logging.py                     # Loguru + orjson
+    │   │   ├── middleware.py                  # ResponseFormatting, LogRequest, DeviceId
+    │   │   └── exceptions.py                  # CoreException
+    │   │
+    │   └── modules/                           # 📚 9 modules (ตาม README)
+    │       │
+    │       ├── shared/                        # 🔗 Base types (ไม่ routed)
+    │       │   ├── domain/
+    │       │   │   ├── entities.py            # BaseEntity, DomainError, Pagination
+    │       │   │   ├── value_objects.py       # UNSET, Email, Name, Phone
+    │       │   │   └── enums.py               # Role, ResponseMessages, SortOrder
+    │       │   ├── application/
+    │       │   │   ├── use_cases.py           # SharedUseCases
+    │       │   │   ├── exceptions.py          # StandardException, DomainException
+    │       │   │   └── utils.py               # BRASILIA_TZ, resolve_client_ip
+    │       │   ├── infrastructure/
+    │       │   │   └── models.py              # Base, BaseModel
+    │       │   └── presentation/
+    │       │       ├── schemas.py             # StandardResponse, Pagination*
+    │       │       └── dependencies.py        # Cross-module factories
+    │       │
+    │       ├── authentication/                # 🔐 Login/Refresh/Logout
+    │       │   ├── domain/
+    │       │   │   ├── entities.py            # Authentication
+    │       │   │   ├── value_objects.py
+    │       │   │   └── enums.py
+    │       │   ├── application/
+    │       │   │   ├── interfaces.py          # ITokenService
+    │       │   │   ├── use_cases.py
+    │       │   │   ├── mappers.py
+    │       │   │   ├── exceptions.py
+    │       │   │   └── utils.py
+    │       │   ├── infrastructure/
+    │       │   │   ├── models.py              # Authentication, RefreshToken, AccessToken
+    │       │   │   ├── repositories.py
+    │       │   │   ├── caches.py
+    │       │   │   └── services.py            # TokenService
+    │       │   └── presentation/
+    │       │       ├── routers.py
+    │       │       ├── schemas.py
+    │       │       ├── docs.py
+    │       │       └── dependencies.py
+    │       │
+    │       ├── user/                          # 👤 Accounts + Roles
+    │       │   ├── domain/
+    │       │   ├── application/
+    │       │   ├── infrastructure/
+    │       │   └── presentation/
+    │       │
+    │       ├── key/                           # 🔑 API Keys (canonical)
+    │       │   ├── domain/
+    │       │   ├── application/
+    │       │   ├── infrastructure/
+    │       │   └── presentation/
+    │       │
+    │       ├── knowledge/                     # 📚 CRUD + Broadcast
+    │       │   ├── domain/
+    │       │   ├── application/
+    │       │   ├── infrastructure/
+    │       │   └── presentation/
+    │       │
+    │       ├── notification/                  # 🔔 Role fan-out
+    │       │   ├── domain/
+    │       │   ├── application/
+    │       │   ├── infrastructure/
+    │       │   └── presentation/
+    │       │
+    │       ├── websocket/                     # 🔌 Real-time
+    │       │   ├── application/
+    │       │   ├── infrastructure/
+    │       │   └── presentation/
+    │       │
+    │       ├── health/                        # ❤️ Liveness
+    │       │   └── presentation/
+    │       │
+    │       └── example/                       # 📝 Minimal reference
+    │           └── presentation/
+    │
+    ├── migrations/                            # 🗄️ Alembic
+    │   ├── env.py                             # ⚠️ ต้อง import ทุก model
+    │   ├── script.py.mako
+    │   └── versions/                          # (empty)
+    │
+    ├── scripts/                               # 🛠️ Utility scripts
+    │   ├── create_module.py
+    │   ├── generate_secret.py
+    │   ├── generate_fernet.py
+    │   ├── directory_tree.py
+    │   ├── websocket_test.html
+    │   └── asyncapi.yaml
+    │
+    ├── secrets/keys/                          # 🔐 JWT keys (gitignored)
+    │   ├── signing-private.pem
+    │   ├── signing-public.pem
+    │   ├── encryption-private.pem
+    │   └── encryption-public.pem
+    │
+    ├── test/                                  # 🧪 Tests
+    │   ├── core/
+    │   └── modules/
+    │       ├── authentication/
+    │       ├── example/
+    │       ├── health/
+    │       ├── key/
+    │       ├── knowledge/
+    │       ├── notifications/
+    │       ├── shared/
+    │       ├── user/
+    │       └── websocket/
+    │
+    ├── docs/                                  # 📘 Postman + specs
+    │   └── postman_collection.json
+    │
+    ├── .env.example
+    ├── .gitignore
+    ├── .python-version
+    ├── alembic.ini
+    ├── docker-compose.yaml                    # FastAPI stack (standalone)
+    ├── Dockerfile
+    ├── Makefile
+    ├── pyproject.toml
+    ├── requirements.txt
+    ├── README.md
+    └── README-PTBR.md
+```
 
 ## 1. Definitions
 
