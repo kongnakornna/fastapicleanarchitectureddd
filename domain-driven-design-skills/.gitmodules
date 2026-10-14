@@ -1,0 +1,3 @@
+[submodule "validation-cases/cargo-shipping"]
+	path = validation-cases/cargo-shipping
+	url = https://github.com/citerus/dddsample-core.git
