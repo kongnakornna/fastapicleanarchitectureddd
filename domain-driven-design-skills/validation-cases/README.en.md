@@ -1,7 +1,5 @@
 # DDD Skill Validation Method
 
-> 🌐 中文版本: [Chinese](README.md)
-
 ---
 
 > This directory documents the **end-to-end validation method** for the 8 in-house DDD modeling skills, along with completed validation cases.
@@ -135,30 +133,6 @@ Produce `REPORT.md` at the validation case root directory, with mandatory 8 sect
 ## 4. Directory Structure Convention
 
 A complete validation case directory structure:
-
-```text
-validation-cases/<case-name>/
-├── 00-fuzzy-prompt.md                     Business brief (blind input)
-├── 01-ddd-scope.out.md                    ~ 08 Stage IV (blind outputs)
-├── 02-ddd-discover.out.md
-├── 03-ddd-subdomains.out.md
-├── 04-ddd-contexts.out.md
-├── 05-ddd-context-map.out.md
-├── 06-ddd-aggregates.out.md
-├── 07-ddd-domain-interactions.out.md
-├── 08-ddd-model-review.out.md
-├── reference/                             Ground truth (written only after blind runs complete)
-│   ├── contexts.md
-│   ├── aggregates.md
-│   ├── events.md
-│   └── context-map.md
-├── scoring/
-│   ├── rubric.md                          Weights, anchors, rules
-│   └── scorecard.md                       Per-Skill scores, deviations, total
-├── backtrack-test/
-│   └── injection-report.md                Injection and trigger verification
-└── REPORT.md                              Final summary report
-```
 
 ## 5. Reusing This Method for New Cases
 

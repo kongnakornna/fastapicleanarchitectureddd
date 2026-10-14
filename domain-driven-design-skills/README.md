@@ -8,7 +8,7 @@
 
 คลังข้อมูลนี้ใช้ `ddd-*` Skill ที่พัฒนาขึ้นเองเป็นแกนหลัก ให้ชุดสายหลัก Domain Modeling สำหรับ AI Agent (ค้นพบ / เชิงกลยุทธ์ / เชิงยุทธวิธี / ตรวจสอบ / เชื่อมต่อข้อกำหนด) นอกจากนี้ยังรวบรวมบันทึกการวิจัย Skill DDD ที่เกี่ยวข้องจาก AI หลักในระบบนิเวศ (ดู[อ้างอิงระบบนิเวศภายนอก](#อ้างอิงระบบนิเวศภายนอก)) เพื่อเปรียบเทียบและอ้างอิงตามต้องการ
 
-```bash
+```sh
 # Clone อย่างรวดเร็ว (รวม submodule ทั้งหมด)
 git clone --recurse-submodules https://github.com/<your-org>/domain-driven-design-skills.git
 ```
@@ -72,14 +72,6 @@ git clone --recurse-submodules https://github.com/<your-org>/domain-driven-desig
 
 **วิธีเรียกใช้**: ในบทสนทนา AI Agent ใช้ไวยากรณ์ `@skill-name` ผลงานสามารถส่งเป็น Input ของ Skill ขั้นตอนถัดไปได้โดยตรง:
 
-```text
-@ddd-scope        <คำอธิบายปัญหาทางธุรกิจ>
-@ddd-discover     <ผลงาน scope>
-@ddd-subdomains   <ผลงาน discover>
-...
-@ddd-model-review <ผลงาน Modeling ที่มีอยู่>
-```
-
 ---
 
 ## อ้างอิงระบบนิเวศภายนอก
@@ -111,7 +103,7 @@ git clone --recurse-submodules https://github.com/<your-org>/domain-driven-desig
 | ออกแบบระบบใหม่ที่มีสถาปัตยกรรมชัดเจน              | **ประเภทหลอมรวมรูปแบบสถาปัตยกรรม** (`clean-ddd-hexagonal`)    |
 | วางแผนหรือจัดระเบียบ Module และขอบเขต Microservices ของธุรกิจที่ซับซ้อน | **ประเภทการออกแบบเชิงกลยุทธ์** (`ddd-strategic-design`, `ddd-context-mapping`) |
 | โครงการมี Technology Stack ที่ต้องการชัดเจน        | **ประเภทเชี่ยวชาญ Technology Stack** (`arch-ddd`, `ddd-planning`) |
-| ค้นหากระบวนการ实施 DDD ที่มีมาตรฐานและเชิงโครงสร้างสำหรับทีม | **ประเภท Framework/Platform เฉพาะ** (`cleanddd-skills`)         |
+| ค้นหากระบวนการ  DDD ที่มีมาตรฐานและเชิงโครงสร้างสำหรับทีม | **ประเภท Framework/Platform เฉพาะ** (`cleanddd-skills`)         |
 | สร้างระบบ AI Agent ที่ซับซ้อน                       | **ประเภท Framework/Platform เฉพาะ** (`claude-flow`, `Solon AI Skills`) |
 
 ---
@@ -120,36 +112,17 @@ git clone --recurse-submodules https://github.com/<your-org>/domain-driven-desig
 
 เพื่อทำการ **ประเมินคุณภาพแบบObjectiveและทำซ้ำได้** สำหรับ `ddd-*` Skill ที่พัฒนาขึ้นเอง คลังข้อมูลดูแลไดเรกทอรี `validation-cases/` แยกต่างหาก รวบรวมกรณีตรวจสอบ blind-run end-to-end และวิธีตรวจสอบทั่วไป
 
-- [validation-cases/README.md](validation-cases/README.md) — **สรุปวิธีตรวจสอบ**: กระบวนการ 6 ขั้นตอน (Input คลุมเครือ → blind-run 8 Skill → การดึง True Value → การให้คะแนนเทียบ基准 → การทดสอบ injection ย้อนกลับ → รายงานสรุป), ข้อจำกัด blind-run, เมทริกซ์ injection, ขั้นตอนที่ใช้ซ้ำได้ และข้อจำกัดที่รู้อยู่แล้ว
-- [validation-cases/cargo-validation/](validation-cases/cargo-validation/) — **กรณีตรวจสอบ Cargo**: ใช้ DDD Sample การขนส่ง Cargo ของ Eric Evans + Citerus (submodule `validation-cases/cargo-shipping`) เป็น True Value อ้างอิง เดินสาย流水线 Skill 8 ขั้นตอนครบถ้วน ปัจจุบันได้คะแนนถ่วงน้ำหนัก **85.8%** (B+ ดี), เครื่องมือย้อนกลับ **5/5 ผ่านทั้งหมด**; ข้อสรุปครบถ้วนดูที่ [REPORT.md](validation-cases/cargo-validation/REPORT.md)
+- [validation-cases/README.md](validation-cases/README.md) — **สรุปวิธีตรวจสอบ**: กระบวนการ 6 ขั้นตอน (Input คลุมเครือ → blind-run 8 Skill → การดึง True Value → การให้คะแนนเทียบ  → การทดสอบ injection ย้อนกลับ → รายงานสรุป), ข้อจำกัด blind-run, เมทริกซ์ injection, ขั้นตอนที่ใช้ซ้ำได้ และข้อจำกัดที่รู้อยู่แล้ว
+- [validation-cases/cargo-validation/](validation-cases/cargo-validation/) — **กรณีตรวจสอบ Cargo**: ใช้ DDD Sample การขนส่ง Cargo ของ Eric Evans + Citerus (submodule `validation-cases/cargo-shipping`) เป็น True Value อ้างอิง เดินสาย  Skill 8 ขั้นตอนครบถ้วน ปัจจุบันได้คะแนนถ่วงน้ำหนัก **85.8%** (B+ ดี), เครื่องมือย้อนกลับ **5/5 ผ่านทั้งหมด**; ข้อสรุปครบถ้วนดูที่ [REPORT.md](validation-cases/cargo-validation/REPORT.md)
 - [validation-cases/insurance-validation/](validation-cases/insurance-validation/) — **กรณีตรวจสอบการรับประกันและการเคลมประกัน**: _DOMAIN ที่ไม่มีข้อกำหนดอ้างอิง_ (ประกันภัย) ใช้ระบบการตรวจสอบของผู้เชี่ยวชาญ (เกณฑ์ 4 ประเภทแทนจุดยึด True Value) ได้คะแนนถ่วงน้ำหนัก **90.9%** (เปรียบเทียบกับคะแนน Cargo โดยตรงไม่ได้); เพิ่มขั้นตอน V (`ddd-openspec-bridge`, การตรวจสอบ OpenSpec Change Set 9/9 ผ่าน) ทำให้ครบ 5 ขั้นตอน ข้อสรุปครบถ้วนดูที่ [REPORT.md](validation-cases/insurance-validation/REPORT.md)
 
-ผลการตรวจสอบได้反馈กลับไปสู่การปรับปรุง Skill หลัก (เช่น "การตรวจสอบการอ้างอิงภายนอกอีกครั้ง + รูปแบบ Specification" ของ `ddd-aggregates`, "มิติเทียบ基准อุตสาหกรรม" ของ `ddd-model-review`, "ADR แนวคิดระหว่างทาง" ของ `ddd-contexts`) สร้างปิดลูป feedback ที่สังเกตได้
+ผลการตรวจสอบได้ กลับไปสู่การปรับปรุง Skill หลัก (เช่น "การตรวจสอบการอ้างอิงภายนอกอีกครั้ง + รูปแบบ Specification" ของ `ddd-aggregates`, "มิติเทียบ อุตสาหกรรม" ของ `ddd-model-review`, "ADR แนวคิดระหว่างทาง" ของ `ddd-contexts`) สร้างปิดลูป feedback ที่สังเกตได้
 
 ---
 
 ## โครงสร้างไดเรกทอรี
 
-```text
-skills/
-├── ddd-scope/                  # ขั้นตอน I: การเล็ง Scope
-├── ddd-discover/               # ขั้นตอน I: การค้นพบ Domain
-├── ddd-subdomains/             # ขั้นตอน II: การจำแนก Subdomain
-├── ddd-contexts/               # ขั้นตอน II: Bounded Context + ภาษากลาง
-├── ddd-context-map/            # ขั้นตอน II: แผนที่ Context
-├── ddd-aggregates/             # ขั้นตอน III: การออกแบบ Aggregate
-├── ddd-domain-interactions/    # ขั้นตอน III: Domain Interaction
-├── ddd-model-review/           # ขั้นตอน IV: การตรวจสอบโมเดล
-└── ddd-openspec-bridge/        # ขั้นตอน V: การเชื่อมต่อข้อกำหนด (OpenSpec)
-
-validation-cases/
-├── README.md                   # สรุปวิธีตรวจสอบ (กระบวนการ 6 ขั้นตอน)
-├── cargo-shipping/             # DDD Sample การขนส่ง Cargo (submodule, True Value)
-├── cargo-validation/           # กรณีตรวจสอบ Cargo (blind-run + True Value + คะแนน + injection + REPORT)
-└── insurance-validation/       # กรณีตรวจสอบการรับประกันและการเคลมประกัน (ไม่มีข้อกำหนดอ้างอิง, ระบบตรวจสอบผู้เชี่ยวชาญ)
-```
-
-> บันทึกการวิจัย Skill จากภายนอกดูที่章节 [อ้างอิงระบบนิเวศภายนอก](#อ้างอิงระบบนิเวศภายนอก) ไม่แจกจ่ายในรูปแบบ submodule อีกต่อไป
+> บันทึกการวิจัย Skill จากภายนอกดูที่[อ้างอิงระบบนิเวศภายนอก](#อ้างอิงระบบนิเวศภายนอก) ไม่แจกจ่ายในรูปแบบ submodule อีกต่อไป
 
 ---
 
@@ -157,7 +130,7 @@ validation-cases/
 
 - [ddd-quickstart.md](docs/ddd-quickstart.md) — **เริ่มต้นอย่างรวดเร็ว**: Skill คืออะไร, รันที่ไหน, ทำอย่างไรจาก 0 ถึง 1 ให้เสร็จหนึ่งรอบ Modeling (ผู้เริ่มต้นต้องอ่าน)
 - [ddd-skill-system-design.md](docs/ddd-skill-system-design.md) — เอกสารการออกแบบสายหลักระบบ DDD ที่พัฒนาขึ้นเอง (โมเดล 5 ขั้นตอน, แผนภาพการพึ่งพา, เมทริกซ์ปิดลูป feedback)
-- [ddd-pipeline-article.md](docs/ddd-pipeline-article.md) — บทความแนะนำ流水线 Skill แบบบรรยาย (สายหลัก 4 ขั้นตอน / 8 Skill เวอร์ชันแรก + ผลการตรวจสอบ Cargo สำคัญ)
+- [ddd-pipeline-article.md](docs/ddd-pipeline-article.md) — บทความแนะนำ  Skill แบบบรรยาย (สายหลัก 4 ขั้นตอน / 8 Skill เวอร์ชันแรก + ผลการตรวจสอบ Cargo สำคัญ)
 - [ddd-openspec-mapping.md](docs/ddd-openspec-mapping.md) — คู่มือการจับคู่: นิยามมาตรฐานการแปลงผลงานเชิงยุทธวิธี DDD เป็นข้อกำหนด OpenSpec
 - [ddd-skills-report.md](docs/ddd-skills-report.md) — รายงานการวิจัย Skill DDD (รวมการอ้างอิงและ Backlog การปรับปรุง)
 - [validation-cases/README.md](validation-cases/README.md) — สรุปวิธีตรวจสอบ (กระบวนการ blind-run 6 ขั้นตอน, เมทริกซ์ injection, คู่มือการใช้ซ้ำ)
@@ -170,6 +143,6 @@ validation-cases/
 
 คลังข้อมูลเก็บเฉพาะ `validation-cases/cargo-shipping` เป็น submodule เดียว (True Value สำหรับกรณีตรวจสอบ) หาก clone แล้วแต่ยังไม่ได้ดึงข้อมูล:
 
-```bash
+```sh
 git submodule update --init --recursive
 ```

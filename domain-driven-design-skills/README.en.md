@@ -1,14 +1,12 @@
 # Domain-Driven Design (DDD) Skill Panorama
 
-> 🌐 中文版本: [Chinese](README.md)
-
 ---
 
 > :warning: **Work In Progress (WIP)**: This repository and its in-house backbone are under active construction and continuous iteration. Some structures, documentation, and specifications may change at any time.
 
 This repository centers on self-developed `ddd-*` Skills, providing a domain modeling backbone pipeline for AI Agents (Discovery / Strategic / Tactical / Validation / Specification Bridging). It also documents mainstream DDD-related AI Skills from the ecosystem as research references (see [External Ecosystem References](#external-ecosystem-reference)) for comparison and on-demand use.
 
-```bash
+```sh
 # Quick clone (with all submodules)
 git clone --recurse-submodules https://github.com/<your-org>/domain-driven-design-skills.git
 ```
@@ -72,14 +70,6 @@ The core deliverable of this repository is the set of **self-developed `ddd-*` S
 
 **Invocation**: Use `@skill-name` syntax in AI Agent conversations. Artifacts can be directly passed as input to the next stage's Skill:
 
-```text
-@ddd-scope        <business problem description>
-@ddd-discover     <scope artifacts>
-@ddd-subdomains   <discover artifacts>
-...
-@ddd-model-review <existing modeling artifacts>
-```
-
 ---
 
 ## External Ecosystem Reference
@@ -130,25 +120,6 @@ Validation results have been fed back into backbone SKILL iterations (e.g., `ddd
 
 ## Directory Structure
 
-```text
-skills/
-├── ddd-scope/                  # Stage I: Scope Convergence
-├── ddd-discover/               # Stage I: Domain Discovery
-├── ddd-subdomains/             # Stage II: Subdomain Classification
-├── ddd-contexts/               # Stage II: Bounded Contexts + Ubiquitous Language
-├── ddd-context-map/            # Stage II: Context Mapping
-├── ddd-aggregates/             # Stage III: Aggregate Design
-├── ddd-domain-interactions/    # Stage III: Domain Interactions
-├── ddd-model-review/           # Stage IV: Model Validation
-└── ddd-openspec-bridge/        # Stage V: Specification Bridging (OpenSpec)
-
-validation-cases/
-├── README.md                   # Validation Method Overview (6-step process)
-├── cargo-shipping/             # Cargo Shipping DDD Sample (submodule, ground truth source)
-├── cargo-validation/           # Cargo Validation Case (blind outputs + ground truth + scoring + backtrack injection + REPORT)
-└── insurance-validation/       # Insurance Underwriting & Claims Validation Case (no canonical reference, expert-review)
-```
-
 > Research records of external ecosystem Skills are listed in the [External Ecosystem References](#external-ecosystem-reference) section; they are no longer distributed as submodules.
 
 ---
@@ -170,6 +141,6 @@ validation-cases/
 
 The repository keeps a single submodule, `validation-cases/cargo-shipping` (the ground-truth source for the validation case). If you've cloned but haven't pulled it:
 
-```bash
+```sh
 git submodule update --init --recursive
 ```
