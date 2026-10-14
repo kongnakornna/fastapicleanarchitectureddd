@@ -1,4 +1,4 @@
-# 📘 ERP + IoT System Architecture Guide for Food Group Companies
+# 📘 POC ERP + IoT System Architecture Guide for Food Group Companies
 ## ( FastAPI Clean Architecture + DDD Template)
 
 > **Complete Document** — Merges the architecture from **ERPIoT** with the **ERP for Food Group Companies (Part 1-2)** and **Smart Mushroom Farm IoT** to create a Multi-company ERP + IoT system that covers every dimension of the food business.
