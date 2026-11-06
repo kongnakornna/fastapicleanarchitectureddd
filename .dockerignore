@@ -3,5 +3,5 @@ venv
 .venv/
 .github/
 .gitignore
-README.md
-.env.example
+README.md 
+.env
